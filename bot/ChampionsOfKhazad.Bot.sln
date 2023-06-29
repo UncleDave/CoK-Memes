@@ -17,6 +17,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		README.md = README.md
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChampionsOfKhazad.Bot.OpenAi.Embeddings", "src\ChampionsOfKhazad.Bot.OpenAi.Embeddings\ChampionsOfKhazad.Bot.OpenAi.Embeddings.csproj", "{B1B71F7D-0188-4719-A211-BCCF03A32DFA}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -31,9 +33,14 @@ Global
 		{F9F08389-512B-408D-A5BB-0F7BEFB06686}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F9F08389-512B-408D-A5BB-0F7BEFB06686}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F9F08389-512B-408D-A5BB-0F7BEFB06686}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B1B71F7D-0188-4719-A211-BCCF03A32DFA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B1B71F7D-0188-4719-A211-BCCF03A32DFA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B1B71F7D-0188-4719-A211-BCCF03A32DFA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B1B71F7D-0188-4719-A211-BCCF03A32DFA}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{250AB7D4-9E29-41B4-8636-BDD934CC20EF} = {AE87495F-C4DE-42DA-8BCB-DF6EC3792ACD}
 		{F9F08389-512B-408D-A5BB-0F7BEFB06686} = {AE87495F-C4DE-42DA-8BCB-DF6EC3792ACD}
+		{B1B71F7D-0188-4719-A211-BCCF03A32DFA} = {AE87495F-C4DE-42DA-8BCB-DF6EC3792ACD}
 	EndGlobalSection
 EndGlobal

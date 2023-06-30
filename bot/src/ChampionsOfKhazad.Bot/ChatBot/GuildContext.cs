@@ -15,6 +15,10 @@ public static class GuildContext
 
         public static string Leaf =>
             "Leafhunter is a Hunter, he is known for exclusively eating pizza and being completely unable to spell.";
+        
+        public static string Shurikun =>
+            "Shurikun is a Gnome Death Knight, he is known for his small stature and his inability to interrupt a spell.";
+        
     }
 
     public static IReadOnlyDictionary<string, string> ContextMap { get; } =
@@ -29,6 +33,8 @@ public static class GuildContext
             { "cokebeard", Members.Cokebeard },
             { "coke", Members.Cokebeard },
             { "leaf", Members.Leaf },
-            { "leafhunter", Members.Leaf }
+            { "leafhunter", Members.Leaf },
+            { "shurikun", Members.Shurikun },
+            { "shuri", Members.Shurikun }
         };
 }

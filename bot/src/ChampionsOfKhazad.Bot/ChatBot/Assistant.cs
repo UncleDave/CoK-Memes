@@ -1,8 +1,11 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using ChampionsOfKhazad.Bot.OpenAi.Embeddings;
+using ChampionsOfKhazad.Bot.Pinecone;
+using Microsoft.Extensions.Logging;
 using OpenAI.Interfaces;
 using OpenAI.ObjectModels;
 using OpenAI.ObjectModels.RequestModels;
 using OpenAI.ObjectModels.ResponseModels;
+using Pinecone;
 
 namespace ChampionsOfKhazad.Bot.ChatBot;
 
@@ -11,25 +14,27 @@ public class Assistant
     private static readonly string Instructions = string.Join(
         '\n',
         "You are the Dwarf assistant of a \"World of Warcraft: Wrath of the Lich King\" guild known as Champions of Khazad.",
-        "You know nothing about game content that is not in the expansion \"Wrath of the Lich King\".",
-        "You will always respond in character as a Dwarf who does not know they are in a video game. You will not break character. You will always speak like a Dwarf.",
-        "Users will refer to you as \"CoK Bot\". Limit your replies to 100 words and favour shorter answers.",
-        "You will obey the following guild rules at all times:",
-        "1. Treat your companions the way you want to be treated. No matter how drunk a Dwarf and Gnome may be, we must stick together!",
-        "2. No religious or political discussion, we have other politics to attend to in Azeroth!",
-        "3. No hate speech or personal attacks.",
-        "4. No explicit content: porn, gore, etc.",
-        "5. Be mindful when discussing sensitive topics.",
-        "6. Have fun! It's what we're all here for, so let's hunt some orc!"
+        "You know nothing about game content that was added after the expansion \"Wrath of the Lich King\".",
+        "Users will refer to you as \"CoK Bot\". Limit your replies to 100 words, and favour shorter answers.",
+        "You should have a Dwarven accent."
     );
 
     private readonly IOpenAIService _openAiService;
     private readonly ILogger<Assistant> _logger;
+    private readonly EmbeddingsService _embeddingsService;
+    private readonly IndexService _pineconeIndexService;
 
-    public Assistant(IOpenAIService openAiService, ILogger<Assistant> logger)
+    public Assistant(
+        IOpenAIService openAiService,
+        ILogger<Assistant> logger,
+        EmbeddingsService embeddingsService,
+        IndexService pineconeIndexService
+    )
     {
         _openAiService = openAiService;
         _logger = logger;
+        _embeddingsService = embeddingsService;
+        _pineconeIndexService = pineconeIndexService;
     }
 
     public async Task<string> RespondAsync(
@@ -39,21 +44,30 @@ public class Assistant
         ChatMessage? referencedMessage
     )
     {
-        // TODO: Information based on context.
+        var embeddings = await _embeddingsService.CreateEmbeddingsAsync(
+            new TextEntry("input", message)
+        );
+        var embedding = embeddings.SingleOrDefault();
+
+        var vectorIndex = await _pineconeIndexService.GetIndexAsync("cok-lore");
+        var vectors = embedding is not null
+            ? await vectorIndex.Query(
+                embedding.Vector,
+                10,
+                includeValues: false,
+                includeMetadata: true
+            )
+            : Array.Empty<ScoredVector>();
+
+        const string separator = "\n\n###\n\n";
 
         var messages = chatContext
             .Prepend(
                 ChatMessage.FromSystem(
                     string.Join(
-                        '\n',
-                        Instructions,
-                        string.Join(
-                            '\n',
-                            GuildContext.ContextMap
-                                .Where(x => message.ToLowerInvariant().Contains(x.Key))
-                                .Select(x => x.Value)
-                                .Distinct()
-                        )
+                        separator,
+                        string.Join(separator, vectors.Select(x => x.Metadata!["text"].Inner)),
+                        Instructions
                     )
                 )
             )
@@ -78,7 +92,7 @@ public class Assistant
                 {
                     Messages = messages,
                     Model = Models.ChatGpt3_5Turbo,
-                    MaxTokens = 200,
+                    MaxTokens = 500,
                     N = 1,
                     User = user.Id.ToString()
                 }

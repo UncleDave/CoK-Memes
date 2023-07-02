@@ -13,10 +13,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: pulumi/actions@v4
+      - name: Deploy Bot
+        uses: pulumi/actions@v4
         with:
           command: up
           stack-name: prod
           work-dir: bot/src/ChampionsOfKhazad.Bot.Infrastructure/
         env:
           PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+      - name: Upload Guild Lore
+        run: dotnet run --project src/ChampionsOfKhazad.Bot.LoreUploader
+        env:
+          OpenAi__ApiKey: ${{ secrets.OPEN_AI_API_KEY }}
+          Pinecone__ApiKey: ${{ secrets.PINECONE_API_KEY }}

@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net7.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <UserSecretsId>d21bc470-69c2-4696-ad1a-1aed453e5409</UserSecretsId>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Humanizer.Core" Version="2.14.1" />
+        <PackageReference Include="Microsoft.Extensions.Hosting" Version="7.0.1" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\ChampionsOfKhazad.Bot.OpenAi.Embeddings\ChampionsOfKhazad.Bot.OpenAi.Embeddings.csproj" />
+        <ProjectReference Include="..\ChampionsOfKhazad.Bot.Pinecone\ChampionsOfKhazad.Bot.Pinecone.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Content Include="Lore.json">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
+    </ItemGroup>
+
+</Project>

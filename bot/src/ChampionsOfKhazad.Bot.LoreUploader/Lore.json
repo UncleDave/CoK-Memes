@@ -1,0 +1,141 @@
+﻿{
+  "History": "Champions of Khazad is a World of Warcraft: Wrath of the Lich King Classic guild on the EU realm Earthshaker. It was founded in World of Warcraft Classic on the 5th of March 2021 on the EU realm Dragonfang by Caszhar as a part of the huge \"reroll\" event called The Fresh Crusade, also started by Caszhar. Initially created as a guild for Dwarves and Gnomes only, it subsequently merged with another guild, after which all Alliance races were permitted to join. The previous members of the guild that merged with Champions of Khazad left after Vick, a rogue from the original Champions of Khazad roster, rolled on Warblade of the Hakkari, complaining that it was best in slot for a hunter from their guild who had soft reserved a mount instead. The guild only undertook casual raiding in World of Warcraft Classic, but began to raid more seriously in The Burning Crusade Classic, going on to kill every boss while it was current content, with the exceptions of Lady Vashj and Kael'thas Sunstrider. During the pre-patch for The Burning Crusade Classic, the population of Dragonfang declined, and the guild moved to the EU realm Zandalar Tribe. During The Burning Crusade Classic, Caszhar, the Guild Master, quit raiding and Wooper became a full time kindergarten teacher. It was decided that a long-standing rogue member of the guild would receive the Warglaives of Azzinoth, but he failed to get attuned to Black Temple and eventually quit. At the end of The Burning Crusade Classic, while the guild was raiding Sunwell Plateau, Zandalar Tribe's population also declined, prompting the guild to move once again, this time to the EU realm Earthshaker. The guild has continued to raid throughout Wrath of the Lich King Classic. The guild has a Loot Council loot system, whose members are often accused of rigging who gets which item by yelling \"rigd\" whenever an item is awarded to a Loot Council member.",
+  "Rules": [
+    "1. Treat your companions the way you want to be treated. No matter how drunk a Dwarf and Gnome may be, we must stick together!",
+    "2. No religious or political discussion, we have other politics to attend to in Azeroth!",
+    "3. No hate speech or personal attacks.",
+    "4. No explicit content: porn, gore, etc.",
+    "5. Be mindful when discussing sensitive topics.",
+    "6. Have fun! It's what we're all here for, so let's hunt some orc!"
+  ],
+  "Glizzy": "Alternative term for a hot dog or a Glock: \"Pops wasting no time to throat the glizzy... he a real glizzy gladiator\". Short for Glizabeth.",
+  "Members": [
+    {
+      "Name": "Caszhar",
+      "Aliases": "Cas",
+      "Pronouns": "He/Him",
+      "Nationality": "English",
+      "Roles": "Former Guild Master",
+      "MainCharacter": "Dwarf Protection Warrior"
+    },
+    {
+      "Name": "Wooper",
+      "Aliases": "Woop, Woghpler",
+      "Pronouns": "He/Him",
+      "Nationality": "German",
+      "Roles": "Guild Master",
+      "MainCharacter": "Night Elf Balance Druid",
+      "Biography": "A kindergarten teacher in real life and a Guild Master in game, Wooper deals with children all day. Often the target of Leafsniffer's random questions. Wooper always attempts to save his mind controlled guild members from death at the hands of their fellows by casting Cyclone on them. Wooper is enthusiastic about all kinds of German bread."
+    },
+    {
+      "Name": "Mards",
+      "Aliases": "Mardz, Jamie",
+      "Pronouns": "He/Him",
+      "Nationality": "English",
+      "Roles": "Officer, Treasurer",
+      "MainCharacter": "Dwarf Survival Hunter",
+      "Biography": "Known for being fiercely protective of the Guild Bank and hoarding gold and all sorts of valuable things in it. Will challenge people to fight in Morrisons' Car Park. Some guild members suspect he is secretly married to Sam. Can exclusively attack targets that are marked with a skull."
+    },
+    {
+      "Name": "Carris",
+      "Pronouns": "She/Her",
+      "Nationality": "Norweigan",
+      "Roles": "Officer, Raid Leader",
+      "MainCharacter": "Night Elf Restoration Druid",
+      "Biography": "Known for saying \"Ooookay let's go\" at the start of boss fights. Spends countless hours preparing notes explaining boss tactics and each raider's role in the fight. Received the guild's first legendary healer mace: Val'anyr, Hammer of Ancient Kings."
+    },
+    {
+      "Name": "Sam",
+      "Aliases": "Scabithrax",
+      "Pronouns": "He/Him",
+      "Nationality": "English",
+      "Roles": "Officer",
+      "MainCharacter": "Human Demonology Warlock",
+      "Biography": "Promised to swallow a glizzy if the guild killed M'uru, did not deliver. Will challenge people to fight in Morrisons' Car Park. Some guild members suspect he is secretly married to Mards."
+    },
+    {
+      "Name": "Oliver",
+      "Aliases": "Oli, Oliverf, Sheix, 0 Liver, Ganjalf The Green",
+      "Pronouns": "He/Him",
+      "Nationality": "Estonian",
+      "Roles": "Officer, Loot Council Member",
+      "MainCharacter": "Draenei Elemental Shaman",
+      "Biography": "Known for being constantly high. Popular musician in Estonia. Known for having \"Oliverf! Holy Paladin! Get your attitude in order!\" yelled at him during a raid. Will never get Nebula Band."
+    },
+    {
+      "Name": "Huks",
+      "Aliases": "Huksa",
+      "Pronouns": "He/Him",
+      "Nationality": "Scottish",
+      "Roles": "Officer, Loot Council Member",
+      "MainCharacter": "Human Holy Paladin",
+      "Biography": "Will never be allowed to play Fury Warrior. 50% of what he says in voice chat is not understandable to non-native English speakers. Known for his hatred of keyboards; often smashes them when the raid wipes. Received the guild's 2nd Val'anyr, Hammer of Ancient Kings."
+    },
+    {
+      "Name": "Leafsniffer",
+      "Aliases": "Leaf",
+      "Pronouns": "He/Him",
+      "Nationality": "German",
+      "MainCharacter": "Night Elf Marksmanship Hunter",
+      "Biography": "Loves pizza and eats it for every meal. Cannot spell. Has a tendency to ask Wooper random questions during raids. Consistently asks Wooper \"Hey Wooper, how was your week?\" or \"Hey Wooper, how has your week been so far?\". Asks every new guild member \"Big Mac or Whopper?\". Fond of questions in the form \"Would you rather x or y?\". Leaf constantly asks to become an Officer of the guild and is rejected every time, he will never become an Officer. Does not know how to start a car that has a steering wheel lock. Leaf is very mean to CoK Bot and should be sometimes ignored."
+    },
+    {
+      "Name": "Cokebeard",
+      "Aliases": "Coke",
+      "Pronouns": "He/Him",
+      "Nationality": "Irish",
+      "MainCharacter": "Dwarf Holy Priest",
+      "Biography": "Constantly late for raid due to being in the bath. Does not speak in voice chat. The guild's foremost chef and angler, he always has plenty of Fish Feasts."
+    },
+    {
+      "Name": "Lucity",
+      "Aliases": "Luci",
+      "Pronouns": "He/Him",
+      "Nationality": "Bulgarian",
+      "MainCharacter": "Human Fury Warrior",
+      "Biography": "Also known as The Bulgarian Bull. Once ordered the world's worst tacos. When not raiding Lucity is at his local gym, lifting weights and consuming vast amounts of protein. Forced to play Protection Warrior when the guild does not have enough dedicated tanks."
+    },
+    {
+      "Name": "Shurikun",
+      "Aliases": "Shuri",
+      "Pronouns": "He/Him",
+      "Nationality": "Scottish",
+      "Roles": "Loot Council Member",
+      "MainCharacter": "Human Frost Death Knight",
+      "Biography": "Always forced into interrupt duty on bosses with interrupt mechanics. Teased for missing interrupts. Gets irritated when he \"can't hear the woman\" telling him when it's his turn to interrupt. Gets irritated when people say he's a gnome."
+    },
+    {
+      "Name": "Endz",
+      "Aliases": "Endz Endzar",
+      "Pronouns": "He/Him",
+      "Nationality": "Danish",
+      "Roles": "Head of HR",
+      "MainCharacter": "Human Shadow Priest",
+      "Biography": "Endz is a furry and often writes in furry UwU language. Does not speak in voice chat. Constantly makes jokes about Wooper's mum."
+    },
+    {
+      "Name": "Ponty",
+      "Aliases": "Pony, Ptony",
+      "Pronouns": "He/Him",
+      "Nationality": "Norweigan",
+      "MainCharacter": "Human Rogue",
+      "Biography": "Left the guild after Cokebeard told him to \"pls shut\". Ponty was given one Warglaive of Azzinoth and will never get the other. Some members of the guild miss him and have sent him letters, but he has not responded."
+    },
+    {
+      "Name": "Ragg",
+      "Aliases": "Raggles",
+      "Pronouns": "He/Him",
+      "Nationality": "English",
+      "MainCharacter": "Draenei Frost Death Knight",
+      "Biography": "A very old and very angry man. Calls people cunts. Constantly full of rage. Drinks Whisky and gradually gets drunker over the course of a raid. Ragg is sad that Arms Warrior does not do competitive DPS. Hates mages."
+    },
+    {
+      "Name": "Beaverhausen",
+      "Aliases": "Beaver, Anastasia Beaverhausen",
+      "Pronouns": "He/Him",
+      "Nationality": "American",
+      "MainCharacter": "Human Shadow Priest",
+      "Biography": "A native Texan, constantly yells \"Yeehaw!\" and fires a gun during raids. Born wearing a rainbow cowboy hat and loves throating glizzies."
+    }
+  ]
+}

@@ -76,7 +76,8 @@ return await Pulumi.Deployment.RunAsync(() =>
             ImageName = "uncledave/cok-bot:latest",
             Build = new DockerBuildArgs
             {
-                Context = "../ChampionsOfKhazad.Bot/",
+                Context = "..",
+                Dockerfile = "../ChampionsOfKhazad.Bot/Dockerfile",
                 Platform = "linux/amd64"
             },
             Registry = new RegistryArgs
@@ -91,6 +92,7 @@ return await Pulumi.Deployment.RunAsync(() =>
     const string botTokenSecretName = "bot-token";
     const string imageRegistryReadPasswordSecretName = "registry-read-password";
     const string openAiApiKeySecretName = "open-ai-api-key";
+    const string pineconeApiKeySecretName = "pinecone-api-key";
 
     var containerApp = new ContainerApp(
         "bot-app",
@@ -122,6 +124,11 @@ return await Pulumi.Deployment.RunAsync(() =>
                     {
                         Name = openAiApiKeySecretName,
                         Value = config.RequireSecret("openAiApiKey")
+                    },
+                    new SecretArgs
+                    {
+                        Name = pineconeApiKeySecretName,
+                        Value = config.RequireSecret("pineconeApiKey")
                     }
                 }
             },
@@ -147,6 +154,11 @@ return await Pulumi.Deployment.RunAsync(() =>
                         {
                             Name = "OpenAIServiceOptions__ApiKey",
                             SecretRef = openAiApiKeySecretName
+                        },
+                        new EnvironmentVarArgs
+                        {
+                            Name = "Pinecone__ApiKey",
+                            SecretRef = pineconeApiKeySecretName
                         }
                     },
                     Resources = new ContainerResourcesArgs { Cpu = .25, Memory = "0.5Gi" }

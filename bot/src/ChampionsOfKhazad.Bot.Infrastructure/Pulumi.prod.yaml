@@ -8,6 +8,8 @@ config:
     secure: AAABACWvQkCeVivhg/b9e5Qf0e03XMQDVwU4m0Dyq4oBNN0PMO/lz2NQyDYPQrcFTvk0oMcmwHoOnFWAWiqP3khAB/Y=
   ChampionsOfKhazad.Bot.Infrastructure:openAiApiKey:
     secure: AAABACbPJ/lEiFQYbpyKV0jkixduBfbPTQCkuhYyqKn3YWBQxVlOiDBTebDMHpEE5ZXvCfb7koh0YrRWvneaNYkT+PnnjwKIW1aib5UrEJ70xc0=
+  ChampionsOfKhazad.Bot.Infrastructure:pineconeApiKey:
+    secure: AAABAB12yI73XWR4bdzt2QmYSCTYPIalPknw1CR2VY7rku5ibJJQ5IdKqUm/yRfmXQccOLYfUn/chOIop0N0EOYFk34=
   azure-native:clientId: 23eb70a2-0327-4c11-b88b-8cf0077efddd
   azure-native:clientSecret:
     secure: AAABAFmmL+UAV6Od5qem7CMyDq81Ae5UBUzA2VsfZAGEYZI7IAoaFYOzL7Qqo4RjlV8SKrEeEf1tz+yO9Azltxp7vP/4mFFD

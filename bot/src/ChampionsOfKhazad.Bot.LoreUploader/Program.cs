@@ -33,9 +33,14 @@ if (lore is null)
 var textEntries = new List<TextEntry>
 {
     new("history", lore.History),
-    new("rules", string.Join('\n', lore.Rules)),
-    new("glizzy", lore.Glizzy)
+    new("rules", string.Join('\n', lore.Rules))
 };
+
+var termTextEntries = lore.Terms.Select(
+    x => new TextEntry($"term-{x.Key.ToLowerInvariant()}", x.Value)
+);
+
+textEntries.AddRange(termTextEntries);
 
 var memberTextEntries = lore.Members.Select(
     x =>
@@ -82,4 +87,5 @@ var vectors = embeddings.Select(
 
 await index.Upsert(vectors);
 
-// TODO: Delete removed vectors
+// TODO: Delete vectors that no longer exist
+// TODO: Don't create embeddings for vectors that haven't changed

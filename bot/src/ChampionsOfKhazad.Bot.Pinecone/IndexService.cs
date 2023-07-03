@@ -1,5 +1,5 @@
 ﻿using Pinecone;
-using Pinecone.Rest;
+using Pinecone.Grpc;
 
 namespace ChampionsOfKhazad.Bot.Pinecone;
 
@@ -14,8 +14,8 @@ public class IndexService
 
     public Task<IndexName[]> ListIndexesAsync() => _pineconeClient.ListIndexes();
 
-    public Task<Index<RestTransport>> GetIndexAsync(string name) =>
-        _pineconeClient.GetIndex<RestTransport>(name);
+    public Task<Index<GrpcTransport>> GetIndexAsync(string name) =>
+        _pineconeClient.GetIndex(name);
 
     public Task CreateIndexAsync(
         string name,

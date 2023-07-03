@@ -77,7 +77,6 @@ return await Pulumi.Deployment.RunAsync(() =>
             Build = new DockerBuildArgs
             {
                 Context = "..",
-                Dockerfile = "../ChampionsOfKhazad.Bot/Dockerfile",
                 Platform = "linux/amd64"
             },
             Registry = new RegistryArgs

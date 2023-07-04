@@ -7,10 +7,10 @@ public class SummonUserHandlerOptions
     public const string Key = "SummonUser";
 
     [Required]
-    public ulong UserId { get; set; }
+    public ulong UserId { get; init; }
 
     [Required]
-    public ulong LeaderId { get; set; }
+    public ulong LeaderId { get; init; }
 
-    public bool AllowSingleUserStreaks { get; set; }
+    public bool AllowSingleUserStreaks { get; init; }
 }

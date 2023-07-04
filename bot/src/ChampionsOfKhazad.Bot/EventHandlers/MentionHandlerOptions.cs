@@ -9,5 +9,7 @@ public class MentionHandlerOptions
     public const string Key = "Mention";
 
     [Required]
-    public required ulong ChannelId { get; set; }
+    public required ulong ChannelId { get; init; }
+
+    public IReadOnlyDictionary<ulong, ushort>? HourlyUserQuotas { get; init; }
 }

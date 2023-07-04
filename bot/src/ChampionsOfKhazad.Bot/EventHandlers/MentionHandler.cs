@@ -1,11 +1,14 @@
 ﻿using System.Text.RegularExpressions;
 using ChampionsOfKhazad.Bot.ChatBot;
 using Discord;
+using Humanizer;
 using Microsoft.Extensions.Options;
 using OpenAI.ObjectModels;
 using OpenAI.ObjectModels.RequestModels;
 
 namespace ChampionsOfKhazad.Bot;
+
+// TODO: Threads
 
 public class MentionHandler : IMessageReceivedEventHandler
 {
@@ -14,6 +17,7 @@ public class MentionHandler : IMessageReceivedEventHandler
 
     private readonly MentionHandlerOptions _options;
     private readonly Assistant _assistant;
+    private readonly Dictionary<ulong, DateTime> _lastMessageTimeByQuotaUsers = new();
     private ulong _botId;
 
     public MentionHandler(IOptions<MentionHandlerOptions> options, Assistant assistant)
@@ -28,16 +32,42 @@ public class MentionHandler : IMessageReceivedEventHandler
         return Task.CompletedTask;
     }
 
-    public Task HandleMessageAsync(IUserMessage message)
+    public async Task HandleMessageAsync(IUserMessage message)
     {
         if (
             message.Channel is not ITextChannel textChannel
             || textChannel.Id != _options.ChannelId
             || !message.MentionedUserIds.Contains(_botId)
         )
-            return Task.CompletedTask;
+            return;
 
+        if (_options.HourlyUserQuotas?.TryGetValue(message.Author.Id, out var quota) ?? false)
+        {
+            if (
+                _lastMessageTimeByQuotaUsers.TryGetValue(message.Author.Id, out var lastMessageTime)
+            )
+            {
+                var timeSinceLastMessage = DateTime.UtcNow - lastMessageTime;
+                if (timeSinceLastMessage < TimeSpan.FromHours(1))
+                {
+                    var timeUntilNextMessage = TimeSpan.FromHours(1) - timeSinceLastMessage;
+                    await message.ReplyAsync(
+                        $"I'm sorry, you have reached your hourly quota of {"message".ToQuantity(quota)}. Please wait {"minutes".ToQuantity(timeUntilNextMessage.TotalMinutes, "0")} before trying again."
+                    );
+                    return;
+                }
+
+                _lastMessageTimeByQuotaUsers[message.Author.Id] = DateTime.UtcNow;
+            }
+            else
+            {
+                _lastMessageTimeByQuotaUsers.Add(message.Author.Id, DateTime.UtcNow);
+            }
+        }
+
+#pragma warning disable CS4014
         Task.Run(async () =>
+#pragma warning restore CS4014
         {
             using var typing = textChannel.EnterTypingState();
 
@@ -68,8 +98,6 @@ public class MentionHandler : IMessageReceivedEventHandler
 
             await message.ReplyAsync(response);
         });
-
-        return Task.CompletedTask;
     }
 
     private static string GetFriendlyAuthorName(IMessage message) =>

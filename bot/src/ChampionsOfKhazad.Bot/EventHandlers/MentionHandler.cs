@@ -48,11 +48,11 @@ public class MentionHandler : IMessageReceivedEventHandler
             )
             {
                 var timeSinceLastMessage = DateTime.UtcNow - lastMessageTime;
-                if (timeSinceLastMessage < TimeSpan.FromHours(1))
+                if (timeSinceLastMessage < TimeSpan.FromDays(365))
                 {
-                    var timeUntilNextMessage = TimeSpan.FromHours(1) - timeSinceLastMessage;
+                    var timeUntilNextMessage = TimeSpan.FromDays(365) - timeSinceLastMessage;
                     await message.ReplyAsync(
-                        $"I'm sorry, you have reached your hourly quota of {"message".ToQuantity(quota)}. Please wait {"minutes".ToQuantity(timeUntilNextMessage.TotalMinutes, "0")} before trying again."
+                        $"I'm sorry, you have reached your yearly quota of {"message".ToQuantity(quota)}. Please wait {"minutes".ToQuantity(timeUntilNextMessage.TotalMinutes, "0")} before trying again."
                     );
                     return;
                 }

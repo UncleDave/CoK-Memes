@@ -8,7 +8,7 @@
 
     <ItemGroup>
       <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="7.0.0" />
-      <PackageReference Include="Pinecone.NET" Version="1.2.0" />
+      <PackageReference Include="Pinecone.NET" Version="1.2.1" />
     </ItemGroup>
 
 </Project>

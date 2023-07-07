@@ -15,7 +15,13 @@ public static class ServiceCollectionExtensions
         where TImplementation : class, IEventHandler
         where TOptions : class =>
         services
-            .AddSingleton<IEventHandler, TImplementation>()
+            .AddSingleton(
+                serviceProvider =>
+                    EventHandlerFactory.CreateEventHandler<TImplementation>(
+                        serviceProvider,
+                        configuration
+                    )
+            )
             .AddOptionsWithEagerValidation<TOptions>(configuration);
 
     public static IServiceCollection AddOptionsWithEagerValidation<T>(

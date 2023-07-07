@@ -17,7 +17,10 @@ public class EmoteStreakHandler : IMessageReceivedEventHandler
 
     public async Task StartAsync(BotContext context)
     {
-        _emote = await context.Guild.GetEmotesAsync().SingleAsync(x => x.Name == _options.EmoteName);
+        _emote = await context.Guild
+            .GetEmotesAsync()
+            .SingleAsync(x => x.Name == _options.EmoteName);
+
         _channel = await context.Guild.GetChannelAsync(_options.ChannelId);
         _botId = context.BotId;
     }
@@ -29,11 +32,7 @@ public class EmoteStreakHandler : IMessageReceivedEventHandler
                 $"{nameof(EmoteStreakHandler)} has not been started"
             );
 
-        if (
-            message.Channel is not ITextChannel textChannel
-            || (textChannel.CategoryId != _options.ChannelId && textChannel.Id != _options.ChannelId)
-            || message.Content == _emote.ToString()
-        )
+        if (message.Content == _emote.ToString())
             return;
 
         var streak = 0;
@@ -55,7 +54,10 @@ public class EmoteStreakHandler : IMessageReceivedEventHandler
                 break;
 
             // Ignore repeat messages from the same user
-            if (!_options.AllowSingleUserStreaks && previousUserMessage.Author.Id == previousAuthorId)
+            if (
+                !_options.AllowSingleUserStreaks
+                && previousUserMessage.Author.Id == previousAuthorId
+            )
                 continue;
 
             previousAuthorId = previousUserMessage.Author.Id;

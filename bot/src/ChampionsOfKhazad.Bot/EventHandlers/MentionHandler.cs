@@ -8,8 +8,6 @@ using OpenAI.ObjectModels.RequestModels;
 
 namespace ChampionsOfKhazad.Bot;
 
-// TODO: Threads
-
 public class MentionHandler : IMessageReceivedEventHandler
 {
     private static readonly Regex NameExpression =
@@ -36,7 +34,6 @@ public class MentionHandler : IMessageReceivedEventHandler
     {
         if (
             message.Channel is not ITextChannel textChannel
-            || textChannel.Id != _options.ChannelId
             || !message.MentionedUserIds.Contains(_botId)
         )
             return;
@@ -117,5 +114,5 @@ public class MentionHandler : IMessageReceivedEventHandler
             ? StaticValues.ChatMessageRoles.Assistant
             : StaticValues.ChatMessageRoles.User;
 
-    public override string ToString() => $"{nameof(MentionHandler)}";
+    public override string ToString() => nameof(MentionHandler);
 }

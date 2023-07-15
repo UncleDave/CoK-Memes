@@ -2,9 +2,9 @@
 
 namespace ChampionsOfKhazad.Bot;
 
-public class ReactionHandlerOptions
+public class QuestionMarkReactorOptions
 {
-    public const string Key = "Reaction";
+    public const string Key = "QuestionMarkReaction";
     
     [Required]
     public ulong UserId { get; init; }

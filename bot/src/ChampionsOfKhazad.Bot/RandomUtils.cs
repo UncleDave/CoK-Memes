@@ -28,5 +28,5 @@ public static class RandomUtils
         };
     }
 
-    public static bool RollTheDice(int chance) => Random.Next(1, 101) <= chance;
+    public static bool Roll(int chance) => Random.Next(1, 101) <= chance;
 }

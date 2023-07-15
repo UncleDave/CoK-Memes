@@ -64,8 +64,11 @@ host.Services
     .AddEventHandler<SummonUserHandler, SummonUserHandlerOptions>(
         host.Configuration.GetEventHandlerSection(SummonUserHandlerOptions.Key)
     )
-    .AddEventHandler<ReactionHandler, ReactionHandlerOptions>(
-        host.Configuration.GetEventHandlerSection(ReactionHandlerOptions.Key)
+    .AddEventHandler<ClownReactor, ClownReactorOptions>(
+        host.Configuration.GetEventHandlerSection(ClownReactorOptions.Key)
+    )
+    .AddEventHandler<QuestionMarkReactor, QuestionMarkReactorOptions>(
+        host.Configuration.GetEventHandlerSection(QuestionMarkReactorOptions.Key)
     )
     .AddEventHandler<MentionHandler, MentionHandlerOptions>(
         host.Configuration.GetEventHandlerSection(MentionHandlerOptions.Key)

@@ -38,6 +38,17 @@ public class MentionHandler : IMessageReceivedEventHandler
         )
             return;
 
+        // July 23, 2023, 06:30:00 PM UTC
+        var banDate = new DateTime(2023, 7, 23, 16, 30, 0, DateTimeKind.Utc);
+
+        if (message.Author.Id == _options.BannedUserId && DateTime.UtcNow < banDate)
+        {
+            await message.ReplyAsync(
+                $"This Lorekeeper Hammerstone™ account has been temporarily suspended. The suspension expires in {(DateTime.UtcNow - banDate).Humanize(3, true)}. Please go to https://isleafanofficeryet.org/banned.html for further information. (LHS8008S101)"
+            );
+            return;
+        }
+
         if (_options.HourlyUserQuotas?.TryGetValue(message.Author.Id, out var quota) ?? false)
         {
             if (

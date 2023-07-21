@@ -37,7 +37,8 @@ host.Services.AddSingleton<DiscordSocketClient>(
                     GatewayIntents.Guilds
                     | GatewayIntents.GuildMessages
                     | GatewayIntents.DirectMessages
-                    | GatewayIntents.MessageContent,
+                    | GatewayIntents.MessageContent
+                    | GatewayIntents.GuildMessageReactions,
                 LogLevel = LogSeverity.Debug
             }
         )
@@ -75,6 +76,9 @@ host.Services
     )
     .AddEventHandler<SycophantHandler, SycophantHandlerOptions>(
         host.Configuration.GetEventHandlerSection(SycophantHandlerOptions.Key)
+    )
+    .AddEventHandler<HallOfFameReactionHandler, HallOfFameReactionHandlerOptions>(
+        host.Configuration.GetEventHandlerSection(HallOfFameReactionHandlerOptions.Key)
     );
 
 host.Services.AddHostedService<BotService>();

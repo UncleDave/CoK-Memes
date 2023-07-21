@@ -29,7 +29,7 @@ public class EmoteStreakHandler : IMessageReceivedEventHandler
     {
         if (_emote is null)
             throw new InvalidOperationException(
-                $"{nameof(EmoteStreakHandler)} has not been started"
+                $"{nameof(EmoteStreakHandler)} has not been started or emote {_options.EmoteName} could not be found"
             );
 
         if (message.Content == _emote.ToString())

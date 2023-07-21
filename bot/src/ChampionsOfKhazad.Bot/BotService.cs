@@ -16,6 +16,9 @@ public class BotService : IHostedService
     private IEnumerable<IMessageReceivedEventHandler> _messageReceivedEventHandlers =
         Array.Empty<IMessageReceivedEventHandler>();
 
+    private IEnumerable<IReactionAddedEventHandler> _reactionAddedEventHandlers =
+        Array.Empty<IReactionAddedEventHandler>();
+
     public BotService(
         DiscordSocketClient client,
         ILogger<BotService> logger,
@@ -30,6 +33,7 @@ public class BotService : IHostedService
 
         _client.Ready += Ready;
         _client.MessageReceived += MessageReceivedAsync;
+        _client.ReactionAdded += ReactionAddedAsync;
     }
 
     public async Task StartAsync(CancellationToken cancellationToken)
@@ -57,9 +61,13 @@ public class BotService : IHostedService
         );
 
         var context = new BotContext(_client.Rest.CurrentUser.Id, guild);
-        var startedEventHandlers = await StartEventHandlersAsync(_eventHandlers, context);
+
+        var startedEventHandlers = (
+            await StartEventHandlersAsync(_eventHandlers, context)
+        ).ToList();
 
         _messageReceivedEventHandlers = startedEventHandlers.OfType<IMessageReceivedEventHandler>();
+        _reactionAddedEventHandlers = startedEventHandlers.OfType<IReactionAddedEventHandler>();
 
         _logger.LogInformation("Bot started");
     }
@@ -78,6 +86,25 @@ public class BotService : IHostedService
             catch (Exception e)
             {
                 _logger.LogError(e, "Error handling message with {EventHandler}", handler);
+            }
+        }
+    }
+
+    private async Task ReactionAddedAsync(
+        Cacheable<IUserMessage, ulong> message,
+        Cacheable<IMessageChannel, ulong> channel,
+        SocketReaction reaction
+    )
+    {
+        foreach (var handler in _reactionAddedEventHandlers)
+        {
+            try
+            {
+                await handler.HandleReactionAsync(reaction);
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Error handling reaction with {EventHandler}", handler);
             }
         }
     }

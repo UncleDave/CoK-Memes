@@ -40,8 +40,9 @@ public class Assistant
     public async Task<string> RespondAsync(
         string message,
         User user,
-        IEnumerable<ChatMessage> chatContext,
-        ChatMessage? referencedMessage
+        IEnumerable<ChatMessage>? chatContext = null,
+        ChatMessage? referencedMessage = null,
+        string? instructions = null
     )
     {
         var embeddings = await _embeddingsService.CreateEmbeddingsAsync(
@@ -61,13 +62,13 @@ public class Assistant
 
         const string separator = "\n\n###\n\n";
 
-        var messages = chatContext
+        var messages = (chatContext ?? Array.Empty<ChatMessage>())
             .Prepend(
                 ChatMessage.FromSystem(
                     string.Join(
                         separator,
                         string.Join(separator, vectors.Select(x => x.Metadata!["text"].Inner)),
-                        Instructions
+                        instructions ?? Instructions
                     )
                 )
             )

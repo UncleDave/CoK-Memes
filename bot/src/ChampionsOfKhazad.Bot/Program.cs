@@ -72,6 +72,9 @@ host.Services
     )
     .AddEventHandler<MentionHandler, MentionHandlerOptions>(
         host.Configuration.GetEventHandlerSection(MentionHandlerOptions.Key)
+    )
+    .AddEventHandler<SycophantHandler, SycophantHandlerOptions>(
+        host.Configuration.GetEventHandlerSection(SycophantHandlerOptions.Key)
     );
 
 host.Services.AddHostedService<BotService>();

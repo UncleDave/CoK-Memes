@@ -7,6 +7,8 @@ using OpenAI.ObjectModels.RequestModels;
 
 namespace ChampionsOfKhazad.Bot;
 
+// TODO: Better async solution than Task.Run
+
 public class MentionHandler : IMessageReceivedEventHandler
 {
     private static readonly Regex NameExpression =

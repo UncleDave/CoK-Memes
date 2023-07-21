@@ -4,7 +4,5 @@ public class MentionHandlerOptions
 {
     public const string Key = "Mention";
 
-    public IReadOnlyDictionary<ulong, ushort>? HourlyUserQuotas { get; init; }
-    
-    public ulong BannedUserId { get; init; }
+    public ulong CringeAsideUserId { get; init; }
 }

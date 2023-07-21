@@ -1,7 +1,6 @@
 ﻿using System.Text.RegularExpressions;
 using ChampionsOfKhazad.Bot.ChatBot;
 using Discord;
-using Humanizer;
 using Microsoft.Extensions.Options;
 using OpenAI.ObjectModels;
 using OpenAI.ObjectModels.RequestModels;
@@ -15,7 +14,6 @@ public class MentionHandler : IMessageReceivedEventHandler
 
     private readonly MentionHandlerOptions _options;
     private readonly Assistant _assistant;
-    private readonly Dictionary<ulong, DateTime> _lastMessageTimeByQuotaUsers = new();
     private ulong _botId;
 
     public MentionHandler(IOptions<MentionHandlerOptions> options, Assistant assistant)
@@ -30,48 +28,13 @@ public class MentionHandler : IMessageReceivedEventHandler
         return Task.CompletedTask;
     }
 
-    public async Task HandleMessageAsync(IUserMessage message)
+    public Task HandleMessageAsync(IUserMessage message)
     {
         if (
             message.Channel is not ITextChannel textChannel
             || !message.MentionedUserIds.Contains(_botId)
         )
-            return;
-
-        // July 23, 2023, 06:30:00 PM UTC
-        var banDate = new DateTime(2023, 7, 23, 16, 30, 0, DateTimeKind.Utc);
-
-        if (message.Author.Id == _options.BannedUserId && DateTime.UtcNow < banDate)
-        {
-            await message.ReplyAsync(
-                $"This Lorekeeper Hammerstone™ account has been temporarily suspended. The suspension expires in {(DateTime.UtcNow - banDate).Humanize(3, true)}. Please go to https://isleafanofficeryet.org/banned.html for further information. (LHS8008S101)"
-            );
-            return;
-        }
-
-        if (_options.HourlyUserQuotas?.TryGetValue(message.Author.Id, out var quota) ?? false)
-        {
-            if (
-                _lastMessageTimeByQuotaUsers.TryGetValue(message.Author.Id, out var lastMessageTime)
-            )
-            {
-                var timeSinceLastMessage = DateTime.UtcNow - lastMessageTime;
-                if (timeSinceLastMessage < TimeSpan.FromDays(365))
-                {
-                    var timeUntilNextMessage = TimeSpan.FromDays(365) - timeSinceLastMessage;
-                    await message.ReplyAsync(
-                        $"I'm sorry, you have reached your yearly quota of {"message".ToQuantity(quota)}. Please wait {"minutes".ToQuantity(timeUntilNextMessage.TotalMinutes, "0")} before trying again."
-                    );
-                    return;
-                }
-
-                _lastMessageTimeByQuotaUsers[message.Author.Id] = DateTime.UtcNow;
-            }
-            else
-            {
-                _lastMessageTimeByQuotaUsers.Add(message.Author.Id, DateTime.UtcNow);
-            }
-        }
+            return Task.CompletedTask;
 
 #pragma warning disable CS4014
         Task.Run(async () =>
@@ -91,6 +54,11 @@ public class MentionHandler : IMessageReceivedEventHandler
                 )
                 .ToListAsync();
 
+            if (message.Author.Id == _options.CringeAsideUserId)
+                previousMessages.Add(
+                    ChatMessage.FromSystem("Include cringe aside somewhere in your response.")
+                );
+
             var response = await _assistant.RespondAsync(
                 message.CleanContent,
                 user,
@@ -106,6 +74,8 @@ public class MentionHandler : IMessageReceivedEventHandler
 
             await message.ReplyAsync(response);
         });
+
+        return Task.CompletedTask;
     }
 
     private static string GetFriendlyAuthorName(IMessage message) =>

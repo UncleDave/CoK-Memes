@@ -5,28 +5,17 @@ namespace ChampionsOfKhazad.Bot;
 
 public static class EventHandlerFactory
 {
-    public static IEventHandler CreateEventHandler<T>(
+    public static IMessageReceivedEventHandler CreateMessageReceivedEventHandler<T>(
         IServiceProvider serviceProvider,
         IConfiguration config
     )
-        where T : IEventHandler
+        where T : IMessageReceivedEventHandler
     {
         var eventHandler = ActivatorUtilities.CreateInstance<T>(serviceProvider);
-
-        return ApplyChannelSpecificDecorator(eventHandler, config);
-    }
-
-    private static IEventHandler ApplyChannelSpecificDecorator(
-        IEventHandler eventHandler,
-        IConfiguration config
-    )
-    {
         var channelId = config.GetValue<ulong?>("ChannelId");
 
-        return
-            channelId is not null
-            && eventHandler is IMessageReceivedEventHandler messageReceivedEventHandler
-            ? new ChannelSpecificEventHandler(messageReceivedEventHandler, channelId.Value)
+        return channelId is not null
+            ? new ChannelSpecificEventHandler(eventHandler, channelId.Value)
             : eventHandler;
     }
 }

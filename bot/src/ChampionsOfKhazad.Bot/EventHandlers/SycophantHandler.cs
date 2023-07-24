@@ -9,18 +9,17 @@ public class SycophantHandler : IMessageReceivedEventHandler
 {
     private readonly SycophantHandlerOptions _options;
     private readonly Assistant _assistant;
-    private ulong _botId;
+    private readonly BotContext _context;
 
-    public SycophantHandler(IOptions<SycophantHandlerOptions> options, Assistant assistant)
+    public SycophantHandler(
+        IOptions<SycophantHandlerOptions> options,
+        Assistant assistant,
+        BotContext context
+    )
     {
         _options = options.Value;
         _assistant = assistant;
-    }
-
-    public Task StartAsync(BotContext context)
-    {
-        _botId = context.BotId;
-        return Task.CompletedTask;
+        _context = context;
     }
 
     public Task HandleMessageAsync(IUserMessage message)
@@ -28,7 +27,7 @@ public class SycophantHandler : IMessageReceivedEventHandler
         if (
             message.Channel is not ITextChannel textChannel
             || message.Author.Id != _options.UserId
-            || message.MentionedUserIds.Contains(_botId)
+            || message.MentionedUserIds.Contains(_context.BotId)
             || !RandomUtils.Roll(1)
         )
             return Task.CompletedTask;

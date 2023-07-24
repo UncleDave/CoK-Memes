@@ -4,13 +4,12 @@ namespace ChampionsOfKhazad.Bot;
 
 // TODO: Fix ToString.
 
-public class ChannelSpecificEventHandler : EventHandlerDecorator, IMessageReceivedEventHandler
+public class ChannelSpecificEventHandler : IMessageReceivedEventHandler
 {
     private readonly IMessageReceivedEventHandler _eventHandler;
     private readonly ulong _channelId;
 
     public ChannelSpecificEventHandler(IMessageReceivedEventHandler eventHandler, ulong channelId)
-        : base(eventHandler)
     {
         _eventHandler = eventHandler;
         _channelId = channelId;

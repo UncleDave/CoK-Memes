@@ -58,28 +58,36 @@ host.Services.AddPinecone(
 host.Services.AddSingleton<Assistant>();
 
 host.Services
-    .AddEventHandler<DirectMessageHandler>()
-    .AddEventHandler<EmoteStreakHandler, EmoteStreakHandlerOptions>(
+    .AddMessageReceivedEventHandler<DirectMessageHandler>()
+    .AddMessageReceivedEventHandler<EmoteStreakHandler, EmoteStreakHandlerOptions>(
         host.Configuration.GetEventHandlerSection(EmoteStreakHandlerOptions.Key)
     )
-    .AddEventHandler<SummonUserHandler, SummonUserHandlerOptions>(
+    .AddMessageReceivedEventHandler<SummonUserHandler, SummonUserHandlerOptions>(
         host.Configuration.GetEventHandlerSection(SummonUserHandlerOptions.Key)
     )
-    .AddEventHandler<ClownReactor, ClownReactorOptions>(
+    .AddMessageReceivedEventHandler<ClownReactor, ClownReactorOptions>(
         host.Configuration.GetEventHandlerSection(ClownReactorOptions.Key)
     )
-    .AddEventHandler<QuestionMarkReactor, QuestionMarkReactorOptions>(
+    .AddMessageReceivedEventHandler<QuestionMarkReactor, QuestionMarkReactorOptions>(
         host.Configuration.GetEventHandlerSection(QuestionMarkReactorOptions.Key)
     )
-    .AddEventHandler<MentionHandler, MentionHandlerOptions>(
+    .AddMessageReceivedEventHandler<MentionHandler, MentionHandlerOptions>(
         host.Configuration.GetEventHandlerSection(MentionHandlerOptions.Key)
     )
-    .AddEventHandler<SycophantHandler, SycophantHandlerOptions>(
+    .AddMessageReceivedEventHandler<SycophantHandler, SycophantHandlerOptions>(
         host.Configuration.GetEventHandlerSection(SycophantHandlerOptions.Key)
     )
-    .AddEventHandler<HallOfFameReactionHandler, HallOfFameReactionHandlerOptions>(
+    .AddReactionAddedEventHandler<HallOfFameReactionHandler, HallOfFameReactionHandlerOptions>(
         host.Configuration.GetEventHandlerSection(HallOfFameReactionHandlerOptions.Key)
     );
 
-host.Services.AddHostedService<BotService>();
+host.Services
+    .AddHostedService<BotService>()
+    .AddSingleton<BotContextProvider>()
+    .AddScoped<BotContext>(
+        serviceProvider =>
+            serviceProvider.GetRequiredService<BotContextProvider>().BotContext
+            ?? throw new InvalidOperationException("BotContext is not available")
+    );
+
 host.Build().Run();

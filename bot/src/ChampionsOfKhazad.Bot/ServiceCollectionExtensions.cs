@@ -5,23 +5,36 @@ namespace ChampionsOfKhazad.Bot;
 
 public static class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddEventHandler<T>(this IServiceCollection services)
-        where T : class, IEventHandler => services.AddSingleton<IEventHandler, T>();
+    public static IServiceCollection AddMessageReceivedEventHandler<T>(
+        this IServiceCollection services
+    )
+        where T : class, IMessageReceivedEventHandler =>
+        services.AddScoped<IMessageReceivedEventHandler, T>();
 
-    public static IServiceCollection AddEventHandler<TImplementation, TOptions>(
+    public static IServiceCollection AddMessageReceivedEventHandler<TImplementation, TOptions>(
         this IServiceCollection services,
         IConfiguration configuration
     )
-        where TImplementation : class, IEventHandler
+        where TImplementation : class, IMessageReceivedEventHandler
         where TOptions : class =>
         services
-            .AddSingleton(
+            .AddScoped(
                 serviceProvider =>
-                    EventHandlerFactory.CreateEventHandler<TImplementation>(
+                    EventHandlerFactory.CreateMessageReceivedEventHandler<TImplementation>(
                         serviceProvider,
                         configuration
                     )
             )
+            .AddOptionsWithEagerValidation<TOptions>(configuration);
+
+    public static IServiceCollection AddReactionAddedEventHandler<TImplementation, TOptions>(
+        this IServiceCollection services,
+        IConfiguration configuration
+    )
+        where TImplementation : class, IReactionAddedEventHandler
+        where TOptions : class =>
+        services
+            .AddScoped<IReactionAddedEventHandler, TImplementation>()
             .AddOptionsWithEagerValidation<TOptions>(configuration);
 
     public static IServiceCollection AddOptionsWithEagerValidation<T>(

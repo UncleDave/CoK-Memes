@@ -1,5 +1,6 @@
 ﻿using Discord;
 using Discord.WebSocket;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -10,26 +11,23 @@ public class BotService : IHostedService
 {
     private readonly DiscordSocketClient _client;
     private readonly ILogger _logger;
-    private readonly IEnumerable<IEventHandler> _eventHandlers;
     private readonly BotOptions _options;
-
-    private IEnumerable<IMessageReceivedEventHandler> _messageReceivedEventHandlers =
-        Array.Empty<IMessageReceivedEventHandler>();
-
-    private IEnumerable<IReactionAddedEventHandler> _reactionAddedEventHandlers =
-        Array.Empty<IReactionAddedEventHandler>();
+    private readonly IServiceProvider _serviceProvider;
+    private readonly BotContextProvider _botContextProvider;
 
     public BotService(
         DiscordSocketClient client,
         ILogger<BotService> logger,
         IOptions<BotOptions> options,
-        IEnumerable<IEventHandler> eventHandlers
+        IServiceProvider serviceProvider,
+        BotContextProvider botContextProvider
     )
     {
         _client = client;
         _logger = logger;
         _options = options.Value;
-        _eventHandlers = eventHandlers;
+        _serviceProvider = serviceProvider;
+        _botContextProvider = botContextProvider;
 
         _client.Ready += Ready;
         _client.MessageReceived += MessageReceivedAsync;
@@ -49,7 +47,7 @@ public class BotService : IHostedService
 
     public async Task StopAsync(CancellationToken cancellationToken) => await _client.StopAsync();
 
-    private async Task Ready()
+    private Task Ready()
     {
         var guild = _client.GetGuild(_options.GuildId);
 
@@ -60,71 +58,47 @@ public class BotService : IHostedService
             guild.Channels.Select(x => x.Name)
         );
 
-        var context = new BotContext(_client.Rest.CurrentUser.Id, guild);
-
-        var startedEventHandlers = (
-            await StartEventHandlersAsync(_eventHandlers, context)
-        ).ToList();
-
-        _messageReceivedEventHandlers = startedEventHandlers.OfType<IMessageReceivedEventHandler>();
-        _reactionAddedEventHandlers = startedEventHandlers.OfType<IReactionAddedEventHandler>();
+        _botContextProvider.BotContext = new BotContext(_client.CurrentUser.Id, guild);
 
         _logger.LogInformation("Bot started");
+
+        return Task.CompletedTask;
     }
 
-    private async Task MessageReceivedAsync(SocketMessage message)
+    private async Task ExecuteEventHandlers<T>(Func<T, Task> handlerExecutor)
     {
-        if (message is not SocketUserMessage userMessage || message.Author.IsBot)
-            return;
+        using var scope = _serviceProvider.CreateScope();
+        var eventHandlers = scope.ServiceProvider.GetServices<T>();
 
-        foreach (var handler in _messageReceivedEventHandlers)
+        foreach (var eventHandler in eventHandlers)
         {
             try
             {
-                await handler.HandleMessageAsync(userMessage);
+                await handlerExecutor(eventHandler);
             }
             catch (Exception e)
             {
-                _logger.LogError(e, "Error handling message with {EventHandler}", handler);
+                _logger.LogError(e, "Error executing event handler {EventHandler}", eventHandler);
             }
         }
     }
 
-    private async Task ReactionAddedAsync(
+    private Task MessageReceivedAsync(SocketMessage message)
+    {
+        if (message is not SocketUserMessage userMessage || message.Author.IsBot)
+            return Task.CompletedTask;
+
+        return ExecuteEventHandlers<IMessageReceivedEventHandler>(
+            eventHandler => eventHandler.HandleMessageAsync(userMessage)
+        );
+    }
+
+    private Task ReactionAddedAsync(
         Cacheable<IUserMessage, ulong> message,
         Cacheable<IMessageChannel, ulong> channel,
         SocketReaction reaction
-    )
-    {
-        foreach (var handler in _reactionAddedEventHandlers)
-        {
-            try
-            {
-                await handler.HandleReactionAsync(reaction);
-            }
-            catch (Exception e)
-            {
-                _logger.LogError(e, "Error handling reaction with {EventHandler}", handler);
-            }
-        }
-    }
-
-    private Task<IEnumerable<IEventHandler>> StartEventHandlersAsync(
-        IEnumerable<IEventHandler> eventHandlers,
-        BotContext context
     ) =>
-        eventHandlers.WhereAsync(async eventHandler =>
-        {
-            try
-            {
-                await eventHandler.StartAsync(context);
-                _logger.LogDebug("Started event handler {EventHandler}", eventHandler);
-                return true;
-            }
-            catch (Exception e)
-            {
-                _logger.LogError(e, "Error starting event handler {EventHandler}", eventHandler);
-                return false;
-            }
-        });
+        ExecuteEventHandlers<IReactionAddedEventHandler>(
+            eventHandler => eventHandler.HandleReactionAsync(reaction)
+        );
 }

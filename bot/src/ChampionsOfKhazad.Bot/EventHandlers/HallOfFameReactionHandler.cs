@@ -7,31 +7,23 @@ namespace ChampionsOfKhazad.Bot;
 public class HallOfFameReactionHandler : IReactionAddedEventHandler
 {
     private readonly HallOfFameReactionHandlerOptions _options;
-    private ITextChannel? _targetChannel;
+    private readonly BotContext _context;
 
-    public HallOfFameReactionHandler(IOptions<HallOfFameReactionHandlerOptions> options)
+    public HallOfFameReactionHandler(
+        IOptions<HallOfFameReactionHandlerOptions> options,
+        BotContext context
+    )
     {
         _options = options.Value;
-    }
-
-    public async Task StartAsync(BotContext context)
-    {
-        var targetChannel = await context.Guild.GetChannelAsync(_options.TargetChannelId);
-
-        if (targetChannel is not ITextChannel textChannel)
-            throw new InvalidOperationException(
-                "Target channel was not found or is not a text channel"
-            );
-
-        _targetChannel = textChannel;
+        _context = context;
     }
 
     public async Task HandleReactionAsync(SocketReaction reaction)
     {
-        if (_targetChannel is null)
-            throw new InvalidOperationException(
-                $"{nameof(HallOfFameReactionHandler)} has not been started or channel {_options.TargetChannelId} could not be found"
-            );
+        var targetChannel = await _context.Guild.GetChannelAsync(_options.TargetChannelId);
+
+        if (targetChannel is not ITextChannel targetTextChannel)
+            throw new ApplicationException("Target channel was not found or is not a text channel");
 
         var message = reaction.Message.IsSpecified
             ? reaction.Message.Value
@@ -42,7 +34,7 @@ public class HallOfFameReactionHandler : IReactionAddedEventHandler
             || reaction.Emote.Name != _options.EmoteName
             || message.Author.Id != _options.MessageAuthorId
             || message.Reactions[reaction.Emote].ReactionCount < _options.Threshold
-            || await MessageAlreadyPostedAsync(message)
+            || await MessageAlreadyPostedAsync(message, targetTextChannel)
         )
             return;
 
@@ -60,12 +52,15 @@ public class HallOfFameReactionHandler : IReactionAddedEventHandler
             .WithFooter(message.Id.ToString())
             .WithTimestamp(message.Timestamp);
 
-        await _targetChannel.SendMessageAsync(embed: embed.Build());
+        await targetTextChannel.SendMessageAsync(embed: embed.Build());
     }
 
-    private async Task<bool> MessageAlreadyPostedAsync(IMessage message)
+    private static async Task<bool> MessageAlreadyPostedAsync(
+        IMessage message,
+        IMessageChannel channel
+    )
     {
-        var matchingMessage = await _targetChannel!
+        var matchingMessage = await channel!
             .GetMessagesAsync()
             .Flatten()
             .FirstOrDefaultAsync(

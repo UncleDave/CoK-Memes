@@ -6,33 +6,23 @@ namespace ChampionsOfKhazad.Bot;
 public class EmoteStreakHandler : IMessageReceivedEventHandler
 {
     private readonly EmoteStreakHandlerOptions _options;
-    private IEmote? _emote;
-    private IGuildChannel? _channel;
-    private ulong? _botId;
+    private readonly BotContext _botContext;
 
-    public EmoteStreakHandler(IOptions<EmoteStreakHandlerOptions> options)
+    public EmoteStreakHandler(IOptions<EmoteStreakHandlerOptions> options, BotContext botContext)
     {
         _options = options.Value;
-    }
-
-    public async Task StartAsync(BotContext context)
-    {
-        _emote = await context.Guild
-            .GetEmotesAsync()
-            .SingleAsync(x => x.Name == _options.EmoteName);
-
-        _channel = await context.Guild.GetChannelAsync(_options.ChannelId);
-        _botId = context.BotId;
+        _botContext = botContext;
     }
 
     public async Task HandleMessageAsync(IUserMessage message)
     {
-        if (_emote is null)
-            throw new InvalidOperationException(
-                $"{nameof(EmoteStreakHandler)} has not been started or emote {_options.EmoteName} could not be found"
-            );
+        var emote =
+            _botContext.Guild.Emotes.SingleOrDefault(x => x.Name == _options.EmoteName)
+            ?? await _botContext.Guild
+                .GetEmotesAsync()
+                .SingleAsync(x => x.Name == _options.EmoteName);
 
-        if (message.Content == _emote.ToString())
+        if (message.Content == emote.ToString())
             return;
 
         var streak = 0;
@@ -45,12 +35,12 @@ public class EmoteStreakHandler : IMessageReceivedEventHandler
             // Otherwise users can edit their messages after a streak is broken to continue it
             if (
                 previousMessage is not IUserMessage previousUserMessage
-                || (previousMessage.Author.IsBot && previousMessage.Author.Id != _botId)
+                || (previousMessage.Author.IsBot && previousMessage.Author.Id != _botContext.BotId)
             )
                 continue;
 
             // Streak is broken if the message isn't the emote - stop counting
-            if (previousUserMessage.Content != _emote.ToString())
+            if (previousUserMessage.Content != emote.ToString())
                 break;
 
             // Ignore repeat messages from the same user
@@ -67,11 +57,11 @@ public class EmoteStreakHandler : IMessageReceivedEventHandler
         if (streak > 1)
         {
             await message.Channel.SendMessageAsync(
-                $"Streak of {streak} {_emote} broken by {message.Author.Mention}, shame on them."
+                $"Streak of {streak} {emote} broken by {message.Author.Mention}, shame on them."
             );
         }
     }
 
     public override string ToString() =>
-        $"{nameof(EmoteStreakHandler)} - :{_options.EmoteName}: in #{_channel?.Name ?? _options.ChannelId.ToString()}";
+        $"{nameof(EmoteStreakHandler)} - :{_options.EmoteName}: in {_options.ChannelId.ToString()}";
 }

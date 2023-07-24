@@ -1,9 +1,8 @@
-﻿using Discord;
-using Discord.WebSocket;
+﻿using Discord.WebSocket;
 
 namespace ChampionsOfKhazad.Bot;
 
-public interface IReactionAddedEventHandler : IEventHandler
+public interface IReactionAddedEventHandler
 {
     Task HandleReactionAsync(SocketReaction reaction);
 }

@@ -16,25 +16,24 @@ public class MentionHandler : IMessageReceivedEventHandler
 
     private readonly MentionHandlerOptions _options;
     private readonly Assistant _assistant;
-    private ulong _botId;
+    private readonly BotContext _context;
 
-    public MentionHandler(IOptions<MentionHandlerOptions> options, Assistant assistant)
+    public MentionHandler(
+        IOptions<MentionHandlerOptions> options,
+        Assistant assistant,
+        BotContext context
+    )
     {
         _options = options.Value;
         _assistant = assistant;
-    }
-
-    public Task StartAsync(BotContext context)
-    {
-        _botId = context.BotId;
-        return Task.CompletedTask;
+        _context = context;
     }
 
     public Task HandleMessageAsync(IUserMessage message)
     {
         if (
             message.Channel is not ITextChannel textChannel
-            || !message.MentionedUserIds.Contains(_botId)
+            || !message.MentionedUserIds.Contains(_context.BotId)
         )
             return Task.CompletedTask;
 
@@ -93,7 +92,7 @@ public class MentionHandler : IMessageReceivedEventHandler
                     : message.Author.Id.ToString();
 
     private string GetMessageRole(IMessage message) =>
-        message.Author.Id == _botId
+        message.Author.Id == _context.BotId
             ? StaticValues.ChatMessageRoles.Assistant
             : StaticValues.ChatMessageRoles.User;
 

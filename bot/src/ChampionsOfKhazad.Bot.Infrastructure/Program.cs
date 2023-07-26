@@ -74,11 +74,7 @@ return await Pulumi.Deployment.RunAsync(() =>
         new ImageArgs
         {
             ImageName = "uncledave/cok-bot:latest",
-            Build = new DockerBuildArgs
-            {
-                Context = "..",
-                Platform = "linux/amd64"
-            },
+            Build = new DockerBuildArgs { Context = "..", Platform = "linux/amd64" },
             Registry = new RegistryArgs
             {
                 Server = imageRegistryServer,
@@ -92,6 +88,7 @@ return await Pulumi.Deployment.RunAsync(() =>
     const string imageRegistryReadPasswordSecretName = "registry-read-password";
     const string openAiApiKeySecretName = "open-ai-api-key";
     const string pineconeApiKeySecretName = "pinecone-api-key";
+    const string raidHelperApiKeySecretName = "raid-helper-api-key";
 
     var containerApp = new ContainerApp(
         "bot-app",
@@ -128,6 +125,11 @@ return await Pulumi.Deployment.RunAsync(() =>
                     {
                         Name = pineconeApiKeySecretName,
                         Value = config.RequireSecret("pineconeApiKey")
+                    },
+                    new SecretArgs
+                    {
+                        Name = raidHelperApiKeySecretName,
+                        Value = config.RequireSecret("raidHelperApiKey")
                     }
                 }
             },
@@ -158,6 +160,11 @@ return await Pulumi.Deployment.RunAsync(() =>
                         {
                             Name = "Pinecone__ApiKey",
                             SecretRef = pineconeApiKeySecretName
+                        },
+                        new EnvironmentVarArgs
+                        {
+                            Name = "RaidHelper__ApiKey",
+                            SecretRef = raidHelperApiKeySecretName
                         }
                     },
                     Resources = new ContainerResourcesArgs { Cpu = .25, Memory = "0.5Gi" }

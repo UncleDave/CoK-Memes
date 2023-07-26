@@ -4,5 +4,6 @@
 - Send Messages
 - Send Messages in Threads
 - Read Message History
+- Manage Messages
 
-Bitmask: 274877975552
+Bitmask: 274877983744

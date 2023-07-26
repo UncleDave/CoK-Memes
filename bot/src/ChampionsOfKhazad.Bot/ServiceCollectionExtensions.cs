@@ -37,6 +37,16 @@ public static class ServiceCollectionExtensions
             .AddScoped<IReactionAddedEventHandler, TImplementation>()
             .AddOptionsWithEagerValidation<TOptions>(configuration);
 
+    public static IServiceCollection AddSlashCommand<TImplementation, TOptions>(
+        this IServiceCollection services,
+        IConfiguration configuration
+    )
+        where TImplementation : class, ISlashCommand
+        where TOptions : class =>
+        services
+            .AddScoped<TImplementation>()
+            .AddOptionsWithEagerValidation<TOptions>(configuration);
+
     public static IServiceCollection AddOptionsWithEagerValidation<T>(
         this IServiceCollection services,
         IConfiguration configuration

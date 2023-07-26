@@ -2,6 +2,7 @@
 using ChampionsOfKhazad.Bot.ChatBot;
 using ChampionsOfKhazad.Bot.OpenAi.Embeddings;
 using ChampionsOfKhazad.Bot.Pinecone;
+using ChampionsOfKhazad.Bot.RaidHelper;
 using Discord;
 using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
@@ -57,6 +58,11 @@ host.Services.AddPinecone(
 
 host.Services.AddSingleton<Assistant>();
 
+host.Services.AddRaidHelperClient(
+    host.Configuration["RaidHelper:ApiKey"]
+        ?? throw new ApplicationException("RaidHelper:ApiKey is required")
+);
+
 host.Services
     .AddMessageReceivedEventHandler<DirectMessageHandler>()
     .AddMessageReceivedEventHandler<EmoteStreakHandler, EmoteStreakHandlerOptions>(
@@ -79,6 +85,9 @@ host.Services
     )
     .AddReactionAddedEventHandler<HallOfFameReactionHandler, HallOfFameReactionHandlerOptions>(
         host.Configuration.GetEventHandlerSection(HallOfFameReactionHandlerOptions.Key)
+    )
+    .AddSlashCommand<RaidsSlashCommand, RaidsSlashCommandOptions>(
+        host.Configuration.GetSlashCommandSection(RaidsSlashCommandOptions.Key)
     );
 
 host.Services

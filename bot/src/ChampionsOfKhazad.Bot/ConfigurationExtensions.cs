@@ -8,4 +8,9 @@ public static class ConfigurationExtensions
         this IConfiguration configuration,
         string key
     ) => configuration.GetSection($"{EventHandlerOptions.Key}:{key}");
+
+    public static IConfigurationSection GetSlashCommandSection(
+        this IConfiguration configuration,
+        string key
+    ) => configuration.GetSection($"{SlashCommandOptions.Key}:{key}");
 }

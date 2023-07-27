@@ -40,6 +40,7 @@ public class Assistant
     public async Task<string> RespondAsync(
         string message,
         User user,
+        IEnumerable<string> availableEmotes,
         IEnumerable<ChatMessage>? chatContext = null,
         ChatMessage? referencedMessage = null,
         string? instructions = null
@@ -68,7 +69,11 @@ public class Assistant
                     string.Join(
                         separator,
                         string.Join(separator, vectors.Select(x => x.Metadata!["text"].Inner)),
-                        instructions ?? Instructions
+                        string.Join(
+                            '\n',
+                            instructions ?? Instructions,
+                            $"You can use unicode emojis and the following guild emojis: {string.Join(", ", availableEmotes.Select(x => $":{x}:"))}"
+                        )
                     )
                 )
             )

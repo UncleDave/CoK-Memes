@@ -55,6 +55,7 @@ public class SycophantHandler : IMessageReceivedEventHandler
             var response = await _assistant.RespondAsync(
                 message.CleanContent,
                 user,
+                _context.Guild.Emotes.Select(x => x.Name),
                 recentUserMessages,
                 instructions: "You are a sycophant. You will agree with and echo everything the users says but will not add anything of value. You will try to suck up to them as much as possible. You are not too bright."
             );

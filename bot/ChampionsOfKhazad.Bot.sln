@@ -34,6 +34,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "workflows", "workflows", "{
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChampionsOfKhazad.Bot.Pinecone", "src\ChampionsOfKhazad.Bot.Pinecone\ChampionsOfKhazad.Bot.Pinecone.csproj", "{1279084B-B1F1-42ED-9641-34F2DFEF355D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChampionsOfKhazad.Bot.RaidHelper", "src\ChampionsOfKhazad.Bot.RaidHelper\ChampionsOfKhazad.Bot.RaidHelper.csproj", "{CB393522-4E3E-44E0-AE23-FF9B61E15DF1}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -60,6 +62,10 @@ Global
 		{1279084B-B1F1-42ED-9641-34F2DFEF355D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1279084B-B1F1-42ED-9641-34F2DFEF355D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1279084B-B1F1-42ED-9641-34F2DFEF355D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CB393522-4E3E-44E0-AE23-FF9B61E15DF1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CB393522-4E3E-44E0-AE23-FF9B61E15DF1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CB393522-4E3E-44E0-AE23-FF9B61E15DF1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CB393522-4E3E-44E0-AE23-FF9B61E15DF1}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{250AB7D4-9E29-41B4-8636-BDD934CC20EF} = {AE87495F-C4DE-42DA-8BCB-DF6EC3792ACD}
@@ -70,5 +76,6 @@ Global
 		{95CB2B92-3C10-4A69-A732-EDAED267A19C} = {A4D28AFE-A969-44EA-90F8-158C988FD16D}
 		{D06424C6-E36E-4957-8FA4-FF337DEBF9A3} = {5B231EE9-6669-4A17-BDA5-5C52B52AECDC}
 		{1279084B-B1F1-42ED-9641-34F2DFEF355D} = {AE87495F-C4DE-42DA-8BCB-DF6EC3792ACD}
+		{CB393522-4E3E-44E0-AE23-FF9B61E15DF1} = {AE87495F-C4DE-42DA-8BCB-DF6EC3792ACD}
 	EndGlobalSection
 EndGlobal

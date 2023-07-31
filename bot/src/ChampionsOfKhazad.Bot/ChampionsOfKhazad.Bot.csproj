@@ -28,6 +28,7 @@
     <ItemGroup>
       <ProjectReference Include="..\ChampionsOfKhazad.Bot.OpenAi.Embeddings\ChampionsOfKhazad.Bot.OpenAi.Embeddings.csproj" />
       <ProjectReference Include="..\ChampionsOfKhazad.Bot.Pinecone\ChampionsOfKhazad.Bot.Pinecone.csproj" />
+      <ProjectReference Include="..\ChampionsOfKhazad.Bot.RaidHelper\ChampionsOfKhazad.Bot.RaidHelper.csproj" />
     </ItemGroup>
 
 </Project>

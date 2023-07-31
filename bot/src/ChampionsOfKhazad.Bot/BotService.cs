@@ -32,6 +32,7 @@ public class BotService : IHostedService
         _client.Ready += Ready;
         _client.MessageReceived += MessageReceivedAsync;
         _client.ReactionAdded += ReactionAddedAsync;
+        _client.SlashCommandExecuted += SlashCommandExecuted;
     }
 
     public async Task StartAsync(CancellationToken cancellationToken)
@@ -47,7 +48,7 @@ public class BotService : IHostedService
 
     public async Task StopAsync(CancellationToken cancellationToken) => await _client.StopAsync();
 
-    private Task Ready()
+    private async Task Ready()
     {
         var guild = _client.GetGuild(_options.GuildId);
 
@@ -60,9 +61,10 @@ public class BotService : IHostedService
 
         _botContextProvider.BotContext = new BotContext(_client.CurrentUser.Id, guild);
 
-        _logger.LogInformation("Bot started");
+        foreach (var slashCommand in SlashCommands.All)
+            await guild.CreateApplicationCommandAsync(slashCommand.Properties);
 
-        return Task.CompletedTask;
+        _logger.LogInformation("Bot started");
     }
 
     private async Task ExecuteEventHandlers<T>(Func<T, Task> handlerExecutor)
@@ -101,4 +103,29 @@ public class BotService : IHostedService
         ExecuteEventHandlers<IReactionAddedEventHandler>(
             eventHandler => eventHandler.HandleReactionAsync(reaction)
         );
+
+    private async Task SlashCommandExecuted(SocketSlashCommand command)
+    {
+        using var scope = _serviceProvider.CreateScope();
+
+        try
+        {
+            var commandType = SlashCommands.All
+                .Single(x => x.Properties.Name.Value == command.CommandName)
+                .CommandType;
+
+            var commandHandler = (ISlashCommand)
+                scope.ServiceProvider.GetRequiredService(commandType);
+
+            await commandHandler.ExecuteAsync(command);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(
+                e,
+                "Error executing slash command {SlashCommand}",
+                command.CommandName
+            );
+        }
+    }
 }

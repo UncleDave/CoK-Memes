@@ -20,7 +20,7 @@ public class SummonUserHandler : IMessageReceivedEventHandler
     };
 
     private readonly SummonUserHandlerOptions _options;
-    private DateTime? _lastSummon;
+    private static DateTime? lastSummon;
 
     public SummonUserHandler(IOptions<SummonUserHandlerOptions> options)
     {
@@ -32,7 +32,7 @@ public class SummonUserHandler : IMessageReceivedEventHandler
         if (
             message.Channel is not ITextChannel textChannel
             || !message.MentionedUserIds.Contains(_options.UserId)
-            || (_lastSummon is not null && (DateTime.Now - _lastSummon.Value).TotalMinutes < 15)
+            || (lastSummon is not null && (DateTime.Now - lastSummon.Value).TotalMinutes < 15)
         )
             return;
 
@@ -72,7 +72,7 @@ public class SummonUserHandler : IMessageReceivedEventHandler
                 .Replace("{Leader}", MentionUtils.MentionUser(_options.LeaderId))
                 .Replace("{RandomOrdinal}", RandomUtils.RandomOrdinal(1, 10000));
 
-            _lastSummon = DateTime.Now;
+            lastSummon = DateTime.Now;
 
             await textChannel.SendMessageAsync(
                 $"{MentionUtils.MentionUser(_options.UserId)}, {summonMessage}."

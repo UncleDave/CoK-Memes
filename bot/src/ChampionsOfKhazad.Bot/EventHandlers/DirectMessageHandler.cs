@@ -9,7 +9,7 @@ public class DirectMessageHandler : IMessageReceivedEventHandler
     private const string Message =
         $"Hi! I'm a bot, if you want to know more you can find my juicy innards at {SourceUrl}";
 
-    private readonly Dictionary<ulong, DateTime> _lastUserMessage = new();
+    private static readonly Dictionary<ulong, DateTime> LastUserMessage = new();
 
     public Task HandleMessageAsync(IUserMessage message)
     {
@@ -17,10 +17,10 @@ public class DirectMessageHandler : IMessageReceivedEventHandler
             return Task.CompletedTask;
 
         var isOnCooldown =
-            _lastUserMessage.TryGetValue(message.Author.Id, out var lastMessage)
+            LastUserMessage.TryGetValue(message.Author.Id, out var lastMessage)
             && (DateTime.Now - lastMessage).TotalMinutes < 5;
 
-        _lastUserMessage[message.Author.Id] = DateTime.Now;
+        LastUserMessage[message.Author.Id] = DateTime.Now;
 
         return isOnCooldown ? Task.CompletedTask : message.Channel.SendMessageAsync(Message);
     }

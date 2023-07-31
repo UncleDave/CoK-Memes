@@ -34,8 +34,5 @@ public class EmbeddingsService
 
     private record CreateEmbeddingsResponse(EmbeddingResponse[] Data);
 
-    private record CreateEmbeddingsRequest(
-        IEnumerable<string> Input,
-        string Model = Constants.Model
-    );
+    private record CreateEmbeddingsRequest(IEnumerable<string> Input, string Model = Constants.Model);
 }

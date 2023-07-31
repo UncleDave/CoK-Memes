@@ -8,10 +8,7 @@ public class LoggingDiscordSocketClient : DiscordSocketClient
 {
     private readonly ILogger<LoggingDiscordSocketClient> _logger;
 
-    public LoggingDiscordSocketClient(
-        ILogger<LoggingDiscordSocketClient> logger,
-        DiscordSocketConfig? config = null
-    )
+    public LoggingDiscordSocketClient(ILogger<LoggingDiscordSocketClient> logger, DiscordSocketConfig? config = null)
         : base(config)
     {
         _logger = logger;
@@ -32,13 +29,7 @@ public class LoggingDiscordSocketClient : DiscordSocketClient
             _ => LogLevel.Information
         };
 
-        _logger.Log(
-            severity,
-            message.Exception,
-            "[{Source}] {Message}",
-            message.Source,
-            message.Message
-        );
+        _logger.Log(severity, message.Exception, "[{Source}] {Message}", message.Source, message.Message);
 
         return Task.CompletedTask;
     }

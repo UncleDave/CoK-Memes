@@ -18,12 +18,7 @@ return await Pulumi.Deployment.RunAsync(() =>
     var resourceGroup = new ResourceGroup(
         "resource-group",
         new ResourceGroupArgs { ResourceGroupName = "cok-memes" },
-        new CustomResourceOptions
-        {
-            ImportId =
-                $"/subscriptions/{providerConfig.Require("subscriptionId")}/resourceGroups/cok-memes",
-            Protect = true
-        }
+        new CustomResourceOptions { ImportId = $"/subscriptions/{providerConfig.Require("subscriptionId")}/resourceGroups/cok-memes", Protect = true }
     );
 
     var logAnalytics = new Workspace(
@@ -38,16 +33,7 @@ return await Pulumi.Deployment.RunAsync(() =>
 
     var logAnalyticsSharedKeys = Output
         .Tuple(resourceGroup.Name, logAnalytics.Name)
-        .Apply(
-            items =>
-                GetSharedKeys.InvokeAsync(
-                    new GetSharedKeysArgs
-                    {
-                        ResourceGroupName = items.Item1,
-                        WorkspaceName = items.Item2,
-                    }
-                )
-        );
+        .Apply(items => GetSharedKeys.InvokeAsync(new GetSharedKeysArgs { ResourceGroupName = items.Item1, WorkspaceName = items.Item2, }));
 
     var environment = new ManagedEnvironment(
         "environment",
@@ -89,6 +75,7 @@ return await Pulumi.Deployment.RunAsync(() =>
     const string openAiApiKeySecretName = "open-ai-api-key";
     const string pineconeApiKeySecretName = "pinecone-api-key";
     const string raidHelperApiKeySecretName = "raid-helper-api-key";
+    const string mongoConnectionStringSecretName = "mongo-connection-string";
 
     var containerApp = new ContainerApp(
         "bot-app",
@@ -106,31 +93,12 @@ return await Pulumi.Deployment.RunAsync(() =>
                 },
                 Secrets =
                 {
-                    new SecretArgs
-                    {
-                        Name = botTokenSecretName,
-                        Value = config.RequireSecret("botToken")
-                    },
-                    new SecretArgs
-                    {
-                        Name = imageRegistryReadPasswordSecretName,
-                        Value = config.RequireSecret("imageRegistryReadPassword")
-                    },
-                    new SecretArgs
-                    {
-                        Name = openAiApiKeySecretName,
-                        Value = config.RequireSecret("openAiApiKey")
-                    },
-                    new SecretArgs
-                    {
-                        Name = pineconeApiKeySecretName,
-                        Value = config.RequireSecret("pineconeApiKey")
-                    },
-                    new SecretArgs
-                    {
-                        Name = raidHelperApiKeySecretName,
-                        Value = config.RequireSecret("raidHelperApiKey")
-                    }
+                    new SecretArgs { Name = botTokenSecretName, Value = config.RequireSecret("botToken") },
+                    new SecretArgs { Name = imageRegistryReadPasswordSecretName, Value = config.RequireSecret("imageRegistryReadPassword") },
+                    new SecretArgs { Name = openAiApiKeySecretName, Value = config.RequireSecret("openAiApiKey") },
+                    new SecretArgs { Name = pineconeApiKeySecretName, Value = config.RequireSecret("pineconeApiKey") },
+                    new SecretArgs { Name = raidHelperApiKeySecretName, Value = config.RequireSecret("raidHelperApiKey") },
+                    new SecretArgs { Name = mongoConnectionStringSecretName, Value = config.RequireSecret("mongoConnectionString") }
                 }
             },
             Template = new TemplateArgs
@@ -142,31 +110,12 @@ return await Pulumi.Deployment.RunAsync(() =>
                     Env =
                     {
                         new EnvironmentVarArgs { Name = "TZ", Value = "Europe/Copenhagen" },
-                        new EnvironmentVarArgs
-                        {
-                            Name = "Bot__Token",
-                            SecretRef = botTokenSecretName
-                        },
-                        new EnvironmentVarArgs
-                        {
-                            Name = "DOTNET_ENVIRONMENT",
-                            Value = config.Require("environment")
-                        },
-                        new EnvironmentVarArgs
-                        {
-                            Name = "OpenAIServiceOptions__ApiKey",
-                            SecretRef = openAiApiKeySecretName
-                        },
-                        new EnvironmentVarArgs
-                        {
-                            Name = "Pinecone__ApiKey",
-                            SecretRef = pineconeApiKeySecretName
-                        },
-                        new EnvironmentVarArgs
-                        {
-                            Name = "RaidHelper__ApiKey",
-                            SecretRef = raidHelperApiKeySecretName
-                        }
+                        new EnvironmentVarArgs { Name = "Bot__Token", SecretRef = botTokenSecretName },
+                        new EnvironmentVarArgs { Name = "DOTNET_ENVIRONMENT", Value = config.Require("environment") },
+                        new EnvironmentVarArgs { Name = "OpenAIServiceOptions__ApiKey", SecretRef = openAiApiKeySecretName },
+                        new EnvironmentVarArgs { Name = "Pinecone__ApiKey", SecretRef = pineconeApiKeySecretName },
+                        new EnvironmentVarArgs { Name = "RaidHelper__ApiKey", SecretRef = raidHelperApiKeySecretName },
+                        new EnvironmentVarArgs { Name = "ConnectionStrings__Mongo", SecretRef = mongoConnectionStringSecretName }
                     },
                     Resources = new ContainerResourcesArgs { Cpu = .25, Memory = "0.5Gi" }
                 },

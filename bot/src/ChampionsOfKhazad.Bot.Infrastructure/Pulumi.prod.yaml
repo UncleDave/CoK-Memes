@@ -6,6 +6,8 @@ config:
     secure: AAABAAd6Vnr8NIUL/CPqzrln9TWMchDVoPq0TwyKlUnRrYb2566iwM4lt4zKA82+9h2+8P3vAkd9FOD07pJKkHR1o3Q=
   ChampionsOfKhazad.Bot.Infrastructure:imageRegistryWritePassword:
     secure: AAABACWvQkCeVivhg/b9e5Qf0e03XMQDVwU4m0Dyq4oBNN0PMO/lz2NQyDYPQrcFTvk0oMcmwHoOnFWAWiqP3khAB/Y=
+  ChampionsOfKhazad.Bot.Infrastructure:mongoConnectionString:
+    secure: AAABAPzXPvKSmhwS65Ag18oX8vk56leMrls0Dw0y1A7owHHC50ZwlboqeR8f9tEhDm+TPZx+cGDRpR55TAzWHxpo2TPTqM1YCjOh4axvQMx/PJfjHQK0hMJxK7kqHnY4CPvKKmy4qnXc/WuoX1y1HEeWF8HwkZxyBjclMUTxLg2bsGACrg==
   ChampionsOfKhazad.Bot.Infrastructure:openAiApiKey:
     secure: AAABACbPJ/lEiFQYbpyKV0jkixduBfbPTQCkuhYyqKn3YWBQxVlOiDBTebDMHpEE5ZXvCfb7koh0YrRWvneaNYkT+PnnjwKIW1aib5UrEJ70xc0=
   ChampionsOfKhazad.Bot.Infrastructure:pineconeApiKey:
@@ -16,3 +18,7 @@ config:
   azure-native:clientSecret:
     secure: AAABAFmmL+UAV6Od5qem7CMyDq81Ae5UBUzA2VsfZAGEYZI7IAoaFYOzL7Qqo4RjlV8SKrEeEf1tz+yO9Azltxp7vP/4mFFD
   azure-native:tenantId: 081eef35-1428-44d4-890e-171600b2710f
+  mongodbatlas:privateKey:
+    secure: AAABALyvp6CqW2C30vbXAzfnZCvKmqCFFk5wjmi1F/8mwRenGdnC/0PtMVQUYVVReKpWTmr08qr+07CFMn/6jbfTZ38=
+  mongodbatlas:publicKey:
+    secure: AAABACcrzHnTEuCZtiUmmEQdAgGybIZzbM7M4+6PAP8xQYLH2K65hA==

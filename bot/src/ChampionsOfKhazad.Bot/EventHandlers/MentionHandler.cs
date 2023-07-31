@@ -11,8 +11,7 @@ namespace ChampionsOfKhazad.Bot;
 
 public class MentionHandler : IMessageReceivedEventHandler
 {
-    private static readonly Regex NameExpression =
-        new("^[a-zA-Z0-9_-]{1,64}$", RegexOptions.Compiled);
+    private static readonly Regex NameExpression = new("^[a-zA-Z0-9_-]{1,64}$", RegexOptions.Compiled);
 
     private static readonly Regex EmojiExpression = new(@":(?<name>\w+):", RegexOptions.Compiled);
 
@@ -20,11 +19,7 @@ public class MentionHandler : IMessageReceivedEventHandler
     private readonly Assistant _assistant;
     private readonly BotContext _context;
 
-    public MentionHandler(
-        IOptions<MentionHandlerOptions> options,
-        Assistant assistant,
-        BotContext context
-    )
+    public MentionHandler(IOptions<MentionHandlerOptions> options, Assistant assistant, BotContext context)
     {
         _options = options.Value;
         _assistant = assistant;
@@ -33,10 +28,7 @@ public class MentionHandler : IMessageReceivedEventHandler
 
     public Task HandleMessageAsync(IUserMessage message)
     {
-        if (
-            message.Channel is not ITextChannel textChannel
-            || !message.MentionedUserIds.Contains(_context.BotId)
-        )
+        if (message.Channel is not ITextChannel textChannel || !message.MentionedUserIds.Contains(_context.BotId))
             return Task.CompletedTask;
 
 #pragma warning disable CS4014
@@ -51,16 +43,11 @@ public class MentionHandler : IMessageReceivedEventHandler
                 .GetPreviousMessagesAsync()
                 .Take(20)
                 .Reverse()
-                .Select(
-                    x =>
-                        new ChatMessage(GetMessageRole(x), x.CleanContent, GetFriendlyAuthorName(x))
-                )
+                .Select(x => new ChatMessage(GetMessageRole(x), x.CleanContent, GetFriendlyAuthorName(x)))
                 .ToListAsync();
 
             if (message.Author.Id == _options.CringeAsideUserId)
-                previousMessages.Add(
-                    ChatMessage.FromSystem("Include cringe aside somewhere in your response.")
-                );
+                previousMessages.Add(ChatMessage.FromSystem("Include cringe aside somewhere in your response."));
 
             var response = await _assistant.RespondAsync(
                 message.CleanContent,
@@ -83,21 +70,16 @@ public class MentionHandler : IMessageReceivedEventHandler
     }
 
     private static string GetFriendlyAuthorName(IMessage message) =>
-        message.Author is IGuildUser { DisplayName: not null } guildUser
-        && NameExpression.IsMatch(guildUser.DisplayName)
+        message.Author is IGuildUser { DisplayName: not null } guildUser && NameExpression.IsMatch(guildUser.DisplayName)
             ? guildUser.DisplayName
-            : message.Author.GlobalName is not null
-            && NameExpression.IsMatch(message.Author.GlobalName)
+            : message.Author.GlobalName is not null && NameExpression.IsMatch(message.Author.GlobalName)
                 ? message.Author.GlobalName
-                : message.Author.Username is not null
-                && NameExpression.IsMatch(message.Author.Username)
+                : message.Author.Username is not null && NameExpression.IsMatch(message.Author.Username)
                     ? message.Author.Username
                     : message.Author.Id.ToString();
 
     private string GetMessageRole(IMessage message) =>
-        message.Author.Id == _context.BotId
-            ? StaticValues.ChatMessageRoles.Assistant
-            : StaticValues.ChatMessageRoles.User;
+        message.Author.Id == _context.BotId ? StaticValues.ChatMessageRoles.Assistant : StaticValues.ChatMessageRoles.User;
 
     private string ProcessEmojis(string message)
     {

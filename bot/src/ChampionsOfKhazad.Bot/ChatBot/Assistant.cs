@@ -24,12 +24,7 @@ public class Assistant
     private readonly EmbeddingsService _embeddingsService;
     private readonly IndexService _pineconeIndexService;
 
-    public Assistant(
-        IOpenAIService openAiService,
-        ILogger<Assistant> logger,
-        EmbeddingsService embeddingsService,
-        IndexService pineconeIndexService
-    )
+    public Assistant(IOpenAIService openAiService, ILogger<Assistant> logger, EmbeddingsService embeddingsService, IndexService pineconeIndexService)
     {
         _openAiService = openAiService;
         _logger = logger;
@@ -46,19 +41,12 @@ public class Assistant
         string? instructions = null
     )
     {
-        var embeddings = await _embeddingsService.CreateEmbeddingsAsync(
-            new TextEntry("input", message)
-        );
+        var embeddings = await _embeddingsService.CreateEmbeddingsAsync(new TextEntry("input", message));
         var embedding = embeddings.SingleOrDefault();
 
         var vectorIndex = await _pineconeIndexService.GetIndexAsync("cok-lore");
         var vectors = embedding is not null
-            ? await vectorIndex.Query(
-                embedding.Vector,
-                10,
-                includeValues: false,
-                includeMetadata: true
-            )
+            ? await vectorIndex.Query(embedding.Vector, 10, includeValues: false, includeMetadata: true)
             : Array.Empty<ScoredVector>();
 
         const string separator = "\n\n###\n\n";
@@ -83,9 +71,7 @@ public class Assistant
         if (referencedMessage is not null)
         {
             messages.Add(
-                ChatMessage.FromSystem(
-                    $"The user is referencing this message from \"{referencedMessage.Name}\": \"{referencedMessage.Content}\""
-                )
+                ChatMessage.FromSystem($"The user is referencing this message from \"{referencedMessage.Name}\": \"{referencedMessage.Content}\"")
             );
         }
 
@@ -114,17 +100,11 @@ public class Assistant
 
         if (!result.Successful)
         {
-            _logger.LogError(
-                "Chat completion failed: {ErrorCode}:{ErrorMessage}",
-                result.Error?.Code,
-                result.Error?.Message
-            );
+            _logger.LogError("Chat completion failed: {ErrorCode}:{ErrorMessage}", result.Error?.Code, result.Error?.Message);
             return "I'm sorry, I'm having a stroke.";
         }
 
-        var choice =
-            result.Choices.FirstOrDefault(x => x.FinishReason == "stop")
-            ?? result.Choices.FirstOrDefault();
+        var choice = result.Choices.FirstOrDefault(x => x.FinishReason == "stop") ?? result.Choices.FirstOrDefault();
 
         if (choice is null)
         {

@@ -11,11 +11,7 @@ public class SycophantHandler : IMessageReceivedEventHandler
     private readonly Assistant _assistant;
     private readonly BotContext _context;
 
-    public SycophantHandler(
-        IOptions<SycophantHandlerOptions> options,
-        Assistant assistant,
-        BotContext context
-    )
+    public SycophantHandler(IOptions<SycophantHandlerOptions> options, Assistant assistant, BotContext context)
     {
         _options = options.Value;
         _assistant = assistant;
@@ -43,11 +39,7 @@ public class SycophantHandler : IMessageReceivedEventHandler
             // Get the unbroken message chain from the same author within the last 30 seconds
             var recentUserMessages = await message
                 .GetPreviousMessagesAsync()
-                .TakeWhile(
-                    x =>
-                        x.Author.Id == _options.UserId
-                        && DateTimeOffset.UtcNow - x.Timestamp < TimeSpan.FromSeconds(30)
-                )
+                .TakeWhile(x => x.Author.Id == _options.UserId && DateTimeOffset.UtcNow - x.Timestamp < TimeSpan.FromSeconds(30))
                 .Reverse()
                 .Select(x => ChatMessage.FromUser(x.CleanContent, user.Name))
                 .ToListAsync();

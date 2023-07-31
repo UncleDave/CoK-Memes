@@ -13,14 +13,7 @@ public class RaidsSlashCommand : ISlashCommand
     private readonly BotContext _botContext;
     private readonly ILogger<RaidsSlashCommand> _logger;
 
-    private static readonly string[] Acknowledgements =
-    {
-        "More work?",
-        "Right-o.",
-        "Yes, milord.",
-        "All right.",
-        "Off I go, then!"
-    };
+    private static readonly string[] Acknowledgements = { "More work?", "Right-o.", "Yes, milord.", "All right.", "Off I go, then!" };
 
     private static readonly string[] RaidNames =
     {
@@ -101,9 +94,7 @@ public class RaidsSlashCommand : ISlashCommand
 
             try
             {
-                var createRaidTasks = _options.Raids.Select(
-                    x => CreateRaidAsync(command.User.Id, x)
-                );
+                var createRaidTasks = _options.Raids.Select(x => CreateRaidAsync(command.User.Id, x));
                 await Task.WhenAll(createRaidTasks);
             }
             catch (Exception e)

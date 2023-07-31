@@ -53,11 +53,7 @@ public class BotService : IHostedService
         var guild = _client.GetGuild(_options.GuildId);
 
         _logger.LogDebug("Guilds: {Guilds}", _client.Guilds.Select(x => x.Id));
-        _logger.LogDebug(
-            "Guild: {Guild}, channels: {Channels}",
-            guild.Name,
-            guild.Channels.Select(x => x.Name)
-        );
+        _logger.LogDebug("Guild: {Guild}, channels: {Channels}", guild.Name, guild.Channels.Select(x => x.Name));
 
         _botContextProvider.BotContext = new BotContext(_client.CurrentUser.Id, guild);
 
@@ -90,19 +86,11 @@ public class BotService : IHostedService
         if (message is not SocketUserMessage userMessage || message.Author.IsBot)
             return Task.CompletedTask;
 
-        return ExecuteEventHandlers<IMessageReceivedEventHandler>(
-            eventHandler => eventHandler.HandleMessageAsync(userMessage)
-        );
+        return ExecuteEventHandlers<IMessageReceivedEventHandler>(eventHandler => eventHandler.HandleMessageAsync(userMessage));
     }
 
-    private Task ReactionAddedAsync(
-        Cacheable<IUserMessage, ulong> message,
-        Cacheable<IMessageChannel, ulong> channel,
-        SocketReaction reaction
-    ) =>
-        ExecuteEventHandlers<IReactionAddedEventHandler>(
-            eventHandler => eventHandler.HandleReactionAsync(reaction)
-        );
+    private Task ReactionAddedAsync(Cacheable<IUserMessage, ulong> message, Cacheable<IMessageChannel, ulong> channel, SocketReaction reaction) =>
+        ExecuteEventHandlers<IReactionAddedEventHandler>(eventHandler => eventHandler.HandleReactionAsync(reaction));
 
     private async Task SlashCommandExecuted(SocketSlashCommand command)
     {
@@ -110,22 +98,15 @@ public class BotService : IHostedService
 
         try
         {
-            var commandType = SlashCommands.All
-                .Single(x => x.Properties.Name.Value == command.CommandName)
-                .CommandType;
+            var commandType = SlashCommands.All.Single(x => x.Properties.Name.Value == command.CommandName).CommandType;
 
-            var commandHandler = (ISlashCommand)
-                scope.ServiceProvider.GetRequiredService(commandType);
+            var commandHandler = (ISlashCommand)scope.ServiceProvider.GetRequiredService(commandType);
 
             await commandHandler.ExecuteAsync(command);
         }
         catch (Exception e)
         {
-            _logger.LogError(
-                e,
-                "Error executing slash command {SlashCommand}",
-                command.CommandName
-            );
+            _logger.LogError(e, "Error executing slash command {SlashCommand}", command.CommandName);
         }
     }
 }

@@ -2,10 +2,7 @@
 
 public static class EnumerableExtensions
 {
-    public static async Task<IEnumerable<T>> WhereAsync<T>(
-        this IEnumerable<T> source,
-        Func<T, Task<bool>> predicate
-    )
+    public static async Task<IEnumerable<T>> WhereAsync<T>(this IEnumerable<T> source, Func<T, Task<bool>> predicate)
     {
         var tasks = source.Select(async item => (item, await predicate(item)));
         var results = await Task.WhenAll(tasks);

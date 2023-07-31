@@ -17,10 +17,7 @@ public class ChannelSpecificEventHandler : IMessageReceivedEventHandler
 
     public async Task HandleMessageAsync(IUserMessage message)
     {
-        if (
-            message.Channel.Id == _channelId
-            || (message.Channel is ITextChannel textChannel && textChannel.CategoryId == _channelId)
-        )
+        if (message.Channel.Id == _channelId || (message.Channel is ITextChannel textChannel && textChannel.CategoryId == _channelId))
             await _eventHandler.HandleMessageAsync(message);
     }
 }

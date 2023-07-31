@@ -9,9 +9,7 @@ public static class SlashCommands
             typeof(RaidsSlashCommand),
             new SlashCommandBuilder()
                 .WithName("raids")
-                .WithDescription(
-                    "Clear the Sunday/Monday sign up channels and create new raid sign ups"
-                )
+                .WithDescription("Clear the Sunday/Monday sign up channels and create new raid sign ups")
                 .WithDefaultMemberPermissions(GuildPermission.Administrator)
                 .Build()
         );

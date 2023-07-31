@@ -18,9 +18,7 @@ public class EmoteStreakHandler : IMessageReceivedEventHandler
     {
         var emote =
             _botContext.Guild.Emotes.SingleOrDefault(x => x.Name == _options.EmoteName)
-            ?? await _botContext.Guild
-                .GetEmotesAsync()
-                .SingleAsync(x => x.Name == _options.EmoteName);
+            ?? await _botContext.Guild.GetEmotesAsync().SingleAsync(x => x.Name == _options.EmoteName);
 
         if (message.Content == emote.ToString())
             return;
@@ -44,10 +42,7 @@ public class EmoteStreakHandler : IMessageReceivedEventHandler
                 break;
 
             // Ignore repeat messages from the same user
-            if (
-                !_options.AllowSingleUserStreaks
-                && previousUserMessage.Author.Id == previousAuthorId
-            )
+            if (!_options.AllowSingleUserStreaks && previousUserMessage.Author.Id == previousAuthorId)
                 continue;
 
             previousAuthorId = previousUserMessage.Author.Id;
@@ -56,12 +51,9 @@ public class EmoteStreakHandler : IMessageReceivedEventHandler
 
         if (streak > 1)
         {
-            await message.Channel.SendMessageAsync(
-                $"Streak of {streak} {emote} broken by {message.Author.Mention}, shame on them."
-            );
+            await message.Channel.SendMessageAsync($"Streak of {streak} {emote} broken by {message.Author.Mention}, shame on them.");
         }
     }
 
-    public override string ToString() =>
-        $"{nameof(EmoteStreakHandler)} - :{_options.EmoteName}: in {_options.ChannelId.ToString()}";
+    public override string ToString() => $"{nameof(EmoteStreakHandler)} - :{_options.EmoteName}: in {_options.ChannelId.ToString()}";
 }

@@ -7,9 +7,7 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddPinecone(this IServiceCollection services, string apiKey)
     {
-        services
-            .AddSingleton(new PineconeClient(apiKey, "us-west1-gcp-free"))
-            .AddSingleton<IndexService>();
+        services.AddSingleton(new PineconeClient(apiKey, "us-west1-gcp-free")).AddSingleton<IndexService>();
 
         return services;
     }

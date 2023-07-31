@@ -17,11 +17,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		README.md = README.md
 		src\.dockerignore = src\.dockerignore
 		src\Dockerfile = src\Dockerfile
+		.csharpierrc.json = .csharpierrc.json
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChampionsOfKhazad.Bot.OpenAi.Embeddings", "src\ChampionsOfKhazad.Bot.OpenAi.Embeddings\ChampionsOfKhazad.Bot.OpenAi.Embeddings.csproj", "{B1B71F7D-0188-4719-A211-BCCF03A32DFA}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChampionsOfKhazad.Bot.LoreUploader", "src\ChampionsOfKhazad.Bot.LoreUploader\ChampionsOfKhazad.Bot.LoreUploader.csproj", "{D54C817B-8D53-4013-A615-F6EE44566FAE}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Repository Items", "Repository Items", "{2B3B333B-BE83-46FC-BB9D-7672F4B8679F}"
 EndProject
@@ -33,6 +32,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "workflows", "workflows", "{
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChampionsOfKhazad.Bot.Pinecone", "src\ChampionsOfKhazad.Bot.Pinecone\ChampionsOfKhazad.Bot.Pinecone.csproj", "{1279084B-B1F1-42ED-9641-34F2DFEF355D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChampionsOfKhazad.Bot.Lore", "src\ChampionsOfKhazad.Bot.Lore\ChampionsOfKhazad.Bot.Lore.csproj", "{DB35D2B8-3E87-4E08-B89C-0A7B421BD9F4}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChampionsOfKhazad.Bot.Lore.Mongo", "src\ChampionsOfKhazad.Bot.Lore.Mongo\ChampionsOfKhazad.Bot.Lore.Mongo.csproj", "{2E99F318-9448-42F9-8CDE-32FF77CA0739}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChampionsOfKhazad.Bot.RaidHelper", "src\ChampionsOfKhazad.Bot.RaidHelper\ChampionsOfKhazad.Bot.RaidHelper.csproj", "{CB393522-4E3E-44E0-AE23-FF9B61E15DF1}"
 EndProject
@@ -54,10 +57,6 @@ Global
 		{B1B71F7D-0188-4719-A211-BCCF03A32DFA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B1B71F7D-0188-4719-A211-BCCF03A32DFA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B1B71F7D-0188-4719-A211-BCCF03A32DFA}.Release|Any CPU.Build.0 = Release|Any CPU
-		{D54C817B-8D53-4013-A615-F6EE44566FAE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{D54C817B-8D53-4013-A615-F6EE44566FAE}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{D54C817B-8D53-4013-A615-F6EE44566FAE}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{D54C817B-8D53-4013-A615-F6EE44566FAE}.Release|Any CPU.Build.0 = Release|Any CPU
 		{1279084B-B1F1-42ED-9641-34F2DFEF355D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{1279084B-B1F1-42ED-9641-34F2DFEF355D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1279084B-B1F1-42ED-9641-34F2DFEF355D}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -66,16 +65,25 @@ Global
 		{CB393522-4E3E-44E0-AE23-FF9B61E15DF1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CB393522-4E3E-44E0-AE23-FF9B61E15DF1}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CB393522-4E3E-44E0-AE23-FF9B61E15DF1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DB35D2B8-3E87-4E08-B89C-0A7B421BD9F4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DB35D2B8-3E87-4E08-B89C-0A7B421BD9F4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DB35D2B8-3E87-4E08-B89C-0A7B421BD9F4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DB35D2B8-3E87-4E08-B89C-0A7B421BD9F4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2E99F318-9448-42F9-8CDE-32FF77CA0739}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2E99F318-9448-42F9-8CDE-32FF77CA0739}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2E99F318-9448-42F9-8CDE-32FF77CA0739}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2E99F318-9448-42F9-8CDE-32FF77CA0739}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{250AB7D4-9E29-41B4-8636-BDD934CC20EF} = {AE87495F-C4DE-42DA-8BCB-DF6EC3792ACD}
 		{F9F08389-512B-408D-A5BB-0F7BEFB06686} = {AE87495F-C4DE-42DA-8BCB-DF6EC3792ACD}
 		{B1B71F7D-0188-4719-A211-BCCF03A32DFA} = {AE87495F-C4DE-42DA-8BCB-DF6EC3792ACD}
-		{D54C817B-8D53-4013-A615-F6EE44566FAE} = {AE87495F-C4DE-42DA-8BCB-DF6EC3792ACD}
 		{A4D28AFE-A969-44EA-90F8-158C988FD16D} = {2B3B333B-BE83-46FC-BB9D-7672F4B8679F}
 		{95CB2B92-3C10-4A69-A732-EDAED267A19C} = {A4D28AFE-A969-44EA-90F8-158C988FD16D}
 		{D06424C6-E36E-4957-8FA4-FF337DEBF9A3} = {5B231EE9-6669-4A17-BDA5-5C52B52AECDC}
 		{1279084B-B1F1-42ED-9641-34F2DFEF355D} = {AE87495F-C4DE-42DA-8BCB-DF6EC3792ACD}
 		{CB393522-4E3E-44E0-AE23-FF9B61E15DF1} = {AE87495F-C4DE-42DA-8BCB-DF6EC3792ACD}
+		{DB35D2B8-3E87-4E08-B89C-0A7B421BD9F4} = {AE87495F-C4DE-42DA-8BCB-DF6EC3792ACD}
+		{2E99F318-9448-42F9-8CDE-32FF77CA0739} = {AE87495F-C4DE-42DA-8BCB-DF6EC3792ACD}
 	EndGlobalSection
 EndGlobal

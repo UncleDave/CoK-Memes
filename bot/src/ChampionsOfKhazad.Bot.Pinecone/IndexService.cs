@@ -14,12 +14,8 @@ public class IndexService
 
     public Task<IndexName[]> ListIndexesAsync() => _pineconeClient.ListIndexes();
 
-    public Task<Index<GrpcTransport>> GetIndexAsync(string name) =>
-        _pineconeClient.GetIndex(name);
+    public Task<Index<GrpcTransport>> GetIndexAsync(string name) => _pineconeClient.GetIndex(name);
 
-    public Task CreateIndexAsync(
-        string name,
-        uint dimensions = 1536,
-        Metric metric = Metric.Cosine
-    ) => _pineconeClient.CreateIndex(name, dimensions, metric);
+    public Task CreateIndexAsync(string name, uint dimensions = 1536, Metric metric = Metric.Cosine) =>
+        _pineconeClient.CreateIndex(name, dimensions, metric);
 }

@@ -1,5 +1,4 @@
-﻿**/.dockerignore
-**/.env
+﻿**/.env
 **/.git
 **/.gitignore
 **/.project
@@ -15,7 +14,6 @@
 **/bin
 **/charts
 **/docker-compose*
-**/Dockerfile*
 **/node_modules
 **/npm-debug.log
 **/obj
@@ -24,4 +22,3 @@
 LICENSE
 README.md
 ChampionsOfKhazad.Bot.Infrastructure/
-ChampionsOfKhazad.Bot.LoreUploader/

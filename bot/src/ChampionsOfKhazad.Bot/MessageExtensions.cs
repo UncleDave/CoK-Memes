@@ -4,10 +4,7 @@ namespace ChampionsOfKhazad.Bot;
 
 public static class MessageExtensions
 {
-    public static async IAsyncEnumerable<IMessage> GetPreviousMessagesAsync(
-        this IMessage message,
-        int batchSize = 20
-    )
+    public static async IAsyncEnumerable<IMessage> GetPreviousMessagesAsync(this IMessage message, int batchSize = 20)
     {
         var from = message;
         int length;

@@ -13,9 +13,7 @@ public class RaidHelperClient
 
     public async Task<EventsResponse> GetEventsAsync(ulong guildId)
     {
-        var response = await _httpClient.GetFromJsonAsync<EventsResponse>(
-            $"v3/servers/{guildId}/events"
-        );
+        var response = await _httpClient.GetFromJsonAsync<EventsResponse>($"v3/servers/{guildId}/events");
 
         return response ?? throw new ApplicationException("Failed to get events");
     }

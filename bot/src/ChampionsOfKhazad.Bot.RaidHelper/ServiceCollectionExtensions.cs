@@ -5,10 +5,7 @@ namespace ChampionsOfKhazad.Bot.RaidHelper;
 
 public static class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddRaidHelperClient(
-        this IServiceCollection services,
-        string apiKey
-    )
+    public static IServiceCollection AddRaidHelperClient(this IServiceCollection services, string apiKey)
     {
         services.AddHttpClient<RaidHelperClient>(client =>
         {

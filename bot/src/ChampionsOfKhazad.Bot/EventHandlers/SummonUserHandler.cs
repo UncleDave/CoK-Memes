@@ -46,10 +46,7 @@ public class SummonUserHandler : IMessageReceivedEventHandler
         await foreach (var previousMessage in message.GetPreviousMessagesAsync())
         {
             // Ignore messages that aren't from users or are from bots
-            if (
-                previousMessage is not IUserMessage previousUserMessage
-                || previousMessage.Author.IsBot
-            )
+            if (previousMessage is not IUserMessage previousUserMessage || previousMessage.Author.IsBot)
                 continue;
 
             // Streak is broken if the message does not mention the target user
@@ -57,10 +54,7 @@ public class SummonUserHandler : IMessageReceivedEventHandler
                 break;
 
             // Ignore repeat messages from the same user
-            if (
-                !_options.AllowSingleUserStreaks
-                && previousUserMessage.Author.Id == previousAuthorId
-            )
+            if (!_options.AllowSingleUserStreaks && previousUserMessage.Author.Id == previousAuthorId)
                 continue;
 
             previousAuthorId = previousUserMessage.Author.Id;
@@ -76,9 +70,7 @@ public class SummonUserHandler : IMessageReceivedEventHandler
 
             lastSummon = DateTime.Now;
 
-            await textChannel.SendMessageAsync(
-                $"{MentionUtils.MentionUser(_options.UserId)}, {summonMessage}."
-            );
+            await textChannel.SendMessageAsync($"{MentionUtils.MentionUser(_options.UserId)}, {summonMessage}.");
         }
     }
 

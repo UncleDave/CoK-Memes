@@ -17,6 +17,8 @@ public class SummonUserHandler : IMessageReceivedEventHandler
         "wakey wakey",
         "rise and shine",
         "do you have a Discipline spec? Just asking",
+        "{Leader} is one step closer to the edge, and he's about to break",
+        "LF orange stick, last spot"
     };
 
     private readonly SummonUserHandlerOptions _options;

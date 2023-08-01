@@ -132,7 +132,7 @@ public class RaidsSlashCommand : ISlashCommand
         {
             LeaderId = userId.ToString(),
             TemplateId = EventTemplate.WoWClassicWrathOfTheLichKing,
-            Date = DateTime.UtcNow.NextDayOfWeek(raid.DayOfWeek).ToShortDateString(),
+            Date = DateTime.Now.NextDayOfWeek(raid.DayOfWeek).ToShortDateString(),
             Time = "19:30",
             Title = $"ToGC 25: {RandomUtils.PickRandom(RaidNames)}",
             Description = RandomUtils.PickRandom(RaidDescriptions),

@@ -99,4 +99,6 @@ host.Services
             ?? throw new InvalidOperationException("BotContext is not available")
     );
 
+Log.Logger.Debug(DateTime.Now.ToShortDateString());
+
 host.Build().Run();

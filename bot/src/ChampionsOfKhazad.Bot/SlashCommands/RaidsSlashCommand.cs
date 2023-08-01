@@ -1,6 +1,7 @@
 ﻿using ChampionsOfKhazad.Bot.RaidHelper;
 using Discord;
 using Discord.WebSocket;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace ChampionsOfKhazad.Bot;
@@ -10,6 +11,7 @@ public class RaidsSlashCommand : ISlashCommand
     private readonly RaidsSlashCommandOptions _options;
     private readonly RaidHelperClient _raidHelperClient;
     private readonly BotContext _botContext;
+    private readonly ILogger<RaidsSlashCommand> _logger;
 
     private static readonly string[] Acknowledgements =
     {
@@ -78,12 +80,14 @@ public class RaidsSlashCommand : ISlashCommand
     public RaidsSlashCommand(
         IOptions<RaidsSlashCommandOptions> options,
         RaidHelperClient raidHelperClient,
-        BotContext botContext
+        BotContext botContext,
+        ILogger<RaidsSlashCommand> logger
     )
     {
         _options = options.Value;
         _raidHelperClient = raidHelperClient;
         _botContext = botContext;
+        _logger = logger;
     }
 
     public async Task ExecuteAsync(SocketSlashCommand command)
@@ -95,8 +99,17 @@ public class RaidsSlashCommand : ISlashCommand
             var clearChannelTasks = _options.Raids.Select(x => ClearChannelAsync(x.ChannelId));
             await Task.WhenAll(clearChannelTasks);
 
-            var createRaidTasks = _options.Raids.Select(x => CreateRaidAsync(command.User.Id, x));
-            await Task.WhenAll(createRaidTasks);
+            try
+            {
+                var createRaidTasks = _options.Raids.Select(
+                    x => CreateRaidAsync(command.User.Id, x)
+                );
+                await Task.WhenAll(createRaidTasks);
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Failed to create raid");
+            }
         });
     }
 

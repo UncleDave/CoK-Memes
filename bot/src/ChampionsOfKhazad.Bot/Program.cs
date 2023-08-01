@@ -24,8 +24,6 @@ Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
     .CreateLogger();
 
-Log.Logger.Debug(DateTime.Now.ToShortDateString());
-
 host.Logging.ClearProviders().AddSerilog();
 
 host.Services.AddOptionsWithEagerValidation<BotOptions>(

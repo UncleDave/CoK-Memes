@@ -97,7 +97,7 @@ public class Assistant
                 new ChatCompletionCreateRequest
                 {
                     Messages = messages,
-                    Model = Models.ChatGpt3_5Turbo,
+                    Model = Models.Gpt_3_5_Turbo,
                     MaxTokens = 500,
                     N = 1,
                     User = user.Id.ToString()

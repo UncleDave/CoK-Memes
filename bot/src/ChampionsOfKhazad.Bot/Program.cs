@@ -1,4 +1,5 @@
-﻿using ChampionsOfKhazad.Bot;
+﻿using System.Globalization;
+using ChampionsOfKhazad.Bot;
 using ChampionsOfKhazad.Bot.ChatBot;
 using ChampionsOfKhazad.Bot.OpenAi.Embeddings;
 using ChampionsOfKhazad.Bot.Pinecone;
@@ -11,6 +12,9 @@ using Microsoft.Extensions.Logging;
 using OpenAI.Extensions;
 using Serilog;
 using Serilog.Events;
+
+CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("en-GB");
+Log.Logger.Debug(DateTime.Now.ToShortDateString());
 
 var host = Host.CreateApplicationBuilder(args);
 
@@ -98,7 +102,5 @@ host.Services
             serviceProvider.GetRequiredService<BotContextProvider>().BotContext
             ?? throw new InvalidOperationException("BotContext is not available")
     );
-
-Log.Logger.Debug(DateTime.Now.ToShortDateString());
 
 host.Build().Run();

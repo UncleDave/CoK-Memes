@@ -141,6 +141,7 @@ return await Pulumi.Deployment.RunAsync(() =>
                     Image = botImage.RepoDigest!,
                     Env =
                     {
+                        new EnvironmentVarArgs { Name = "TZ", Value = "Europe/Copenhagen" },
                         new EnvironmentVarArgs
                         {
                             Name = "Bot__Token",

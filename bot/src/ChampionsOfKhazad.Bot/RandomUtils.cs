@@ -9,12 +9,12 @@ public static class RandomUtils
         if (!source.Any())
             throw new InvalidOperationException("Cannot pick random item from empty list");
 
-        return source.Count == 1 ? source[0] : source[Random.Next(0, source.Count)];
+        return source.Count == 1 ? source[0] : source[Random.Shared.Next(0, source.Count)];
     }
 
     public static string RandomOrdinal(int min, int max)
     {
-        var value = Random.Next(min, max + 1);
+        var value = Random.Shared.Next(min, max + 1);
 
         if (value is 11 or 12 or 13)
             return $"{value}th";
@@ -28,5 +28,5 @@ public static class RandomUtils
         };
     }
 
-    public static bool Roll(int chance) => Random.Next(1, 101) <= chance;
+    public static bool Roll(int chance) => Random.Shared.Next(1, 101) <= chance;
 }

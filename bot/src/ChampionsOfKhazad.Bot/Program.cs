@@ -14,7 +14,6 @@ using Serilog;
 using Serilog.Events;
 
 CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("en-GB");
-Log.Logger.Debug(DateTime.Now.ToShortDateString());
 
 var host = Host.CreateApplicationBuilder(args);
 
@@ -24,6 +23,8 @@ Log.Logger = new LoggerConfiguration()
     .Enrich.FromLogContext()
     .WriteTo.Console()
     .CreateLogger();
+
+Log.Logger.Debug(DateTime.Now.ToShortDateString());
 
 host.Logging.ClearProviders().AddSerilog();
 

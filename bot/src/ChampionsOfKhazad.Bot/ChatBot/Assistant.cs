@@ -1,11 +1,9 @@
-﻿using ChampionsOfKhazad.Bot.OpenAi.Embeddings;
-using ChampionsOfKhazad.Bot.Pinecone;
+﻿using ChampionsOfKhazad.Bot.Lore;
 using Microsoft.Extensions.Logging;
 using OpenAI.Interfaces;
 using OpenAI.ObjectModels;
 using OpenAI.ObjectModels.RequestModels;
 using OpenAI.ObjectModels.ResponseModels;
-using Pinecone;
 
 namespace ChampionsOfKhazad.Bot.ChatBot;
 
@@ -21,15 +19,13 @@ public class Assistant
 
     private readonly IOpenAIService _openAiService;
     private readonly ILogger<Assistant> _logger;
-    private readonly EmbeddingsService _embeddingsService;
-    private readonly IndexService _pineconeIndexService;
+    private readonly IGetRelatedLore _relatedLoreGetter;
 
-    public Assistant(IOpenAIService openAiService, ILogger<Assistant> logger, EmbeddingsService embeddingsService, IndexService pineconeIndexService)
+    public Assistant(IOpenAIService openAiService, ILogger<Assistant> logger, IGetRelatedLore relatedLoreGetter)
     {
         _openAiService = openAiService;
         _logger = logger;
-        _embeddingsService = embeddingsService;
-        _pineconeIndexService = pineconeIndexService;
+        _relatedLoreGetter = relatedLoreGetter;
     }
 
     public async Task<string> RespondAsync(
@@ -41,13 +37,7 @@ public class Assistant
         string? instructions = null
     )
     {
-        var embeddings = await _embeddingsService.CreateEmbeddingsAsync(new TextEntry("input", message));
-        var embedding = embeddings.SingleOrDefault();
-
-        var vectorIndex = await _pineconeIndexService.GetIndexAsync("cok-lore");
-        var vectors = embedding is not null
-            ? await vectorIndex.Query(embedding.Vector, 10, includeValues: false, includeMetadata: true)
-            : Array.Empty<ScoredVector>();
+        var relatedLore = await _relatedLoreGetter.GetRelatedLoreAsync(message);
 
         const string separator = "\n\n###\n\n";
 
@@ -56,7 +46,7 @@ public class Assistant
                 ChatMessage.FromSystem(
                     string.Join(
                         separator,
-                        string.Join(separator, vectors.Select(x => x.Metadata!["text"].Inner)),
+                        string.Join(separator, relatedLore),
                         string.Join(
                             '\n',
                             instructions ?? Instructions,
@@ -108,7 +98,7 @@ public class Assistant
 
         if (choice is null)
         {
-            _logger.LogWarning("Chat completion failed: {Error}", result.Error);
+            _logger.LogWarning("Chat completion failed: {@Error}", result.Error);
             return "I'm sorry, I don't know what to say.";
         }
 

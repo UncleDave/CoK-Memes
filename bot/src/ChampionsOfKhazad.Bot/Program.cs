@@ -1,8 +1,7 @@
 ﻿using System.Globalization;
 using ChampionsOfKhazad.Bot;
 using ChampionsOfKhazad.Bot.ChatBot;
-using ChampionsOfKhazad.Bot.OpenAi.Embeddings;
-using ChampionsOfKhazad.Bot.Pinecone;
+using ChampionsOfKhazad.Bot.Lore;
 using ChampionsOfKhazad.Bot.RaidHelper;
 using Discord;
 using Discord.WebSocket;
@@ -48,14 +47,16 @@ host.Services.AddSingleton<DiscordSocketClient>(
 );
 
 host.Services.AddOpenAIService();
-host.Services.AddEmbeddingsService(
-    host.Configuration["OpenAIServiceOptions:ApiKey"] ?? throw new ApplicationException("OpenAIServiceOptions:ApiKey is required")
-);
-
-host.Services.AddPinecone(host.Configuration["Pinecone:ApiKey"] ?? throw new ApplicationException("Pinecone:ApiKey is required"));
 
 host.Services
-    .AddGuildLore()
+    .AddGuildLore(
+        new GuildLoreOptions
+        {
+            EmbeddingsApiKey =
+                host.Configuration["OpenAIServiceOptions:ApiKey"] ?? throw new ApplicationException("OpenAIServiceOptions:ApiKey is required"),
+            VectorDatabaseApiKey = host.Configuration["Pinecone:ApiKey"] ?? throw new ApplicationException("Pinecone:ApiKey is required")
+        }
+    )
     .AddMongoPersistence(host.Configuration.GetConnectionString("Mongo") ?? throw new ApplicationException("Mongo connection string is required"));
 
 host.Services.AddSingleton<Assistant>();

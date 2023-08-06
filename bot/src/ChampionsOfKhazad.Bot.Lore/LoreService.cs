@@ -4,7 +4,7 @@ using Pinecone;
 
 namespace ChampionsOfKhazad.Bot.Lore;
 
-internal class LoreService : IGetLore, IUpdateLore, ICreateLore
+internal class LoreService : IGetLore, IGetRelatedLore, IUpdateLore, ICreateLore
 {
     private readonly IStoreLore _loreStore;
     private readonly EmbeddingsService _embeddingsService;
@@ -72,5 +72,18 @@ internal class LoreService : IGetLore, IUpdateLore, ICreateLore
         );
 
         await index.Upsert(vectors);
+    }
+
+    public async Task<IReadOnlyCollection<string>> GetRelatedLoreAsync(string text, uint max = 10)
+    {
+        var embeddings = await _embeddingsService.CreateEmbeddingsAsync(new TextEntry("input", text));
+        var embedding = embeddings.SingleOrDefault();
+
+        var vectorIndex = await _indexService.GetIndexAsync(Constants.IndexName);
+        var vectors = embedding is not null
+            ? await vectorIndex.Query(embedding.Vector, max, includeValues: false, includeMetadata: true)
+            : Array.Empty<ScoredVector>();
+
+        return vectors.Select(x => x.Metadata!["text"].Inner!.ToString()!).ToList();
     }
 }

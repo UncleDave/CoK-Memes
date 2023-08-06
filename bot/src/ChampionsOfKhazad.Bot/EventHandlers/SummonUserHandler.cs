@@ -7,18 +7,21 @@ public class SummonUserHandler : IMessageReceivedEventHandler
 {
     private static readonly string[] Messages =
     {
-        "time to get out of the bath",
-        "we summon thee",
-        "ay yo waddup",
-        "please don't leave if we ping you too much",
-        "report to {Leader} for mandatory punctuality training",
-        "this is your {RandomOrdinal} ping this month, please try harder",
-        "we need your help to defeat the evil {Leader}",
-        "wakey wakey",
-        "rise and shine",
-        "do you have a Discipline spec? Just asking",
-        "{Leader} is one step closer to the edge, and he's about to break",
-        "LF orange stick wielder"
+        "time to get out of the bath.",
+        "we summon thee!",
+        "ay yo waddup?",
+        "please don't leave if we ping you too much.",
+        "report to {Leader} for mandatory punctuality training.",
+        "this is your {RandomOrdinal} ping this month, please try harder.",
+        "we need your help to defeat the evil {Leader}.",
+        "wakey wakey.",
+        "rise and shine.",
+        "do you have a Discipline spec? Just asking.",
+        "{Leader} is one step closer to the edge, and he's about to break!",
+        "LF orange stick wielder.",
+        "keep Absti up!",
+        "heal Kachika heal Kachika heal Kachika heal Kachika heal Kachika!",
+        "could you please cut some gems for me?"
     };
 
     private readonly SummonUserHandlerOptions _options;
@@ -70,7 +73,7 @@ public class SummonUserHandler : IMessageReceivedEventHandler
 
             lastSummon = DateTime.Now;
 
-            await textChannel.SendMessageAsync($"{MentionUtils.MentionUser(_options.UserId)}, {summonMessage}.");
+            await textChannel.SendMessageAsync($"{MentionUtils.MentionUser(_options.UserId)}, {summonMessage}");
         }
     }
 

@@ -1,12 +1,12 @@
 ﻿using ChampionsOfKhazad.Bot.RaidHelper;
 using Discord;
-using Discord.WebSocket;
+using MediatR;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace ChampionsOfKhazad.Bot;
 
-public class RaidsSlashCommand : ISlashCommand
+public class RaidsSlashCommand : INotificationHandler<RaidsSlashCommandExecuted>
 {
     private readonly RaidsSlashCommandOptions _options;
     private readonly RaidHelperClient _raidHelperClient;
@@ -46,7 +46,8 @@ public class RaidsSlashCommand : ISlashCommand
         "Mumquest",
         "Wooper vs Predator",
         "Frozen Coffee Edition",
-        "Live From The Bath!"
+        "Live From The Bath!",
+        "Hunter's Mark Edition",
     };
 
     private static readonly string[] RaidDescriptions =
@@ -68,6 +69,7 @@ public class RaidsSlashCommand : ISlashCommand
         "Remember to wipe once on the Jormungar so Loot Council doesn't have to worry about the cloak.",
         "Hey can we do some achievements?",
         "Stick around for the post-raid zeppelin show!",
+        "Damn, Malithas Brightblade got hands.",
     };
 
     public RaidsSlashCommand(
@@ -83,25 +85,24 @@ public class RaidsSlashCommand : ISlashCommand
         _logger = logger;
     }
 
-    public async Task ExecuteAsync(SocketSlashCommand command)
+    public async Task Handle(RaidsSlashCommandExecuted notification, CancellationToken cancellationToken)
     {
+        var command = notification.Command;
+
         await command.RespondAsync(RandomUtils.PickRandom(Acknowledgements), ephemeral: true);
 
-        Task.Run(async () =>
-        {
-            var clearChannelTasks = _options.Raids.Select(x => ClearChannelAsync(x.ChannelId));
-            await Task.WhenAll(clearChannelTasks);
+        var clearChannelTasks = _options.Raids.Select(x => ClearChannelAsync(x.ChannelId));
+        await Task.WhenAll(clearChannelTasks);
 
-            try
-            {
-                var createRaidTasks = _options.Raids.Select(x => CreateRaidAsync(command.User.Id, x));
-                await Task.WhenAll(createRaidTasks);
-            }
-            catch (Exception e)
-            {
-                _logger.LogError(e, "Failed to create raid");
-            }
-        });
+        try
+        {
+            var createRaidTasks = _options.Raids.Select(x => CreateRaidAsync(command.User.Id, x));
+            await Task.WhenAll(createRaidTasks);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Failed to create raid");
+        }
     }
 
     private async Task ClearChannelAsync(ulong channelId)

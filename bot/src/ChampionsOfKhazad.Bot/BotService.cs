@@ -1,6 +1,6 @@
 ﻿using Discord;
 using Discord.WebSocket;
-using Microsoft.Extensions.DependencyInjection;
+using MediatR;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -12,22 +12,22 @@ public class BotService : IHostedService
     private readonly DiscordSocketClient _client;
     private readonly ILogger _logger;
     private readonly BotOptions _options;
-    private readonly IServiceProvider _serviceProvider;
     private readonly BotContextProvider _botContextProvider;
+    private readonly IPublisher _publisher;
 
     public BotService(
         DiscordSocketClient client,
         ILogger<BotService> logger,
         IOptions<BotOptions> options,
-        IServiceProvider serviceProvider,
-        BotContextProvider botContextProvider
+        BotContextProvider botContextProvider,
+        IPublisher publisher
     )
     {
         _client = client;
         _logger = logger;
         _options = options.Value;
-        _serviceProvider = serviceProvider;
         _botContextProvider = botContextProvider;
+        _publisher = publisher;
 
         _client.Ready += Ready;
         _client.MessageReceived += MessageReceivedAsync;
@@ -63,50 +63,20 @@ public class BotService : IHostedService
         _logger.LogInformation("Bot started");
     }
 
-    private async Task ExecuteEventHandlers<T>(Func<T, Task> handlerExecutor)
-    {
-        using var scope = _serviceProvider.CreateScope();
-        var eventHandlers = scope.ServiceProvider.GetServices<T>();
-
-        foreach (var eventHandler in eventHandlers)
-        {
-            try
-            {
-                await handlerExecutor(eventHandler);
-            }
-            catch (Exception e)
-            {
-                _logger.LogError(e, "Error executing event handler {EventHandler}", eventHandler);
-            }
-        }
-    }
-
     private Task MessageReceivedAsync(SocketMessage message)
     {
         if (message is not SocketUserMessage userMessage || message.Author.IsBot)
             return Task.CompletedTask;
 
-        return ExecuteEventHandlers<IMessageReceivedEventHandler>(eventHandler => eventHandler.HandleMessageAsync(userMessage));
+        return _publisher.Publish(new MessageReceived(userMessage));
     }
 
     private Task ReactionAddedAsync(Cacheable<IUserMessage, ulong> message, Cacheable<IMessageChannel, ulong> channel, SocketReaction reaction) =>
-        ExecuteEventHandlers<IReactionAddedEventHandler>(eventHandler => eventHandler.HandleReactionAsync(reaction));
+        _publisher.Publish(new ReactionAdded(reaction));
 
-    private async Task SlashCommandExecuted(SocketSlashCommand command)
+    private Task SlashCommandExecuted(SocketSlashCommand command)
     {
-        using var scope = _serviceProvider.CreateScope();
-
-        try
-        {
-            var commandType = SlashCommands.All.Single(x => x.Properties.Name.Value == command.CommandName).CommandType;
-
-            var commandHandler = (ISlashCommand)scope.ServiceProvider.GetRequiredService(commandType);
-
-            await commandHandler.ExecuteAsync(command);
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "Error executing slash command {SlashCommand}", command.CommandName);
-        }
+        var notification = SlashCommands.All.Single(x => x.Properties.Name.Value == command.CommandName).CreateNotification(command);
+        return _publisher.Publish(notification);
     }
 }

@@ -1,9 +1,10 @@
 ﻿using Discord;
+using MediatR;
 using Microsoft.Extensions.Options;
 
 namespace ChampionsOfKhazad.Bot;
 
-public class EmoteStreakHandler : IMessageReceivedEventHandler
+public class EmoteStreakHandler : INotificationHandler<MessageReceived>
 {
     private readonly EmoteStreakHandlerOptions _options;
     private readonly BotContext _botContext;
@@ -14,19 +15,25 @@ public class EmoteStreakHandler : IMessageReceivedEventHandler
         _botContext = botContext;
     }
 
-    public async Task HandleMessageAsync(IUserMessage message)
+    public async Task Handle(MessageReceived notification, CancellationToken cancellationToken)
     {
         var emote =
             _botContext.Guild.Emotes.SingleOrDefault(x => x.Name == _options.EmoteName)
             ?? await _botContext.Guild.GetEmotesAsync().SingleAsync(x => x.Name == _options.EmoteName);
 
-        if (message.Content == emote.ToString())
+        var message = notification.Message;
+
+        if (
+            message.Channel is not ITextChannel textChannel
+            || (textChannel.CategoryId != _options.ChannelId && textChannel.Id != _options.ChannelId)
+            || message.Content == emote.ToString()
+        )
             return;
 
         var streak = 0;
         ulong? previousAuthorId = null;
 
-        await foreach (var previousMessage in message.GetPreviousMessagesAsync())
+        await foreach (var previousMessage in message.GetPreviousMessagesAsync().WithCancellation(cancellationToken))
         {
             // Ignore messages that aren't from users or are from other bots
             // Messages from this bot should break the streak

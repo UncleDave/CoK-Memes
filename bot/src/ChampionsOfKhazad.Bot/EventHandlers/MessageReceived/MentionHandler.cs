@@ -1,15 +1,14 @@
 ﻿using System.Text.RegularExpressions;
 using ChampionsOfKhazad.Bot.ChatBot;
 using Discord;
+using MediatR;
 using Microsoft.Extensions.Options;
 using OpenAI.ObjectModels;
 using OpenAI.ObjectModels.RequestModels;
 
 namespace ChampionsOfKhazad.Bot;
 
-// TODO: Better async solution than Task.Run
-
-public class MentionHandler : IMessageReceivedEventHandler
+public class MentionHandler : INotificationHandler<MessageReceived>
 {
     private static readonly Regex NameExpression = new("^[a-zA-Z0-9_-]{1,64}$", RegexOptions.Compiled);
 
@@ -26,47 +25,46 @@ public class MentionHandler : IMessageReceivedEventHandler
         _context = context;
     }
 
-    public Task HandleMessageAsync(IUserMessage message)
+    public async Task Handle(MessageReceived notification, CancellationToken cancellationToken)
     {
-        if (message.Channel is not ITextChannel textChannel || !message.MentionedUserIds.Contains(_context.BotId))
-            return Task.CompletedTask;
+        var message = notification.Message;
 
-#pragma warning disable CS4014
-        Task.Run(async () =>
-#pragma warning restore CS4014
-        {
-            using var typing = textChannel.EnterTypingState();
+        if (
+            message.Channel is not ITextChannel textChannel
+            || (textChannel.CategoryId != _options.ChannelId && textChannel.Id != _options.ChannelId)
+            || !message.MentionedUserIds.Contains(_context.BotId)
+        )
+            return;
 
-            var user = new User { Id = message.Author.Id, Name = GetFriendlyAuthorName(message) };
+        using var typing = textChannel.EnterTypingState();
 
-            var previousMessages = await message
-                .GetPreviousMessagesAsync()
-                .Take(20)
-                .Reverse()
-                .Select(x => new ChatMessage(GetMessageRole(x), x.CleanContent, GetFriendlyAuthorName(x)))
-                .ToListAsync();
+        var user = new User { Id = message.Author.Id, Name = GetFriendlyAuthorName(message) };
 
-            if (message.Author.Id == _options.CringeAsideUserId)
-                previousMessages.Add(ChatMessage.FromSystem("Include cringe aside somewhere in your response."));
+        var previousMessages = await message
+            .GetPreviousMessagesAsync()
+            .Take(20)
+            .Reverse()
+            .Select(x => new ChatMessage(GetMessageRole(x), x.CleanContent, GetFriendlyAuthorName(x)))
+            .ToListAsync(cancellationToken: cancellationToken);
 
-            var response = await _assistant.RespondAsync(
-                message.CleanContent,
-                user,
-                _context.Guild.Emotes.Select(x => x.Name),
-                previousMessages,
-                message.ReferencedMessage is not null
-                    ? new ChatMessage(
-                        GetMessageRole(message.ReferencedMessage),
-                        message.ReferencedMessage.CleanContent,
-                        GetFriendlyAuthorName(message.ReferencedMessage)
-                    )
-                    : null
-            );
+        if (message.Author.Id == _options.CringeAsideUserId)
+            previousMessages.Add(ChatMessage.FromSystem("Include cringe aside somewhere in your response."));
 
-            await message.ReplyAsync(ProcessEmojis(response));
-        });
+        var response = await _assistant.RespondAsync(
+            message.CleanContent,
+            user,
+            _context.Guild.Emotes.Select(x => x.Name),
+            previousMessages,
+            message.ReferencedMessage is not null
+                ? new ChatMessage(
+                    GetMessageRole(message.ReferencedMessage),
+                    message.ReferencedMessage.CleanContent,
+                    GetFriendlyAuthorName(message.ReferencedMessage)
+                )
+                : null
+        );
 
-        return Task.CompletedTask;
+        await message.ReplyAsync(ProcessEmojis(response));
     }
 
     private static string GetFriendlyAuthorName(IMessage message) =>

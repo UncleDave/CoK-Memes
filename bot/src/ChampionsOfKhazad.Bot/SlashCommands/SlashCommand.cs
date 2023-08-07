@@ -1,5 +1,7 @@
 ﻿using Discord;
+using Discord.WebSocket;
+using MediatR;
 
 namespace ChampionsOfKhazad.Bot;
 
-public record SlashCommand(Type CommandType, ApplicationCommandProperties Properties);
+public record SlashCommand(ApplicationCommandProperties Properties, Func<SocketSlashCommand, INotification> CreateNotification);

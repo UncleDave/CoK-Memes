@@ -1,9 +1,10 @@
 ﻿using Discord;
+using MediatR;
 using Microsoft.Extensions.Options;
 
 namespace ChampionsOfKhazad.Bot;
 
-public class SummonUserHandler : IMessageReceivedEventHandler
+public class SummonUserHandler : INotificationHandler<MessageReceived>
 {
     private static readonly string[] Messages =
     {
@@ -32,8 +33,10 @@ public class SummonUserHandler : IMessageReceivedEventHandler
         _options = options.Value;
     }
 
-    public async Task HandleMessageAsync(IUserMessage message)
+    public async Task Handle(MessageReceived notification, CancellationToken cancellationToken)
     {
+        var message = notification.Message;
+
         if (
             message.Channel is not ITextChannel textChannel
             || !message.MentionedUserIds.Contains(_options.UserId)
@@ -46,7 +49,7 @@ public class SummonUserHandler : IMessageReceivedEventHandler
         var streak = 0;
         ulong? previousAuthorId = null;
 
-        await foreach (var previousMessage in message.GetPreviousMessagesAsync())
+        await foreach (var previousMessage in message.GetPreviousMessagesAsync().WithCancellation(cancellationToken))
         {
             // Ignore messages that aren't from users or are from bots
             if (previousMessage is not IUserMessage previousUserMessage || previousMessage.Author.IsBot)

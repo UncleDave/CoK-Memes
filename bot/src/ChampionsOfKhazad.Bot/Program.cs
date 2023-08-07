@@ -19,7 +19,7 @@ var host = Host.CreateApplicationBuilder(args);
 
 // csharpier-ignore
 Log.Logger = new LoggerConfiguration()
-    .MinimumLevel.Is(LogEventLevel.Debug)
+    .MinimumLevel.Is(host.Environment.IsDevelopment() ? LogEventLevel.Debug : LogEventLevel.Information)
     .Enrich.FromLogContext()
     .WriteTo.Console()
     .CreateLogger();
@@ -52,40 +52,37 @@ host.Services
     .AddGuildLore(
         new GuildLoreOptions
         {
-            EmbeddingsApiKey =
-                host.Configuration["OpenAIServiceOptions:ApiKey"] ?? throw new ApplicationException("OpenAIServiceOptions:ApiKey is required"),
-            VectorDatabaseApiKey = host.Configuration["Pinecone:ApiKey"] ?? throw new ApplicationException("Pinecone:ApiKey is required")
+            EmbeddingsApiKey = host.Configuration.GetRequiredString("OpenAIServiceOptions:ApiKey"),
+            VectorDatabaseApiKey = host.Configuration.GetRequiredString("Pinecone:ApiKey")
         }
     )
-    .AddMongoPersistence(host.Configuration.GetConnectionString("Mongo") ?? throw new ApplicationException("Mongo connection string is required"));
+    .AddMongoPersistence(host.Configuration.GetRequiredConnectionString("Mongo"));
 
 host.Services.AddSingleton<Assistant>();
 
-host.Services.AddRaidHelperClient(host.Configuration["RaidHelper:ApiKey"] ?? throw new ApplicationException("RaidHelper:ApiKey is required"));
+host.Services.AddRaidHelperClient(host.Configuration.GetRequiredString("RaidHelper:ApiKey"));
+
+host.Services.AddMediatR(configuration =>
+{
+    configuration.RegisterServicesFromAssembly(typeof(Program).Assembly);
+    configuration.NotificationPublisherType = typeof(ParallelNonBlockingPublisher);
+    configuration.Lifetime = ServiceLifetime.Singleton;
+});
 
 host.Services
-    .AddMessageReceivedEventHandler<DirectMessageHandler>()
-    .AddMessageReceivedEventHandler<EmoteStreakHandler, EmoteStreakHandlerOptions>(
-        host.Configuration.GetEventHandlerSection(EmoteStreakHandlerOptions.Key)
-    )
-    .AddMessageReceivedEventHandler<SummonUserHandler, SummonUserHandlerOptions>(
-        host.Configuration.GetEventHandlerSection(SummonUserHandlerOptions.Key)
-    )
-    .AddMessageReceivedEventHandler<ClownReactor, ClownReactorOptions>(host.Configuration.GetEventHandlerSection(ClownReactorOptions.Key))
-    .AddMessageReceivedEventHandler<QuestionMarkReactor, QuestionMarkReactorOptions>(
-        host.Configuration.GetEventHandlerSection(QuestionMarkReactorOptions.Key)
-    )
-    .AddMessageReceivedEventHandler<MentionHandler, MentionHandlerOptions>(host.Configuration.GetEventHandlerSection(MentionHandlerOptions.Key))
-    .AddMessageReceivedEventHandler<SycophantHandler, SycophantHandlerOptions>(host.Configuration.GetEventHandlerSection(SycophantHandlerOptions.Key))
-    .AddReactionAddedEventHandler<HallOfFameReactionHandler, HallOfFameReactionHandlerOptions>(
-        host.Configuration.GetEventHandlerSection(HallOfFameReactionHandlerOptions.Key)
-    )
-    .AddSlashCommand<RaidsSlashCommand, RaidsSlashCommandOptions>(host.Configuration.GetSlashCommandSection(RaidsSlashCommandOptions.Key));
+    .AddOptionsWithEagerValidation<EmoteStreakHandlerOptions>(host.Configuration.GetEventHandlerSection(EmoteStreakHandlerOptions.Key))
+    .AddOptionsWithEagerValidation<SummonUserHandlerOptions>(host.Configuration.GetEventHandlerSection(SummonUserHandlerOptions.Key))
+    .AddOptionsWithEagerValidation<ClownReactorOptions>(host.Configuration.GetEventHandlerSection(ClownReactorOptions.Key))
+    .AddOptionsWithEagerValidation<QuestionMarkReactorOptions>(host.Configuration.GetEventHandlerSection(QuestionMarkReactorOptions.Key))
+    .AddOptionsWithEagerValidation<MentionHandlerOptions>(host.Configuration.GetEventHandlerSection(MentionHandlerOptions.Key))
+    .AddOptionsWithEagerValidation<SycophantHandlerOptions>(host.Configuration.GetEventHandlerSection(SycophantHandlerOptions.Key))
+    .AddOptionsWithEagerValidation<HallOfFameReactionHandlerOptions>(host.Configuration.GetEventHandlerSection(HallOfFameReactionHandlerOptions.Key))
+    .AddOptionsWithEagerValidation<RaidsSlashCommandOptions>(host.Configuration.GetSlashCommandSection(RaidsSlashCommandOptions.Key));
 
 host.Services
     .AddHostedService<BotService>()
     .AddSingleton<BotContextProvider>()
-    .AddScoped<BotContext>(
+    .AddSingleton<BotContext>(
         serviceProvider =>
             serviceProvider.GetRequiredService<BotContextProvider>().BotContext ?? throw new InvalidOperationException("BotContext is not available")
     );

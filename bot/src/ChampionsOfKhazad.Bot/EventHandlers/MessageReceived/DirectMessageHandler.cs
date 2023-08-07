@@ -1,17 +1,18 @@
 ﻿using Discord;
+using MediatR;
 
 namespace ChampionsOfKhazad.Bot;
 
-public class DirectMessageHandler : IMessageReceivedEventHandler
+public class DirectMessageHandler : INotificationHandler<MessageReceived>
 {
     private const string SourceUrl = "https://github.com/UncleDave/CoK-Memes/tree/main/bot";
-
     private const string Message = $"Hi! I'm a bot, if you want to know more you can find my juicy innards at {SourceUrl}";
-
     private static readonly Dictionary<ulong, DateTime> LastUserMessage = new();
 
-    public Task HandleMessageAsync(IUserMessage message)
+    public Task Handle(MessageReceived notification, CancellationToken cancellationToken)
     {
+        var message = notification.Message;
+
         if (message.Channel is not IDMChannel)
             return Task.CompletedTask;
 

@@ -1,10 +1,10 @@
 ﻿using Discord;
-using Discord.WebSocket;
+using MediatR;
 using Microsoft.Extensions.Options;
 
 namespace ChampionsOfKhazad.Bot;
 
-public class HallOfFameReactionHandler : IReactionAddedEventHandler
+public class HallOfFameReactionHandler : INotificationHandler<ReactionAdded>
 {
     private readonly HallOfFameReactionHandlerOptions _options;
     private readonly BotContext _context;
@@ -15,13 +15,14 @@ public class HallOfFameReactionHandler : IReactionAddedEventHandler
         _context = context;
     }
 
-    public async Task HandleReactionAsync(SocketReaction reaction)
+    public async Task Handle(ReactionAdded notification, CancellationToken cancellationToken)
     {
         var targetChannel = await _context.Guild.GetChannelAsync(_options.TargetChannelId);
 
         if (targetChannel is not ITextChannel targetTextChannel)
             throw new ApplicationException("Target channel was not found or is not a text channel");
 
+        var reaction = notification.Reaction;
         var message = reaction.Message.IsSpecified ? reaction.Message.Value : await reaction.Channel.GetMessageAsync(reaction.MessageId);
 
         if (
@@ -52,7 +53,7 @@ public class HallOfFameReactionHandler : IReactionAddedEventHandler
 
     private static async Task<bool> MessageAlreadyPostedAsync(IMessage message, IMessageChannel channel)
     {
-        var matchingMessage = await channel!
+        var matchingMessage = await channel
             .GetMessagesAsync()
             .Flatten()
             .FirstOrDefaultAsync(x => x.Embeds.Any(embed => embed.Footer?.Text == message.Id.ToString()));

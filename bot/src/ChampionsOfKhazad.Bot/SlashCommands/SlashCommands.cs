@@ -6,12 +6,12 @@ public static class SlashCommands
 {
     public static readonly SlashCommand Raids =
         new(
-            typeof(RaidsSlashCommand),
             new SlashCommandBuilder()
                 .WithName("raids")
                 .WithDescription("Clear the Sunday/Monday sign up channels and create new raid sign ups")
                 .WithDefaultMemberPermissions(GuildPermission.Administrator)
-                .Build()
+                .Build(),
+        command => new RaidsSlashCommandExecuted(command)
         );
 
     public static readonly SlashCommand[] All = { Raids };

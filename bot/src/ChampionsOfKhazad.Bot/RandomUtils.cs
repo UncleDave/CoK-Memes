@@ -15,17 +15,7 @@ public static class RandomUtils
     public static string RandomOrdinal(int min, int max)
     {
         var value = Random.Shared.Next(min, max + 1);
-
-        if (value is 11 or 12 or 13)
-            return $"{value}th";
-
-        return (value % 10) switch
-        {
-            1 => $"{value}st",
-            2 => $"{value}nd",
-            3 => $"{value}rd",
-            _ => $"{value}th"
-        };
+        return value.ToOrdinal();
     }
 
     public static bool Roll(int chance) => Random.Shared.Next(1, 101) <= chance;

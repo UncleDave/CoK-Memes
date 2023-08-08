@@ -1,4 +1,5 @@
-﻿using Discord;
+﻿using ChampionsOfKhazad.Bot.DiscordStats.StreakBreaks;
+using Discord;
 using MediatR;
 using Microsoft.Extensions.Options;
 
@@ -8,11 +9,20 @@ public class EmoteStreakHandler : INotificationHandler<MessageReceived>
 {
     private readonly EmoteStreakHandlerOptions _options;
     private readonly BotContext _botContext;
+    private readonly IGetStreakBreaks _streakBreakGetter;
+    private readonly IPublisher _publisher;
 
-    public EmoteStreakHandler(IOptions<EmoteStreakHandlerOptions> options, BotContext botContext)
+    public EmoteStreakHandler(
+        IOptions<EmoteStreakHandlerOptions> options,
+        BotContext botContext,
+        IGetStreakBreaks streakBreakGetter,
+        IPublisher publisher
+    )
     {
         _options = options.Value;
         _botContext = botContext;
+        _streakBreakGetter = streakBreakGetter;
+        _publisher = publisher;
     }
 
     public async Task Handle(MessageReceived notification, CancellationToken cancellationToken)
@@ -58,7 +68,17 @@ public class EmoteStreakHandler : INotificationHandler<MessageReceived>
 
         if (streak > 1)
         {
-            await message.Channel.SendMessageAsync($"Streak of {streak} {emote} broken by {message.Author.Mention}, shame on them.");
+            var userStreakBreakCount = await _streakBreakGetter.GetStreakBreakCountByUserAsync(
+                message.Author.Id,
+                _options.EmoteName,
+                cancellationToken
+            );
+
+            await message.Channel.SendMessageAsync(
+                $"Streak of {streak} {emote} broken by {message.Author.Mention}, shame on them. This is their {(userStreakBreakCount + 1).ToOrdinal()} streak break."
+            );
+
+            await _publisher.Publish(new StreakBroken(message.Author.Id, _options.EmoteName, message.Timestamp), cancellationToken);
         }
     }
 

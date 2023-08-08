@@ -1,6 +1,6 @@
 ﻿using MongoDB.Driver;
 
-namespace ChampionsOfKhazad.Bot.Lore.Mongo;
+namespace ChampionsOfKhazad.Bot.Mongo;
 
 internal class MongoCollectionProvider
 {

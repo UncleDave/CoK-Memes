@@ -5,7 +5,6 @@ using ChampionsOfKhazad.Bot.Lore;
 using ChampionsOfKhazad.Bot.RaidHelper;
 using Discord;
 using Discord.WebSocket;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -46,7 +45,16 @@ host.Services.AddSingleton<DiscordSocketClient>(
         )
 );
 
+host.Services.AddMediatR(configuration =>
+{
+    configuration.RegisterServicesFromAssemblyContaining<Program>();
+    configuration.NotificationPublisherType = typeof(ParallelNonBlockingPublisher);
+    configuration.Lifetime = ServiceLifetime.Singleton;
+});
+
 host.Services.AddOpenAIService();
+
+var mongoConnectionString = host.Configuration.GetRequiredConnectionString("Mongo");
 
 host.Services
     .AddGuildLore(
@@ -56,18 +64,13 @@ host.Services
             VectorDatabaseApiKey = host.Configuration.GetRequiredString("Pinecone:ApiKey")
         }
     )
-    .AddMongoPersistence(host.Configuration.GetRequiredConnectionString("Mongo"));
+    .AddMongoPersistence(mongoConnectionString);
+
+host.Services.AddDiscordStats().AddMongoPersistence(mongoConnectionString);
 
 host.Services.AddSingleton<Assistant>();
 
 host.Services.AddRaidHelperClient(host.Configuration.GetRequiredString("RaidHelper:ApiKey"));
-
-host.Services.AddMediatR(configuration =>
-{
-    configuration.RegisterServicesFromAssembly(typeof(Program).Assembly);
-    configuration.NotificationPublisherType = typeof(ParallelNonBlockingPublisher);
-    configuration.Lifetime = ServiceLifetime.Singleton;
-});
 
 host.Services
     .AddOptionsWithEagerValidation<EmoteStreakHandlerOptions>(host.Configuration.GetEventHandlerSection(EmoteStreakHandlerOptions.Key))

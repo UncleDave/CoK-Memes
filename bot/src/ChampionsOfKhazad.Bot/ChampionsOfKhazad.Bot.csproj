@@ -27,6 +27,8 @@
     </ItemGroup>
 
     <ItemGroup>
+        <ProjectReference Include="..\ChampionsOfKhazad.Bot.DiscordStats.Mongo\ChampionsOfKhazad.Bot.DiscordStats.Mongo.csproj" />
+        <ProjectReference Include="..\ChampionsOfKhazad.Bot.DiscordStats\ChampionsOfKhazad.Bot.DiscordStats.csproj" />
         <ProjectReference Include="..\ChampionsOfKhazad.Bot.Lore.Mongo\ChampionsOfKhazad.Bot.Lore.Mongo.csproj"/>
         <ProjectReference Include="..\ChampionsOfKhazad.Bot.Lore\ChampionsOfKhazad.Bot.Lore.csproj"/>
         <ProjectReference Include="..\ChampionsOfKhazad.Bot.RaidHelper\ChampionsOfKhazad.Bot.RaidHelper.csproj"/>

@@ -55,10 +55,13 @@ public class BotService : IHostedService
         _logger.LogDebug("Guilds: {Guilds}", _client.Guilds.Select(x => x.Id));
         _logger.LogDebug("Guild: {Guild}, channels: {Channels}", guild.Name, guild.Channels.Select(x => x.Name));
 
-        _botContextProvider.BotContext = new BotContext(_client.CurrentUser.Id, guild);
+        _botContextProvider.BotContext = new BotContext(_client.CurrentUser.Id, guild, _client);
 
-        foreach (var slashCommand in SlashCommands.All)
+        foreach (var slashCommand in SlashCommands.GuildCommands)
             await guild.CreateApplicationCommandAsync(slashCommand.Properties);
+
+        foreach (var slashCommand in SlashCommands.GlobalCommands)
+            await _client.CreateGlobalApplicationCommandAsync(slashCommand.Properties);
 
         _logger.LogInformation("Bot started");
     }

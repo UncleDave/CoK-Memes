@@ -1,6 +1,7 @@
 ﻿using ChampionsOfKhazad.Bot.RaidHelper;
 using Discord;
 using MediatR;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace ChampionsOfKhazad.Bot;
@@ -10,6 +11,7 @@ public class RaidsSlashCommand : INotificationHandler<RaidsSlashCommandExecuted>
     private readonly RaidsSlashCommandOptions _options;
     private readonly RaidHelperClient _raidHelperClient;
     private readonly BotContext _botContext;
+    private readonly ILogger<RaidsSlashCommand> _logger;
 
     private static readonly string[] Acknowledgements = { "More work?", "Right-o.", "Yes, milord.", "All right.", "Off I go, then!" };
 
@@ -70,11 +72,17 @@ public class RaidsSlashCommand : INotificationHandler<RaidsSlashCommandExecuted>
         "Damn, Malithas Brightblade got hands.",
     };
 
-    public RaidsSlashCommand(IOptions<RaidsSlashCommandOptions> options, RaidHelperClient raidHelperClient, BotContext botContext)
+    public RaidsSlashCommand(
+        IOptions<RaidsSlashCommandOptions> options,
+        RaidHelperClient raidHelperClient,
+        BotContext botContext,
+        ILogger<RaidsSlashCommand> logger
+    )
     {
         _options = options.Value;
         _raidHelperClient = raidHelperClient;
         _botContext = botContext;
+        _logger = logger;
     }
 
     public async Task Handle(RaidsSlashCommandExecuted notification, CancellationToken cancellationToken)
@@ -83,8 +91,15 @@ public class RaidsSlashCommand : INotificationHandler<RaidsSlashCommandExecuted>
 
         await command.RespondAsync(RandomUtils.PickRandom(Acknowledgements), ephemeral: true);
 
-        var clearChannelTasks = _options.Raids.Select(x => ClearChannelAsync(x.ChannelId));
-        await Task.WhenAll(clearChannelTasks);
+        try
+        {
+            var clearChannelTasks = _options.Raids.Select(x => ClearChannelAsync(x.ChannelId));
+            await Task.WhenAll(clearChannelTasks);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Error clearing channels for new raids");
+        }
 
         var createRaidTasks = _options.Raids.Select(x => CreateRaidAsync(command.User.Id, x));
         await Task.WhenAll(createRaidTasks);

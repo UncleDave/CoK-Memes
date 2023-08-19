@@ -4,6 +4,7 @@ using Pulumi.AzureNative.OperationalInsights.Inputs;
 using Pulumi.AzureNative.Resources;
 using Pulumi.AzureNative.App;
 using Pulumi.AzureNative.App.Inputs;
+using Pulumi.AzureNative.Insights;
 using Pulumi.Docker;
 using Pulumi.Docker.Inputs;
 using Config = Pulumi.Config;
@@ -28,6 +29,17 @@ return await Pulumi.Deployment.RunAsync(() =>
             ResourceGroupName = resourceGroup.Name,
             Sku = new WorkspaceSkuArgs { Name = WorkspaceSkuNameEnum.PerGB2018 },
             RetentionInDays = 30
+        }
+    );
+
+    var applicationInsights = new Component(
+        "application-insights",
+        new ComponentArgs
+        {
+            ApplicationType = ApplicationType.Other,
+            Kind = "other",
+            ResourceGroupName = resourceGroup.Name,
+            WorkspaceResourceId = logAnalytics.Id
         }
     );
 
@@ -76,6 +88,7 @@ return await Pulumi.Deployment.RunAsync(() =>
     const string pineconeApiKeySecretName = "pinecone-api-key";
     const string raidHelperApiKeySecretName = "raid-helper-api-key";
     const string mongoConnectionStringSecretName = "mongo-connection-string";
+    const string applicationInsightsConnectionStringSecretName = "application-insights-connection-string";
 
     var containerApp = new ContainerApp(
         "bot-app",
@@ -98,7 +111,8 @@ return await Pulumi.Deployment.RunAsync(() =>
                     new SecretArgs { Name = openAiApiKeySecretName, Value = config.RequireSecret("openAiApiKey") },
                     new SecretArgs { Name = pineconeApiKeySecretName, Value = config.RequireSecret("pineconeApiKey") },
                     new SecretArgs { Name = raidHelperApiKeySecretName, Value = config.RequireSecret("raidHelperApiKey") },
-                    new SecretArgs { Name = mongoConnectionStringSecretName, Value = config.RequireSecret("mongoConnectionString") }
+                    new SecretArgs { Name = mongoConnectionStringSecretName, Value = config.RequireSecret("mongoConnectionString") },
+                    new SecretArgs { Name = applicationInsightsConnectionStringSecretName, Value = applicationInsights.ConnectionString }
                 }
             },
             Template = new TemplateArgs
@@ -115,7 +129,12 @@ return await Pulumi.Deployment.RunAsync(() =>
                         new EnvironmentVarArgs { Name = "OpenAIServiceOptions__ApiKey", SecretRef = openAiApiKeySecretName },
                         new EnvironmentVarArgs { Name = "Pinecone__ApiKey", SecretRef = pineconeApiKeySecretName },
                         new EnvironmentVarArgs { Name = "RaidHelper__ApiKey", SecretRef = raidHelperApiKeySecretName },
-                        new EnvironmentVarArgs { Name = "ConnectionStrings__Mongo", SecretRef = mongoConnectionStringSecretName }
+                        new EnvironmentVarArgs { Name = "ConnectionStrings__Mongo", SecretRef = mongoConnectionStringSecretName },
+                        new EnvironmentVarArgs
+                        {
+                            Name = "ConnectionStrings__ApplicationInsights",
+                            SecretRef = applicationInsightsConnectionStringSecretName
+                        }
                     },
                     Resources = new ContainerResourcesArgs { Cpu = .25, Memory = "0.5Gi" }
                 },

@@ -1,13 +1,15 @@
 ﻿using System.Globalization;
+using AspNetMonsters.ApplicationInsights.AspNetCore;
 using ChampionsOfKhazad.Bot;
 using ChampionsOfKhazad.Bot.ChatBot;
 using ChampionsOfKhazad.Bot.Lore;
 using ChampionsOfKhazad.Bot.RaidHelper;
 using Discord;
 using Discord.WebSocket;
+using Microsoft.ApplicationInsights.Extensibility;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using OpenAI.Extensions;
 using Serilog;
 using Serilog.Events;
@@ -17,13 +19,31 @@ CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("en-GB");
 var host = Host.CreateApplicationBuilder(args);
 
 // csharpier-ignore
-Log.Logger = new LoggerConfiguration()
-    .MinimumLevel.Is(host.Environment.IsDevelopment() ? LogEventLevel.Debug : LogEventLevel.Information)
-    .Enrich.FromLogContext()
-    .WriteTo.Console()
-    .CreateLogger();
+// ReSharper disable once MoveLocalFunctionAfterJumpStatement
+LoggerConfiguration ConfigureLogger(LoggerConfiguration loggerConfiguration, IHostEnvironment hostEnvironment) =>
+    loggerConfiguration
+        .MinimumLevel.Is(hostEnvironment.IsDevelopment() ? LogEventLevel.Debug : LogEventLevel.Information)
+        .Enrich.FromLogContext()
+        .WriteTo.Console();
 
-host.Logging.ClearProviders().AddSerilog();
+Log.Logger = ConfigureLogger(new LoggerConfiguration(), host.Environment).CreateBootstrapLogger();
+
+host.Services
+    .AddApplicationInsightsTelemetryWorkerService(options =>
+    {
+        options.ConnectionString = host.Configuration.GetConnectionString("ApplicationInsights");
+    })
+    .AddCloudRoleNameInitializer("Bot");
+
+host.Services.AddSerilog(
+    (provider, configuration) =>
+    {
+        ConfigureLogger(configuration, host.Environment).WriteTo.ApplicationInsights(
+            provider.GetRequiredService<TelemetryConfiguration>(),
+            TelemetryConverter.Traces
+        );
+    }
+);
 
 host.Services.AddOptionsWithEagerValidation<BotOptions>(host.Configuration.GetSection(BotOptions.Key));
 

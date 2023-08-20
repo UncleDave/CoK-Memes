@@ -10,7 +10,7 @@ namespace ChampionsOfKhazad.Bot;
 public class BotService : IHostedService
 {
     private readonly DiscordSocketClient _client;
-    private readonly ILogger _logger;
+    private readonly ILogger<BotService> _logger;
     private readonly BotOptions _options;
     private readonly BotContextProvider _botContextProvider;
     private readonly IPublisher _publisher;

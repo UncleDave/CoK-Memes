@@ -45,6 +45,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChampionsOfKhazad.Bot.Disco
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChampionsOfKhazad.Bot.Mongo", "src\ChampionsOfKhazad.Bot.Mongo\ChampionsOfKhazad.Bot.Mongo.csproj", "{75E15DC7-77C0-451A-AEA9-7212CB44228A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChampionsOfKhazad.Bot.HardcoreStats", "src\ChampionsOfKhazad.Bot.HardcoreStats\ChampionsOfKhazad.Bot.HardcoreStats.csproj", "{CA384E3C-B0AC-4CBE-B0BD-718DEB65CDB6}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChampionsOfKhazad.Bot.HardcoreStats.Mongo", "src\ChampionsOfKhazad.Bot.HardcoreStats.Mongo\ChampionsOfKhazad.Bot.HardcoreStats.Mongo.csproj", "{ADC3D217-3A6F-482B-8A4D-67C3EC65EB05}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -91,6 +95,14 @@ Global
 		{75E15DC7-77C0-451A-AEA9-7212CB44228A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{75E15DC7-77C0-451A-AEA9-7212CB44228A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{75E15DC7-77C0-451A-AEA9-7212CB44228A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CA384E3C-B0AC-4CBE-B0BD-718DEB65CDB6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CA384E3C-B0AC-4CBE-B0BD-718DEB65CDB6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CA384E3C-B0AC-4CBE-B0BD-718DEB65CDB6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CA384E3C-B0AC-4CBE-B0BD-718DEB65CDB6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{ADC3D217-3A6F-482B-8A4D-67C3EC65EB05}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{ADC3D217-3A6F-482B-8A4D-67C3EC65EB05}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{ADC3D217-3A6F-482B-8A4D-67C3EC65EB05}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{ADC3D217-3A6F-482B-8A4D-67C3EC65EB05}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{250AB7D4-9E29-41B4-8636-BDD934CC20EF} = {AE87495F-C4DE-42DA-8BCB-DF6EC3792ACD}
@@ -106,5 +118,7 @@ Global
 		{95D49A9C-FF4D-4367-B21A-0788CF0AF142} = {AE87495F-C4DE-42DA-8BCB-DF6EC3792ACD}
 		{08D893D2-A266-44B2-B215-E7CF42F6B2A6} = {AE87495F-C4DE-42DA-8BCB-DF6EC3792ACD}
 		{75E15DC7-77C0-451A-AEA9-7212CB44228A} = {AE87495F-C4DE-42DA-8BCB-DF6EC3792ACD}
+		{CA384E3C-B0AC-4CBE-B0BD-718DEB65CDB6} = {AE87495F-C4DE-42DA-8BCB-DF6EC3792ACD}
+		{ADC3D217-3A6F-482B-8A4D-67C3EC65EB05} = {AE87495F-C4DE-42DA-8BCB-DF6EC3792ACD}
 	EndGlobalSection
 EndGlobal

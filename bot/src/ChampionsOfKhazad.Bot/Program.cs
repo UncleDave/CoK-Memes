@@ -87,6 +87,7 @@ host.Services
     .AddMongoPersistence(mongoConnectionString);
 
 host.Services.AddDiscordStats().AddMongoPersistence(mongoConnectionString);
+host.Services.AddHardcoreStats().AddMongoPersistence(mongoConnectionString);
 
 host.Services.AddSingleton<Assistant>();
 

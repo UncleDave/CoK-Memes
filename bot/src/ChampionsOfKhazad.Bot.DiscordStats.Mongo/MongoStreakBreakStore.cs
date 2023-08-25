@@ -3,7 +3,7 @@ using MongoDB.Driver;
 
 namespace ChampionsOfKhazad.Bot.DiscordStats.Mongo;
 
-public class MongoStreakBreakStore : IStoreStreakBreaks
+internal class MongoStreakBreakStore : IStoreStreakBreaks
 {
     private readonly IMongoCollection<StreakBreak> _streakBreakCollection;
 

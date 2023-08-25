@@ -106,4 +106,21 @@ public class Assistant
 
         return choice.Message.Content;
     }
+
+    public async Task<string> RespondAsync(string instruction, string prompt)
+    {
+        var result = await _openAiService.ChatCompletion.CreateCompletion(
+            new ChatCompletionCreateRequest
+            {
+                Messages = new[] { ChatMessage.FromSystem(instruction), ChatMessage.FromSystem(prompt) },
+                Model = Models.Gpt_3_5_Turbo,
+                MaxTokens = 500,
+                N = 1
+            }
+        );
+
+        var choice = result.Choices.FirstOrDefault(x => x.FinishReason == "stop") ?? result.Choices.First();
+
+        return choice.Message.Content;
+    }
 }

@@ -46,7 +46,7 @@ public class RipSlashCommand : INotificationHandler<RipSlashCommandExecuted>
             promptBuilder.Append($" Their reported cause of death was {causeOfDeath}.");
 
         promptBuilder.Append(
-            " Write a short obituary for them, it must be less than 100 words. It must contain all the information you have been given about the character."
+            " Write an obituary for them, it must be less than 100 words. It must contain all the information you have been given about the character and their cause of death."
         );
 
         var obituaryTask = _assistant.RespondAsync(

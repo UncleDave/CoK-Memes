@@ -1,5 +1,4 @@
-﻿using System.Text;
-using ChampionsOfKhazad.Bot.ChatBot;
+﻿using ChampionsOfKhazad.Bot.ChatBot;
 using ChampionsOfKhazad.Bot.HardcoreStats.CharacterDeaths;
 using MediatR;
 
@@ -18,40 +17,15 @@ public class RipSlashCommand : INotificationHandler<RipSlashCommandExecuted>
 
     public async Task Handle(RipSlashCommandExecuted notification, CancellationToken cancellationToken)
     {
-        var character = notification.Command.Data.Options.Single(x => x.Name == "character").Value.ToString()!;
-        var level = notification.Command.Data.Options.SingleOrDefault(x => x.Name == "level")?.Value;
-        var race = notification.Command.Data.Options.SingleOrDefault(x => x.Name == "race")?.Value.ToString();
-        var characterClass = notification.Command.Data.Options.SingleOrDefault(x => x.Name == "class")?.Value.ToString();
-        var causeOfDeath = notification.Command.Data.Options.SingleOrDefault(x => x.Name == "cause")?.Value.ToString();
-        var characterLevel = level is long levelLong ? (ushort?)Math.Clamp(levelLong, 1, 60) : null;
-
-        var promptBuilder = new StringBuilder($"{character} has died.");
-        var details = new List<string>();
-
-        if (characterLevel is not null)
-            details.Add($"level {characterLevel}");
-
-        if (race is not null)
-            details.Add(race);
-
-        if (characterClass is not null)
-            details.Add(characterClass);
-
-        if (details.Count > 0)
-            promptBuilder.Append(
-                $" They were {(characterLevel is not null && details.Count == 1 ? string.Empty : "a ")}{string.Join(" ", details)}."
-            );
-
-        if (causeOfDeath is not null)
-            promptBuilder.Append($" Their reported cause of death was {causeOfDeath}.");
-
-        promptBuilder.Append(
-            " Write an obituary for them, it must be less than 100 words. It must contain all the information you have been given about the character and their cause of death."
-        );
+        var character = (string)notification.Command.Data.Options.Single(x => x.Name == "character").Value;
+        var level = (ushort)Math.Clamp((long)notification.Command.Data.Options.Single(x => x.Name == "level").Value, 1, 60);
+        var race = (string)notification.Command.Data.Options.Single(x => x.Name == "race").Value;
+        var characterClass = (string)notification.Command.Data.Options.Single(x => x.Name == "class").Value;
+        var causeOfDeath = (string)notification.Command.Data.Options.Single(x => x.Name == "cause").Value;
 
         var obituaryTask = _assistant.RespondAsync(
-            "You are the Dwarf Lorekeeper of a \"World of Warcraft Classic\" guild known as Champions of Khazad.",
-            promptBuilder.ToString()
+            "You are the Dwarf Lorekeeper of a World of Warcraft Classic guild known as Champions of Khazad.",
+            $"{character}, a level {level} {race} {characterClass}, has died. Their reported cause of death was {causeOfDeath}. Write an obituary for them, it must be less than 100 words. It must contain all the information you have been given about the character and their cause of death."
         );
 
         await notification.Command.DeferAsync();
@@ -65,7 +39,7 @@ public class RipSlashCommand : INotificationHandler<RipSlashCommandExecuted>
                     character,
                     notification.Command.CreatedAt,
                     obituary,
-                    characterLevel,
+                    level,
                     race,
                     characterClass,
                     causeOfDeath

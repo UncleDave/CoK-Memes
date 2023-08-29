@@ -30,12 +30,13 @@ public static class SlashCommands
                 .WithName("rip")
                 .WithDescription("Announce the untimely demise of your hardcore character")
                 .AddOption("character", ApplicationCommandOptionType.String, "Your character's name", true)
-                .AddOption("level", ApplicationCommandOptionType.Integer, "Your character's level", minValue: 1, maxValue: 60)
+                .AddOption("level", ApplicationCommandOptionType.Integer, "Your character's level", true, minValue: 1, maxValue: 60)
                 .AddOption(
                     new SlashCommandOptionBuilder()
                         .WithName("race")
                         .WithType(ApplicationCommandOptionType.String)
                         .WithDescription("Your character's race")
+                        .WithRequired(true)
                         .AddChoice("Human")
                         .AddChoice("Dwarf")
                         .AddChoice("Gnome")
@@ -50,6 +51,7 @@ public static class SlashCommands
                         .WithName("class")
                         .WithType(ApplicationCommandOptionType.String)
                         .WithDescription("Your character's class")
+                        .WithRequired(true)
                         .AddChoice("Druid")
                         .AddChoice("Hunter")
                         .AddChoice("Mage")
@@ -60,7 +62,7 @@ public static class SlashCommands
                         .AddChoice("Warlock")
                         .AddChoice("Warrior")
                 )
-                .AddOption("cause", ApplicationCommandOptionType.String, "The cause of death")
+                .AddOption("cause", ApplicationCommandOptionType.String, "The cause of death", true)
                 .Build(),
             command => new RipSlashCommandExecuted(command)
         );

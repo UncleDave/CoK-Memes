@@ -120,7 +120,7 @@ return await Pulumi.Deployment.RunAsync(() =>
                 Containers = new ContainerArgs
                 {
                     Name = "bot",
-                    Image = botImage.RepoDigest!,
+                    Image = botImage.RepoDigest,
                     Env =
                     {
                         new EnvironmentVarArgs { Name = "TZ", Value = "Europe/Copenhagen" },

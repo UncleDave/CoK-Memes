@@ -5,10 +5,13 @@ namespace ChampionsOfKhazad.Bot;
 public static class ConfigurationExtensions
 {
     public static IConfigurationSection GetEventHandlerSection(this IConfiguration configuration, string key) =>
-        configuration.GetSection($"{EventHandlerOptions.Key}:{key}");
+        configuration.GetSection($"EventHandlers:{key}");
 
     public static IConfigurationSection GetSlashCommandSection(this IConfiguration configuration, string key) =>
-        configuration.GetSection($"{SlashCommandOptions.Key}:{key}");
+        configuration.GetSection($"SlashCommands:{key}");
+    
+    public static IConfigurationSection GetFollowerSection(this IConfiguration configuration, string key) =>
+        configuration.GetSection($"Followers:{key}");
 
     public static string GetRequiredString(this IConfiguration configuration, string key) =>
         configuration[key] ?? throw new ApplicationException($"{key} is required");

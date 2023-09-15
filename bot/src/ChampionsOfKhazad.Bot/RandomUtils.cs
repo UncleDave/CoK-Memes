@@ -18,5 +18,5 @@ public static class RandomUtils
         return value.ToOrdinal();
     }
 
-    public static bool Roll(int chance) => Random.Shared.Next(1, 101) <= chance;
+    public static bool Roll(ushort chance) => Random.Shared.Next(1, 101) <= chance;
 }

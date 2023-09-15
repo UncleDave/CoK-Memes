@@ -1,5 +1,4 @@
 ﻿using System.Text.RegularExpressions;
-using ChampionsOfKhazad.Bot.ChatBot;
 using Discord;
 using MediatR;
 using Microsoft.Extensions.Options;

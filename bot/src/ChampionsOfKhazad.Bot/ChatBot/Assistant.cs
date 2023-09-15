@@ -5,7 +5,7 @@ using OpenAI.ObjectModels;
 using OpenAI.ObjectModels.RequestModels;
 using OpenAI.ObjectModels.ResponseModels;
 
-namespace ChampionsOfKhazad.Bot.ChatBot;
+namespace ChampionsOfKhazad.Bot;
 
 public class Assistant
 {

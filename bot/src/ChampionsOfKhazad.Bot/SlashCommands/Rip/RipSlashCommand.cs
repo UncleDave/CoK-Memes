@@ -1,5 +1,4 @@
-﻿using ChampionsOfKhazad.Bot.ChatBot;
-using ChampionsOfKhazad.Bot.HardcoreStats.CharacterDeaths;
+﻿using ChampionsOfKhazad.Bot.HardcoreStats.CharacterDeaths;
 using MediatR;
 
 namespace ChampionsOfKhazad.Bot;

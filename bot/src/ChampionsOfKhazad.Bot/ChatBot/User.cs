@@ -1,4 +1,4 @@
-﻿namespace ChampionsOfKhazad.Bot.ChatBot;
+﻿namespace ChampionsOfKhazad.Bot;
 
 public record User
 {

@@ -2,16 +2,16 @@
 
 namespace ChampionsOfKhazad.Bot;
 
-public record SycophantFollowerOptions : BaseFollowerOptions
+public record RatFactsFollowerOptions : BaseFollowerOptions
 {
-    public const string Key = "Sycophant";
+    public const string Key = "RatFacts";
 }
 
-public class SycophantFollower : RandomChanceFollower
+public class RatFactsFollower : RandomChanceFollower
 {
-    public SycophantFollower(
+    public RatFactsFollower(
         IOptions<AllFollowersOptions> allFollowersOptions,
-        IOptions<SycophantFollowerOptions> options,
+        IOptions<RatFactsFollowerOptions> options,
         Assistant assistant,
         BotContext botContext
     )
@@ -19,7 +19,7 @@ public class SycophantFollower : RandomChanceFollower
             new RandomChanceFollowerOptions(
                 options.Value.ToFollowerTarget(),
                 allFollowersOptions.Value.IgnoreBotMentionsInChannelId,
-                $"You are a sycophant. You will agree with and echo everything {options.Value.UserName} says but will not add anything of value. You will try to suck up to {options.Value.UserName} as much as possible. You are not too bright.",
+                $"{options.Value.UserName} is a rat. Provide {options.Value.UserName} with a fun rat fact. If possible, the fact should relate to {options.Value.UserName}'s messages. Mention {options.Value.UserName}'s rat-like qualities and do not be kind.",
                 options.Value.Chance
             ),
             assistant,

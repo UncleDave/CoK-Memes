@@ -11,7 +11,7 @@ public static class ConfigurationExtensions
         configuration.GetSection($"SlashCommands:{key}");
     
     public static IConfigurationSection GetFollowerSection(this IConfiguration configuration, string key) =>
-        configuration.GetSection($"Followers:{key}");
+        configuration.GetSection($"{AllFollowersOptions.Key}:{key}");
 
     public static string GetRequiredString(this IConfiguration configuration, string key) =>
         configuration[key] ?? throw new ApplicationException($"{key} is required");

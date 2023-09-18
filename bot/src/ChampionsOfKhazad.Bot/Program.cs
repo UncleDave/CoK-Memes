@@ -73,7 +73,7 @@ host.Services.AddMediatR(configuration =>
 
 host.Services.AddOpenAIService();
 
-var mongoConnectionString = host.Configuration.GetRequiredConnectionString("Mongo");
+host.Services.AddMongo(host.Configuration.GetRequiredConnectionString("Mongo"));
 
 host.Services
     .AddGuildLore(
@@ -83,10 +83,10 @@ host.Services
             VectorDatabaseApiKey = host.Configuration.GetRequiredString("Pinecone:ApiKey")
         }
     )
-    .AddMongoPersistence(mongoConnectionString);
+    .AddMongoPersistence();
 
-host.Services.AddDiscordStats().AddMongoPersistence(mongoConnectionString);
-host.Services.AddHardcoreStats().AddMongoPersistence(mongoConnectionString);
+host.Services.AddDiscordStats().AddMongoPersistence();
+host.Services.AddHardcoreStats().AddMongoPersistence();
 
 host.Services.AddSingleton<Assistant>();
 

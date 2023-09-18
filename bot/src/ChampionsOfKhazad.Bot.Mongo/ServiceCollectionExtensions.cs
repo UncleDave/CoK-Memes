@@ -1,5 +1,4 @@
 ﻿using ChampionsOfKhazad.Bot.Mongo;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using MongoDB.Bson.Serialization.Conventions;
 using MongoDB.Driver;
 
@@ -10,7 +9,7 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddMongo(this IServiceCollection services, string connectionString)
     {
-        services.TryAddSingleton(typeof(MongoCollectionProvider), _ => new MongoCollectionProvider(connectionString));
+        services.AddSingleton(new MongoCollectionProvider(connectionString));
 
         var conventionPack = new ConventionPack
         {

@@ -7,10 +7,9 @@ namespace Microsoft.Extensions.DependencyInjection;
 
 public static class DiscordStatsBuilderExtensions
 {
-    public static DiscordStatsBuilder AddMongoPersistence(this DiscordStatsBuilder builder, string connectionString)
+    public static DiscordStatsBuilder AddMongoPersistence(this DiscordStatsBuilder builder)
     {
         builder.Services
-            .AddMongo(connectionString)
             .AddCollection<StreakBreak>("streakBreaks")
             .AddSingleton<IStoreStreakBreaks, MongoStreakBreakStore>();
 

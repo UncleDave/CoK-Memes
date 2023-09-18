@@ -7,10 +7,9 @@ namespace Microsoft.Extensions.DependencyInjection;
 
 public static class HardcoreStatsBuilderExtensions
 {
-    public static HardcoreStatsBuilder AddMongoPersistence(this HardcoreStatsBuilder builder, string connectionString)
+    public static HardcoreStatsBuilder AddMongoPersistence(this HardcoreStatsBuilder builder)
     {
         builder.Services
-            .AddMongo(connectionString)
             .AddCollection<CharacterDeath>("characterDeaths")
             .AddSingleton<IStoreCharacterDeaths, MongoCharacterDeathStore>();
 

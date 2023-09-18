@@ -7,10 +7,9 @@ namespace Microsoft.Extensions.DependencyInjection;
 
 public static class GuildLoreBuilderExtensions
 {
-    public static GuildLoreBuilder AddMongoPersistence(this GuildLoreBuilder builder, string connectionString)
+    public static GuildLoreBuilder AddMongoPersistence(this GuildLoreBuilder builder)
     {
         builder.Services
-            .AddMongo(connectionString)
             .AddCollection<Lore>("lore", collection => collection.CreateUniqueIndex(lore => lore.Name))
             .AddCollection<MemberLore>("memberLore", collection => collection.CreateUniqueIndex(lore => lore.Name))
             .AddSingleton<IStoreLore, MongoLoreStore>();

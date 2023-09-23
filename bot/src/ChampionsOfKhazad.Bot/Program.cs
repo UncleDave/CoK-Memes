@@ -1,7 +1,6 @@
 ﻿using System.Globalization;
 using AspNetMonsters.ApplicationInsights.AspNetCore;
 using ChampionsOfKhazad.Bot;
-using ChampionsOfKhazad.Bot.Lore;
 using ChampionsOfKhazad.Bot.RaidHelper;
 using Discord;
 using Discord.WebSocket;
@@ -64,6 +63,7 @@ host.Services.AddSingleton<DiscordSocketClient>(
         )
 );
 
+// Must be the first AddMediatR invocation.
 host.Services.AddMediatR(configuration =>
 {
     configuration.RegisterServicesFromAssemblyContaining<Program>();
@@ -73,20 +73,21 @@ host.Services.AddMediatR(configuration =>
 
 host.Services.AddOpenAIService();
 
-host.Services.AddMongo(host.Configuration.GetRequiredConnectionString("Mongo"));
-
 host.Services
-    .AddGuildLore(
-        new GuildLoreOptions
-        {
-            EmbeddingsApiKey = host.Configuration.GetRequiredString("OpenAIServiceOptions:ApiKey"),
-            VectorDatabaseApiKey = host.Configuration.GetRequiredString("Pinecone:ApiKey")
-        }
-    )
+    .AddBot(configuration =>
+    {
+        configuration.Persistence.ConnectionString = host.Configuration.GetRequiredConnectionString("Mongo");
+    })
+    .AddGuildLore(configuration =>
+    {
+        configuration.EmbeddingsApiKey = host.Configuration.GetRequiredString("OpenAIServiceOptions:ApiKey");
+        configuration.VectorDatabaseApiKey = host.Configuration.GetRequiredString("Pinecone:ApiKey");
+    })
+    .AddMongoPersistence()
+    .AddDiscordStats()
+    .AddMongoPersistence()
+    .AddHardcoreStats()
     .AddMongoPersistence();
-
-host.Services.AddDiscordStats().AddMongoPersistence();
-host.Services.AddHardcoreStats().AddMongoPersistence();
 
 host.Services.AddSingleton<Assistant>();
 

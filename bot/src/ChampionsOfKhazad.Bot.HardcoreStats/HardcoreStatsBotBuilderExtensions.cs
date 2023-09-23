@@ -1,20 +1,19 @@
-﻿using ChampionsOfKhazad.Bot.HardcoreStats;
-using ChampionsOfKhazad.Bot.HardcoreStats.CharacterDeaths;
+﻿using ChampionsOfKhazad.Bot.HardcoreStats.CharacterDeaths;
 
 // ReSharper disable once CheckNamespace
 namespace Microsoft.Extensions.DependencyInjection;
 
-public static class ServiceCollectionExtensions
+public static class HardcoreStatsBotBuilderExtensions
 {
-    public static HardcoreStatsBuilder AddHardcoreStats(this IServiceCollection services)
+    public static HardcoreStatsBuilder AddHardcoreStats(this BotBuilder botBuilder)
     {
-        services
+        botBuilder.Services
             .AddMediatR(configuration =>
             {
                 configuration.RegisterServicesFromAssemblyContaining<CharacterDeath>();
             })
             .AddSingleton<IRecordCharacterDeaths, CharacterDeathService>();
 
-        return new HardcoreStatsBuilder(services);
+        return new HardcoreStatsBuilder(botBuilder.Services, botBuilder.BotConfiguration);
     }
 }

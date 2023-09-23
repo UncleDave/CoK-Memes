@@ -7,10 +7,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="7.0.0" />
-    </ItemGroup>
-
-    <ItemGroup>
+      <ProjectReference Include="..\ChampionsOfKhazad.Bot.Core\ChampionsOfKhazad.Bot.Core.csproj" />
       <ProjectReference Include="..\ChampionsOfKhazad.Bot.OpenAi.Embeddings\ChampionsOfKhazad.Bot.OpenAi.Embeddings.csproj" />
       <ProjectReference Include="..\ChampionsOfKhazad.Bot.Pinecone\ChampionsOfKhazad.Bot.Pinecone.csproj" />
     </ItemGroup>

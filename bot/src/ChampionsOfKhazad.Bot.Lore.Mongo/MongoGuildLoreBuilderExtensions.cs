@@ -5,14 +5,15 @@ using ChampionsOfKhazad.Bot.Mongo;
 // ReSharper disable once CheckNamespace
 namespace Microsoft.Extensions.DependencyInjection;
 
-public static class GuildLoreBuilderExtensions
+public static class MongoGuildLoreBuilderExtensions
 {
     public static GuildLoreBuilder AddMongoPersistence(this GuildLoreBuilder builder)
     {
-        builder.Services
+        builder
+            .AddMongo()
             .AddCollection<Lore>("lore", collection => collection.CreateUniqueIndex(lore => lore.Name))
             .AddCollection<MemberLore>("memberLore", collection => collection.CreateUniqueIndex(lore => lore.Name))
-            .AddSingleton<IStoreLore, MongoLoreStore>();
+            .Services.AddSingleton<IStoreLore, MongoLoreStore>();
 
         return builder;
     }

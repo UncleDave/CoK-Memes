@@ -1,13 +1,10 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using ChampionsOfKhazad.Bot.Core;
 
-namespace ChampionsOfKhazad.Bot.Lore;
+// ReSharper disable once CheckNamespace
+namespace Microsoft.Extensions.DependencyInjection;
 
-public class GuildLoreBuilder
+public class GuildLoreBuilder : BotBuilder
 {
-    public IServiceCollection Services { get; }
-
-    internal GuildLoreBuilder(IServiceCollection services)
-    {
-        Services = services;
-    }
+    public GuildLoreBuilder(IServiceCollection services, BotConfiguration botConfiguration)
+        : base(services, botConfiguration) { }
 }

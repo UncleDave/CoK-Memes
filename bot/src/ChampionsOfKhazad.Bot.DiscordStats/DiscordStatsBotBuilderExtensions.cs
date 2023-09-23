@@ -1,20 +1,19 @@
-﻿using ChampionsOfKhazad.Bot.DiscordStats;
-using ChampionsOfKhazad.Bot.DiscordStats.StreakBreaks;
+﻿using ChampionsOfKhazad.Bot.DiscordStats.StreakBreaks;
 
 // ReSharper disable once CheckNamespace
 namespace Microsoft.Extensions.DependencyInjection;
 
-public static class ServiceCollectionExtensions
+public static class DiscordStatsBotBuilderExtensions
 {
-    public static DiscordStatsBuilder AddDiscordStats(this IServiceCollection services)
+    public static DiscordStatsBuilder AddDiscordStats(this BotBuilder builder)
     {
-        services
+        builder.Services
             .AddMediatR(configuration =>
             {
                 configuration.RegisterServicesFromAssemblyContaining<StreakBreak>();
             })
             .AddSingleton<IGetStreakBreaks, StreakBreakService>();
 
-        return new DiscordStatsBuilder(services);
+        return new DiscordStatsBuilder(builder.Services, builder.BotConfiguration);
     }
 }

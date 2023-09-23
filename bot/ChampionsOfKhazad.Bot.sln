@@ -52,6 +52,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChampionsOfKhazad.Bot.Hardc
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChampionsOfKhazad.Bot.HardcoreStats.Mongo", "src\ChampionsOfKhazad.Bot.HardcoreStats.Mongo\ChampionsOfKhazad.Bot.HardcoreStats.Mongo.csproj", "{ADC3D217-3A6F-482B-8A4D-67C3EC65EB05}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChampionsOfKhazad.Bot.Core", "src\ChampionsOfKhazad.Bot.Core\ChampionsOfKhazad.Bot.Core.csproj", "{FD3A9DF6-C3B6-4195-93DB-215EC534180D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -106,6 +108,10 @@ Global
 		{ADC3D217-3A6F-482B-8A4D-67C3EC65EB05}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{ADC3D217-3A6F-482B-8A4D-67C3EC65EB05}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{ADC3D217-3A6F-482B-8A4D-67C3EC65EB05}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FD3A9DF6-C3B6-4195-93DB-215EC534180D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FD3A9DF6-C3B6-4195-93DB-215EC534180D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FD3A9DF6-C3B6-4195-93DB-215EC534180D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FD3A9DF6-C3B6-4195-93DB-215EC534180D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{250AB7D4-9E29-41B4-8636-BDD934CC20EF} = {AE87495F-C4DE-42DA-8BCB-DF6EC3792ACD}
@@ -123,5 +129,6 @@ Global
 		{75E15DC7-77C0-451A-AEA9-7212CB44228A} = {AE87495F-C4DE-42DA-8BCB-DF6EC3792ACD}
 		{CA384E3C-B0AC-4CBE-B0BD-718DEB65CDB6} = {AE87495F-C4DE-42DA-8BCB-DF6EC3792ACD}
 		{ADC3D217-3A6F-482B-8A4D-67C3EC65EB05} = {AE87495F-C4DE-42DA-8BCB-DF6EC3792ACD}
+		{FD3A9DF6-C3B6-4195-93DB-215EC534180D} = {AE87495F-C4DE-42DA-8BCB-DF6EC3792ACD}
 	EndGlobalSection
 EndGlobal

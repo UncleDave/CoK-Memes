@@ -1,13 +1,10 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using ChampionsOfKhazad.Bot.Core;
 
-namespace ChampionsOfKhazad.Bot.HardcoreStats;
+// ReSharper disable once CheckNamespace
+namespace Microsoft.Extensions.DependencyInjection;
 
-public class HardcoreStatsBuilder
+public class HardcoreStatsBuilder : BotBuilder
 {
-    public IServiceCollection Services { get; }
-
-    internal HardcoreStatsBuilder(IServiceCollection services)
-    {
-        Services = services;
-    }
+    public HardcoreStatsBuilder(IServiceCollection services, BotConfiguration botConfiguration)
+        : base(services, botConfiguration) { }
 }

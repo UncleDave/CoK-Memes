@@ -1,13 +1,10 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using ChampionsOfKhazad.Bot.Core;
 
-namespace ChampionsOfKhazad.Bot.DiscordStats;
+// ReSharper disable once CheckNamespace
+namespace Microsoft.Extensions.DependencyInjection;
 
-public class DiscordStatsBuilder
+public class DiscordStatsBuilder : BotBuilder
 {
-    public IServiceCollection Services { get; }
-
-    internal DiscordStatsBuilder(IServiceCollection services)
-    {
-        Services = services;
-    }
+    public DiscordStatsBuilder(IServiceCollection services, BotConfiguration botConfiguration)
+        : base(services, botConfiguration) { }
 }

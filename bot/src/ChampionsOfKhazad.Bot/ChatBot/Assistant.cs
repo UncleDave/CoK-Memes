@@ -1,4 +1,5 @@
-﻿using ChampionsOfKhazad.Bot.Lore;
+﻿using System.Text.RegularExpressions;
+using ChampionsOfKhazad.Bot.Lore;
 using Microsoft.Extensions.Logging;
 using OpenAI.Interfaces;
 using OpenAI.ObjectModels;
@@ -16,16 +17,20 @@ public class Assistant
         "Your name is \"Lorekeeper Hammerstone\", users will also refer to you as \"CoK Bot\". Limit your replies to 100 words, and prefer shorter answers.",
         "You have a Dwarven accent."
     );
+    
+    private static readonly Regex EmojiExpression = new(@":(?<name>\w+):", RegexOptions.Compiled);
 
     private readonly IOpenAIService _openAiService;
     private readonly ILogger<Assistant> _logger;
     private readonly IGetRelatedLore _relatedLoreGetter;
+    private readonly BotContext _context;
 
-    public Assistant(IOpenAIService openAiService, ILogger<Assistant> logger, IGetRelatedLore relatedLoreGetter)
+    public Assistant(IOpenAIService openAiService, ILogger<Assistant> logger, IGetRelatedLore relatedLoreGetter, BotContext context)
     {
         _openAiService = openAiService;
         _logger = logger;
         _relatedLoreGetter = relatedLoreGetter;
+        _context = context;
     }
 
     public async Task<string> RespondAsync(
@@ -104,7 +109,7 @@ public class Assistant
 
         _logger.LogDebug("Chat completion finish reason: {FinishReason}", choice.FinishReason);
 
-        return choice.Message.Content;
+        return ProcessEmojis(choice.Message.Content);
     }
 
     public async Task<string> RespondAsync(string instruction, string prompt)
@@ -121,6 +126,21 @@ public class Assistant
 
         var choice = result.Choices.FirstOrDefault(x => x.FinishReason == "stop") ?? result.Choices.First();
 
-        return choice.Message.Content;
+        return ProcessEmojis(choice.Message.Content);
+    }
+    
+    private string ProcessEmojis(string message)
+    {
+        var matches = EmojiExpression.Matches(message);
+
+        foreach (Match match in matches)
+        {
+            var emojiName = match.Groups["name"].Value;
+
+            if (_context.Guild.Emotes.FirstOrDefault(x => x.Name == emojiName) is { } emoji)
+                message = message.Replace(match.Value, emoji.ToString());
+        }
+
+        return message;
     }
 }

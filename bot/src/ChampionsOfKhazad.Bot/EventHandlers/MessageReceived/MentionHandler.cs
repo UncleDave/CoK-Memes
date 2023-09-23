@@ -11,8 +11,6 @@ public class MentionHandler : INotificationHandler<MessageReceived>
 {
     private static readonly Regex NameExpression = new("^[a-zA-Z0-9_-]{1,64}$", RegexOptions.Compiled);
 
-    private static readonly Regex EmojiExpression = new(@":(?<name>\w+):", RegexOptions.Compiled);
-
     private readonly MentionHandlerOptions _options;
     private readonly Assistant _assistant;
     private readonly BotContext _context;
@@ -63,7 +61,7 @@ public class MentionHandler : INotificationHandler<MessageReceived>
                 : null
         );
 
-        await message.ReplyAsync(ProcessEmojis(response));
+        await message.ReplyAsync(response);
     }
 
     private static string GetFriendlyAuthorName(IMessage message) =>
@@ -77,21 +75,6 @@ public class MentionHandler : INotificationHandler<MessageReceived>
 
     private string GetMessageRole(IMessage message) =>
         message.Author.Id == _context.BotId ? StaticValues.ChatMessageRoles.Assistant : StaticValues.ChatMessageRoles.User;
-
-    private string ProcessEmojis(string message)
-    {
-        var matches = EmojiExpression.Matches(message);
-
-        foreach (Match match in matches)
-        {
-            var emojiName = match.Groups["name"].Value;
-
-            if (_context.Guild.Emotes.FirstOrDefault(x => x.Name == emojiName) is { } emoji)
-                message = message.Replace(match.Value, emoji.ToString());
-        }
-
-        return message;
-    }
 
     public override string ToString() => nameof(MentionHandler);
 }

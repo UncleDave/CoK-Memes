@@ -10,5 +10,9 @@ public class BotOptions
     public required string Token { get; set; }
 
     [Required]
-    public required ulong GuildId { get; set; }
+    public ulong GuildId { get; set; }
+
+    public ulong? StartMessageUserId { get; set; }
+
+    public string? CommitSha { get; set; }
 }

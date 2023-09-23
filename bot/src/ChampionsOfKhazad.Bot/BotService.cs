@@ -64,6 +64,16 @@ public class BotService : IHostedService
             await _client.CreateGlobalApplicationCommandAsync(slashCommand.Properties);
 
         _logger.LogInformation("Bot started");
+
+        if (_options.StartMessageUserId.HasValue)
+        {
+            var startMessageTargetUser = await _client.GetUserAsync(_options.StartMessageUserId.Value);
+            var message = _options.CommitSha is not null
+                ? $"Bot started, commit: [{_options.CommitSha}]({Constants.RepositoryUrl}/commit/{_options.CommitSha})"
+                : "Bot started";
+
+            await startMessageTargetUser.SendMessageAsync(message);
+        }
     }
 
     private Task MessageReceivedAsync(SocketMessage message)

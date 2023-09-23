@@ -5,7 +5,7 @@ namespace ChampionsOfKhazad.Bot;
 
 public class DirectMessageHandler : INotificationHandler<MessageReceived>
 {
-    private const string SourceUrl = "https://github.com/UncleDave/CoK-Memes/tree/main/bot";
+    private const string SourceUrl = $"{Constants.RepositoryUrl}/tree/main/bot";
     private const string Message = $"Hi! I'm a bot, if you want to know more you can find my juicy innards at {SourceUrl}";
     private static readonly Dictionary<ulong, DateTime> LastUserMessage = new();
 

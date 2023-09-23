@@ -90,6 +90,23 @@ return await Pulumi.Deployment.RunAsync(() =>
     const string mongoConnectionStringSecretName = "mongo-connection-string";
     const string applicationInsightsConnectionStringSecretName = "application-insights-connection-string";
 
+    var containerEnv = new List<EnvironmentVarArgs>
+    {
+        new() { Name = "TZ", Value = "Europe/Copenhagen" },
+        new() { Name = "Bot__Token", SecretRef = botTokenSecretName },
+        new() { Name = "DOTNET_ENVIRONMENT", Value = config.Require("environment") },
+        new() { Name = "OpenAIServiceOptions__ApiKey", SecretRef = openAiApiKeySecretName },
+        new() { Name = "Pinecone__ApiKey", SecretRef = pineconeApiKeySecretName },
+        new() { Name = "RaidHelper__ApiKey", SecretRef = raidHelperApiKeySecretName },
+        new() { Name = "ConnectionStrings__Mongo", SecretRef = mongoConnectionStringSecretName },
+        new() { Name = "ConnectionStrings__ApplicationInsights", SecretRef = applicationInsightsConnectionStringSecretName }
+    };
+
+    var commitSha = Environment.GetEnvironmentVariable("COMMIT_SHA");
+
+    if (commitSha is not null)
+        containerEnv.Add(new EnvironmentVarArgs { Name = "Bot__CommitSha", Value = commitSha });
+
     var containerApp = new ContainerApp(
         "bot-app",
         new ContainerAppArgs
@@ -121,21 +138,7 @@ return await Pulumi.Deployment.RunAsync(() =>
                 {
                     Name = "bot",
                     Image = botImage.RepoDigest,
-                    Env =
-                    {
-                        new EnvironmentVarArgs { Name = "TZ", Value = "Europe/Copenhagen" },
-                        new EnvironmentVarArgs { Name = "Bot__Token", SecretRef = botTokenSecretName },
-                        new EnvironmentVarArgs { Name = "DOTNET_ENVIRONMENT", Value = config.Require("environment") },
-                        new EnvironmentVarArgs { Name = "OpenAIServiceOptions__ApiKey", SecretRef = openAiApiKeySecretName },
-                        new EnvironmentVarArgs { Name = "Pinecone__ApiKey", SecretRef = pineconeApiKeySecretName },
-                        new EnvironmentVarArgs { Name = "RaidHelper__ApiKey", SecretRef = raidHelperApiKeySecretName },
-                        new EnvironmentVarArgs { Name = "ConnectionStrings__Mongo", SecretRef = mongoConnectionStringSecretName },
-                        new EnvironmentVarArgs
-                        {
-                            Name = "ConnectionStrings__ApplicationInsights",
-                            SecretRef = applicationInsightsConnectionStringSecretName
-                        }
-                    },
+                    Env = containerEnv,
                     Resources = new ContainerResourcesArgs { Cpu = .25, Memory = "0.5Gi" }
                 },
                 Scale = new ScaleArgs { MinReplicas = 1, MaxReplicas = 1 }

@@ -70,6 +70,7 @@ public class RaidsSlashCommand : INotificationHandler<RaidsSlashCommandExecuted>
         "Hey can we do some achievements?",
         "Stick around for the post-raid zeppelin show!",
         "Damn, Malithas Brightblade got hands.",
+        "Come, pig."
     };
 
     public RaidsSlashCommand(

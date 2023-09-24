@@ -102,7 +102,15 @@ public class RaidsSlashCommand : INotificationHandler<RaidsSlashCommandExecuted>
             _logger.LogError(e, "Error clearing channels for new raids");
         }
 
-        var createRaidTasks = _options.Raids.Select(x => CreateRaidAsync(command.User.Id, x));
+        const DayOfWeek resetDay = DayOfWeek.Wednesday;
+        var firstRaidDayOfWeek = _options.Raids.Min(x => x.DayOfWeek.Offset(resetDay));
+        var dayOfWeek = DateTime.Now.DayOfWeek.Offset(resetDay);
+        var dateOffset = dayOfWeek >= firstRaidDayOfWeek ? 7 - (int)dayOfWeek : 0;
+
+        var createRaidTasks = _options.Raids.Select(
+            x => CreateRaidAsync(command.User.Id, x.ChannelId, DateTime.Now.NextDayOfWeek(x.DayOfWeek, dateOffset))
+        );
+
         await Task.WhenAll(createRaidTasks);
     }
 
@@ -119,13 +127,13 @@ public class RaidsSlashCommand : INotificationHandler<RaidsSlashCommandExecuted>
         await Task.WhenAll(deletionTasks);
     }
 
-    private async Task CreateRaidAsync(ulong userId, RaidsSlashCommandRaid raid)
+    private async Task CreateRaidAsync(ulong userId, ulong channelId, DateTime date)
     {
         var request = new CreateEventRequest
         {
             LeaderId = userId.ToString(),
             TemplateId = EventTemplate.WoWClassicWrathOfTheLichKing,
-            Date = DateTime.Now.NextDayOfWeek(raid.DayOfWeek).ToShortDateString(),
+            Date = date.ToShortDateString(),
             Time = "19:30",
             Title = $"ToGC 25: {RandomUtils.PickRandom(RaidNames)}",
             Description = RandomUtils.PickRandom(RaidDescriptions),
@@ -138,6 +146,6 @@ public class RaidsSlashCommand : INotificationHandler<RaidsSlashCommandExecuted>
             }
         };
 
-        await _raidHelperClient.CreateEventAsync(_botContext.Guild.Id, raid.ChannelId, request);
+        await _raidHelperClient.CreateEventAsync(_botContext.Guild.Id, channelId, request);
     }
 }

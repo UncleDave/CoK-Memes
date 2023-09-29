@@ -17,7 +17,7 @@ public class Assistant
         "Your name is \"Lorekeeper Hammerstone\", users will also refer to you as \"CoK Bot\". Limit your replies to 100 words, and prefer shorter answers.",
         "You have a Dwarven accent."
     );
-    
+
     private static readonly Regex EmojiExpression = new(@":(?<name>\w+):", RegexOptions.Compiled);
 
     private readonly IOpenAIService _openAiService;
@@ -39,7 +39,8 @@ public class Assistant
         IEnumerable<string> availableEmotes,
         IEnumerable<ChatMessage>? chatContext = null,
         ChatMessage? referencedMessage = null,
-        string? instructions = null
+        string? instructions = null,
+        string? model = null
     )
     {
         var relatedLore = await _relatedLoreGetter.GetRelatedLoreAsync(message);
@@ -78,7 +79,7 @@ public class Assistant
                 new ChatCompletionCreateRequest
                 {
                     Messages = messages,
-                    Model = Models.Gpt_3_5_Turbo,
+                    Model = model ?? Models.Gpt_3_5_Turbo,
                     MaxTokens = 500,
                     N = 1,
                     User = user.Id.ToString()
@@ -112,13 +113,13 @@ public class Assistant
         return ProcessEmojis(choice.Message.Content);
     }
 
-    public async Task<string> RespondAsync(string instruction, string prompt)
+    public async Task<string> RespondAsync(string instruction, string prompt, string? model = null)
     {
         var result = await _openAiService.ChatCompletion.CreateCompletion(
             new ChatCompletionCreateRequest
             {
                 Messages = new[] { ChatMessage.FromSystem(instruction), ChatMessage.FromSystem(prompt) },
-                Model = Models.Gpt_3_5_Turbo,
+                Model = model ?? Models.Gpt_3_5_Turbo,
                 MaxTokens = 500,
                 N = 1
             }
@@ -128,7 +129,7 @@ public class Assistant
 
         return ProcessEmojis(choice.Message.Content);
     }
-    
+
     private string ProcessEmojis(string message)
     {
         var matches = EmojiExpression.Matches(message);

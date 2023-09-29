@@ -1,5 +1,6 @@
 ﻿using Discord;
 using MediatR;
+using OpenAI.ObjectModels;
 using OpenAI.ObjectModels.RequestModels;
 
 namespace ChampionsOfKhazad.Bot;
@@ -52,7 +53,8 @@ public abstract class Follower : INotificationHandler<MessageReceived>
             user,
             _botContext.Guild.Emotes.Select(x => x.Name),
             recentUserMessages,
-            instructions: _options.Instructions
+            instructions: _options.Instructions,
+            model: Models.Gpt_4
         );
 
         await textChannel.SendMessageAsync(response);

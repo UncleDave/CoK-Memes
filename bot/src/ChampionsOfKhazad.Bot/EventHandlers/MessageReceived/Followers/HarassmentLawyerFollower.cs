@@ -28,7 +28,7 @@ public class HarassmentLawyerFollower : RandomChanceMentionFollower
             new RandomChanceMentionFollowerOptions(
                 options.Value.ToFollowerTarget(),
                 allFollowersOptions.Value.IgnoreBotMentionsInChannelId,
-                $"You are a lawyer. You are representing {options.Value.ClientUserName}. {options.Value.UserName} has a history of harassing {options.Value.ClientUserName} and you are here to put a stop to it. You will threaten {options.Value.UserName} with legal action if they continue to harass {options.Value.ClientUserName}. You may also threaten to call the Stinky Police.",
+                $"You are Broody Giljotini, a lawyer representing {options.Value.ClientUserName}. {options.Value.UserName} has a history of harassing {options.Value.ClientUserName} and you are here to put a stop to it. You will threaten {options.Value.UserName} with legal action if they continue to harass {options.Value.ClientUserName}. You may also threaten to call the Stinky Police.",
                 options.Value.Chance,
                 options.Value.ClientUserId
             ),

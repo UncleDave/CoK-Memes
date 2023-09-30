@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Options;
+﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace ChampionsOfKhazad.Bot;
 
@@ -13,7 +14,8 @@ public class NoNutNovemberExpertFollower : RandomChanceTriggerWordsFollower
         IOptions<AllFollowersOptions> allFollowersOptions,
         IOptions<NoNutNovemberExpertFollowerOptions> options,
         Assistant assistant,
-        BotContext botContext
+        BotContext botContext,
+        ILogger<NoNutNovemberExpertFollower> logger
     )
         : base(
             new RandomChanceTriggerWordFollowerOptions(
@@ -24,6 +26,7 @@ public class NoNutNovemberExpertFollower : RandomChanceTriggerWordsFollower
                 new[] { "nnn", "no nut november" }
             ),
             assistant,
-            botContext
+            botContext,
+            logger
         ) { }
 }

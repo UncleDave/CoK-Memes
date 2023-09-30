@@ -2,8 +2,6 @@
 
 public static class RandomUtils
 {
-    private static readonly Random Random = new();
-
     public static T PickRandom<T>(IList<T> source)
     {
         if (!source.Any())
@@ -18,5 +16,11 @@ public static class RandomUtils
         return value.ToOrdinal();
     }
 
-    public static bool Roll(ushort chance) => Random.Shared.Next(1, 101) <= chance;
+    public static (bool Success, int Roll) Roll(ushort chance)
+    {
+        var roll = Random.Shared.Next(1, 101);
+        var success = roll <= chance;
+
+        return (success, roll);
+    }
 }

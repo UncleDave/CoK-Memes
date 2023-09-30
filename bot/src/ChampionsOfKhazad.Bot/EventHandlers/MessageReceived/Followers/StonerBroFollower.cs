@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Options;
+﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace ChampionsOfKhazad.Bot;
 
@@ -13,7 +14,8 @@ public class StonerBroFollower : RandomChanceFollower
         IOptions<AllFollowersOptions> allFollowersOptions,
         IOptions<StonerBroFollowerOptions> options,
         Assistant assistant,
-        BotContext botContext
+        BotContext botContext,
+        ILogger<StonerBroFollower> logger
     )
         : base(
             new RandomChanceFollowerOptions(
@@ -23,6 +25,7 @@ public class StonerBroFollower : RandomChanceFollower
                 options.Value.Chance
             ),
             assistant,
-            botContext
+            botContext,
+            logger
         ) { }
 }

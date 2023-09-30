@@ -1,4 +1,5 @@
 ﻿using Discord;
+using Microsoft.Extensions.Logging;
 
 namespace ChampionsOfKhazad.Bot;
 
@@ -14,8 +15,13 @@ public abstract class RandomChanceTriggerWordsFollower : RandomChanceFollower
 {
     private readonly RandomChanceTriggerWordFollowerOptions _options;
 
-    protected RandomChanceTriggerWordsFollower(RandomChanceTriggerWordFollowerOptions options, Assistant assistant, BotContext botContext)
-        : base(options, assistant, botContext)
+    protected RandomChanceTriggerWordsFollower(
+        RandomChanceTriggerWordFollowerOptions options,
+        Assistant assistant,
+        BotContext botContext,
+        ILogger<RandomChanceTriggerWordsFollower> logger
+    )
+        : base(options, assistant, botContext, logger)
     {
         _options = options;
     }

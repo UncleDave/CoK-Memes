@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Options;
+﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace ChampionsOfKhazad.Bot;
 
@@ -13,7 +14,8 @@ public class SycophantFollower : RandomChanceFollower
         IOptions<AllFollowersOptions> allFollowersOptions,
         IOptions<SycophantFollowerOptions> options,
         Assistant assistant,
-        BotContext botContext
+        BotContext botContext,
+        ILogger<SycophantFollower> logger
     )
         : base(
             new RandomChanceFollowerOptions(
@@ -23,6 +25,7 @@ public class SycophantFollower : RandomChanceFollower
                 options.Value.Chance
             ),
             assistant,
-            botContext
+            botContext,
+            logger
         ) { }
 }

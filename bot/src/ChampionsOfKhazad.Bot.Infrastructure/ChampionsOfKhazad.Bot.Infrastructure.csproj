@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Pulumi" Version="3.58.0" />
+    <PackageReference Include="Pulumi" Version="3.59.0" />
     <PackageReference Include="Pulumi.AzureNative" Version="2.15.0" />
     <PackageReference Include="Pulumi.Docker" Version="4.4.4" />
   </ItemGroup>

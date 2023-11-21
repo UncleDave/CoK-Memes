@@ -53,8 +53,7 @@ public abstract class Follower : INotificationHandler<MessageReceived>
             user,
             _botContext.Guild.Emotes.Select(x => x.Name),
             recentUserMessages,
-            instructions: _options.Instructions,
-            model: Models.Gpt_4
+            instructions: _options.Instructions
         );
 
         await textChannel.SendMessageAsync(response);

@@ -79,7 +79,7 @@ public class Assistant
                 new ChatCompletionCreateRequest
                 {
                     Messages = messages,
-                    Model = model ?? Models.Gpt_3_5_Turbo,
+                    Model = model ?? Models.Gpt_4_1106_preview,
                     MaxTokens = 500,
                     N = 1,
                     User = user.Id.ToString()
@@ -119,7 +119,7 @@ public class Assistant
             new ChatCompletionCreateRequest
             {
                 Messages = new[] { ChatMessage.FromSystem(instruction), ChatMessage.FromSystem(prompt) },
-                Model = model ?? Models.Gpt_3_5_Turbo,
+                Model = model ?? Models.Gpt_4_1106_preview,
                 MaxTokens = 500,
                 N = 1
             }

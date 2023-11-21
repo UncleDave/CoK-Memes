@@ -1,6 +1,5 @@
 ﻿using Discord;
 using MediatR;
-using OpenAI.ObjectModels;
 using OpenAI.ObjectModels.RequestModels;
 
 namespace ChampionsOfKhazad.Bot;

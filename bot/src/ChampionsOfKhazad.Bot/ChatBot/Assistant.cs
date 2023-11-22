@@ -142,7 +142,7 @@ public class Assistant
         {
             var emojiName = match.Groups["name"].Value;
 
-            if (_context.Guild.Emotes.FirstOrDefault(x => x.Name == emojiName) is { } emoji)
+            if (_context.Guild.Emotes.FirstOrDefault(x => string.Equals(x.Name, emojiName, StringComparison.InvariantCultureIgnoreCase)) is { } emoji)
                 message = message.Replace(match.Value, emoji.ToString());
         }
 

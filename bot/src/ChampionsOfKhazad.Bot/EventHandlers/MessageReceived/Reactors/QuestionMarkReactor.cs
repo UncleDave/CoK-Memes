@@ -6,7 +6,7 @@ namespace ChampionsOfKhazad.Bot;
 public class QuestionMarkReactor : GuildMessageReactor
 {
     public QuestionMarkReactor(IOptions<QuestionMarkReactorOptions> options)
-        : base(options.Value.UserId, new Emoji("❔"), new Emoji("❓")) { }
+        : base(new GuildMessageReactorOptions(options.Value.UserId, new[] { new Emoji("❔"), new Emoji("❓") })) { }
 
     protected override bool ShouldReact(IUserMessage message) => message.Content.Length > 0 && message.Content.All(x => x == '?');
 

@@ -3,25 +3,25 @@ using MediatR;
 
 namespace ChampionsOfKhazad.Bot;
 
+public record GuildMessageReactorOptions(ulong UserId, IEnumerable<IEmote> ReactionEmojis);
+
 public abstract class GuildMessageReactor : INotificationHandler<MessageReceived>
 {
-    private readonly Emoji[] _reactionEmojis;
-    private readonly ulong _userId;
+    private readonly GuildMessageReactorOptions _options;
 
-    protected GuildMessageReactor(ulong userId, params Emoji[] reactionEmojis)
+    protected GuildMessageReactor(GuildMessageReactorOptions options)
     {
-        _reactionEmojis = reactionEmojis;
-        _userId = userId;
+        _options = options;
     }
 
     public async Task Handle(MessageReceived notification, CancellationToken cancellationToken)
     {
         var message = notification.Message;
 
-        if (message.Channel is ITextChannel && message.Author.Id == _userId && ShouldReact(message))
+        if (message.Channel is ITextChannel && message.Author.Id == _options.UserId && ShouldReact(message))
         {
             await BeforeReactingAsync(message);
-            await message.AddReactionsAsync(_reactionEmojis);
+            await message.AddReactionsAsync(_options.ReactionEmojis);
             await AfterReactingAsync(message);
         }
     }

@@ -114,9 +114,9 @@ public class RaidsSlashCommand : INotificationHandler<RaidsSlashCommandExecuted>
         var dayOfWeek = DateTime.Now.DayOfWeek.Offset(resetDay);
         var dateOffset = dayOfWeek >= firstRaidDayOfWeek ? 7 - (int)dayOfWeek : 0;
 
-        var createRaidTasks = _options.Raids.Select(
-            x => CreateRaidAsync(command.User.Id, x.ChannelId, DateTime.Now.NextDayOfWeek(x.DayOfWeek, dateOffset))
-        );
+        var createRaidTasks = _options
+            .Raids
+            .Select(x => CreateRaidAsync(command.User.Id, x.ChannelId, DateTime.Now.NextDayOfWeek(x.DayOfWeek, dateOffset)));
 
         await Task.WhenAll(createRaidTasks);
     }

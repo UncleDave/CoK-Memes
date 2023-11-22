@@ -13,7 +13,8 @@ public static class LoreBotBuilderExtensions
         var options = new GuildLoreConfiguration();
         configureGuildLore(options);
 
-        builder.Services
+        builder
+            .Services
             .AddEmbeddingsService(
                 options.EmbeddingsApiKey ?? throw new MissingConfigurationValueException(nameof(GuildLoreConfiguration.EmbeddingsApiKey))
             )

@@ -23,11 +23,13 @@ public class EmbeddingsService
         if (responseContent is null)
             throw new ApplicationException("Response content was null");
 
-        return responseContent.Data.Select(x =>
-        {
-            var entry = input[x.Index];
-            return new Embedding(entry.Id, entry.Text, x.Embedding);
-        });
+        return responseContent
+            .Data
+            .Select(x =>
+            {
+                var entry = input[x.Index];
+                return new Embedding(entry.Id, entry.Text, x.Embedding);
+            });
     }
 
     private record EmbeddingResponse(float[] Embedding, int Index);

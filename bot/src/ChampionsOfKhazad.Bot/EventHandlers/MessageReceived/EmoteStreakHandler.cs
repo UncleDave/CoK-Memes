@@ -74,9 +74,11 @@ public class EmoteStreakHandler : INotificationHandler<MessageReceived>
                 cancellationToken
             );
 
-            await message.Channel.SendMessageAsync(
-                $"Streak of {streak} {emote} broken by {message.Author.Mention}, shame on them. This is their {(userStreakBreakCount + 1).ToOrdinal()} streak break."
-            );
+            await message
+                .Channel
+                .SendMessageAsync(
+                    $"Streak of {streak} {emote} broken by {message.Author.Mention}, shame on them. This is their {(userStreakBreakCount + 1).ToOrdinal()} streak break."
+                );
 
             await _publisher.Publish(new StreakBroken(message.Author.Id, _options.EmoteName, message.Timestamp), cancellationToken);
         }

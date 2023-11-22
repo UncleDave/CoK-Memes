@@ -75,16 +75,18 @@ public class Assistant
 
         try
         {
-            result = await _openAiService.ChatCompletion.CreateCompletion(
-                new ChatCompletionCreateRequest
-                {
-                    Messages = messages,
-                    Model = model ?? Models.Gpt_4_1106_preview,
-                    MaxTokens = 500,
-                    N = 1,
-                    User = user.Id.ToString()
-                }
-            );
+            result = await _openAiService
+                .ChatCompletion
+                .CreateCompletion(
+                    new ChatCompletionCreateRequest
+                    {
+                        Messages = messages,
+                        Model = model ?? Models.Gpt_4_1106_preview,
+                        MaxTokens = 500,
+                        N = 1,
+                        User = user.Id.ToString()
+                    }
+                );
         }
         catch (Exception e)
         {
@@ -115,15 +117,17 @@ public class Assistant
 
     public async Task<string> RespondAsync(string instruction, string prompt, string? model = null)
     {
-        var result = await _openAiService.ChatCompletion.CreateCompletion(
-            new ChatCompletionCreateRequest
-            {
-                Messages = new[] { ChatMessage.FromSystem(instruction), ChatMessage.FromSystem(prompt) },
-                Model = model ?? Models.Gpt_4_1106_preview,
-                MaxTokens = 500,
-                N = 1
-            }
-        );
+        var result = await _openAiService
+            .ChatCompletion
+            .CreateCompletion(
+                new ChatCompletionCreateRequest
+                {
+                    Messages = new[] { ChatMessage.FromSystem(instruction), ChatMessage.FromSystem(prompt) },
+                    Model = model ?? Models.Gpt_4_1106_preview,
+                    MaxTokens = 500,
+                    N = 1
+                }
+            );
 
         var choice = result.Choices.FirstOrDefault(x => x.FinishReason == "stop") ?? result.Choices.First();
 

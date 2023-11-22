@@ -13,7 +13,8 @@ public static class MongoGuildLoreBuilderExtensions
             .AddMongo()
             .AddCollection<Lore>("lore", collection => collection.CreateUniqueIndex(lore => lore.Name))
             .AddCollection<MemberLore>("memberLore", collection => collection.CreateUniqueIndex(lore => lore.Name))
-            .Services.AddSingleton<IStoreLore, MongoLoreStore>();
+            .Services
+            .AddSingleton<IStoreLore, MongoLoreStore>();
 
         return builder;
     }

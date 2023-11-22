@@ -36,10 +36,9 @@ host.Services
 host.Services.AddSerilog(
     (provider, configuration) =>
     {
-        ConfigureLogger(configuration, host.Environment).WriteTo.ApplicationInsights(
-            provider.GetRequiredService<TelemetryConfiguration>(),
-            TelemetryConverter.Traces
-        );
+        ConfigureLogger(configuration, host.Environment)
+            .WriteTo
+            .ApplicationInsights(provider.GetRequiredService<TelemetryConfiguration>(), TelemetryConverter.Traces);
     }
 );
 

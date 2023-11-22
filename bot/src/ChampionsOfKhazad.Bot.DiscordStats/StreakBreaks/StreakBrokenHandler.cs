@@ -10,7 +10,7 @@ internal class StreakBrokenHandler : INotificationHandler<StreakBroken>
     {
         _streakBreakStore = streakBreakStore;
     }
-    
+
     public Task Handle(StreakBroken notification, CancellationToken cancellationToken)
     {
         var streakBreak = new StreakBreak(notification.UserId, notification.EmoteName, notification.Timestamp);

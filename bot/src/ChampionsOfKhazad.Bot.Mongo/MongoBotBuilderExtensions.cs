@@ -10,22 +10,24 @@ public static class MongoBotBuilderExtensions
 {
     public static MongoBuilder AddMongo(this BotBuilder botBuilder)
     {
-        botBuilder.Services.TryAddSingleton(_ =>
-        {
-            var conventionPack = new ConventionPack
+        botBuilder
+            .Services
+            .TryAddSingleton(_ =>
             {
-                new CamelCaseElementNameConvention(),
-                new IgnoreExtraElementsConvention(true),
-                new IgnoreIfNullConvention(true),
-            };
+                var conventionPack = new ConventionPack
+                {
+                    new CamelCaseElementNameConvention(),
+                    new IgnoreExtraElementsConvention(true),
+                    new IgnoreIfNullConvention(true),
+                };
 
-            ConventionRegistry.Register("ChampionsOfKhazad.Bot", conventionPack, _ => true);
+                ConventionRegistry.Register("ChampionsOfKhazad.Bot", conventionPack, _ => true);
 
-            return new MongoCollectionProvider(
-                botBuilder.BotConfiguration.Persistence.ConnectionString
-                    ?? throw new MissingConfigurationValueException(nameof(BotConfiguration.Persistence.ConnectionString))
-            );
-        });
+                return new MongoCollectionProvider(
+                    botBuilder.BotConfiguration.Persistence.ConnectionString
+                        ?? throw new MissingConfigurationValueException(nameof(BotConfiguration.Persistence.ConnectionString))
+                );
+            });
 
         return new MongoBuilder(botBuilder.Services, botBuilder.BotConfiguration);
     }

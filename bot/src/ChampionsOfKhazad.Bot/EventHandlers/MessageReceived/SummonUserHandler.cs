@@ -4,7 +4,7 @@ using Microsoft.Extensions.Options;
 
 namespace ChampionsOfKhazad.Bot;
 
-public class SummonUserHandler : INotificationHandler<MessageReceived>
+public class SummonUserHandler(IOptions<SummonUserHandlerOptions> options) : INotificationHandler<MessageReceived>
 {
     private static readonly string[] Messages =
     {
@@ -25,13 +25,8 @@ public class SummonUserHandler : INotificationHandler<MessageReceived>
         "could you please cut some gems for me?"
     };
 
-    private readonly SummonUserHandlerOptions _options;
+    private readonly SummonUserHandlerOptions _options = options.Value;
     private static DateTime? lastSummon;
-
-    public SummonUserHandler(IOptions<SummonUserHandlerOptions> options)
-    {
-        _options = options.Value;
-    }
 
     public async Task Handle(MessageReceived notification, CancellationToken cancellationToken)
     {

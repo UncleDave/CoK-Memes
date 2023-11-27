@@ -6,28 +6,17 @@ namespace ChampionsOfKhazad.Bot;
 public record RandomChanceFollowerOptions(FollowerTarget Target, ulong IgnoreBotMentionsInChannelId, string Instructions, ushort Chance)
     : FollowerOptions(Target, IgnoreBotMentionsInChannelId, Instructions);
 
-public abstract class RandomChanceFollower : Follower
-{
-    private readonly RandomChanceFollowerOptions _options;
-    private readonly ILogger<RandomChanceFollower> _logger;
-
-    protected RandomChanceFollower(
-        RandomChanceFollowerOptions options,
+public abstract class RandomChanceFollower(RandomChanceFollowerOptions options,
         Assistant assistant,
         BotContext botContext,
-        ILogger<RandomChanceFollower> logger
-    )
-        : base(options, assistant, botContext)
-    {
-        _options = options;
-        _logger = logger;
-    }
-
+        ILogger<RandomChanceFollower> logger)
+    : Follower(options, assistant, botContext)
+{
     protected override bool ShouldTrigger(IUserMessage message)
     {
-        var roll = RandomUtils.Roll(_options.Chance);
+        var roll = RandomUtils.Roll(options.Chance);
 
-        _logger.LogInformation(
+        logger.LogInformation(
             "Follower rolling for message from {Author}: {Roll} - {Result}",
             message.Author.GlobalName ?? message.Author.Username,
             roll.Roll,

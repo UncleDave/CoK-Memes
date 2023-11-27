@@ -4,20 +4,13 @@ using Microsoft.Extensions.Options;
 
 namespace ChampionsOfKhazad.Bot;
 
-public class HallOfFameReactionHandler : INotificationHandler<ReactionAdded>
+public class HallOfFameReactionHandler(IOptions<HallOfFameReactionHandlerOptions> options, BotContext context) : INotificationHandler<ReactionAdded>
 {
-    private readonly HallOfFameReactionHandlerOptions _options;
-    private readonly BotContext _context;
-
-    public HallOfFameReactionHandler(IOptions<HallOfFameReactionHandlerOptions> options, BotContext context)
-    {
-        _options = options.Value;
-        _context = context;
-    }
+    private readonly HallOfFameReactionHandlerOptions _options = options.Value;
 
     public async Task Handle(ReactionAdded notification, CancellationToken cancellationToken)
     {
-        var targetChannel = await _context.Guild.GetChannelAsync(_options.TargetChannelId);
+        var targetChannel = await context.Guild.GetChannelAsync(_options.TargetChannelId);
 
         if (targetChannel is not ITextChannel targetTextChannel)
             throw new ApplicationException("Target channel was not found or is not a text channel");

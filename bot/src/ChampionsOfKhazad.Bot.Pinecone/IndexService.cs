@@ -3,19 +3,12 @@ using Pinecone.Grpc;
 
 namespace ChampionsOfKhazad.Bot.Pinecone;
 
-public class IndexService
+public class IndexService(PineconeClient pineconeClient)
 {
-    private readonly PineconeClient _pineconeClient;
+    public Task<IndexName[]> ListIndexesAsync() => pineconeClient.ListIndexes();
 
-    public IndexService(PineconeClient pineconeClient)
-    {
-        _pineconeClient = pineconeClient;
-    }
-
-    public Task<IndexName[]> ListIndexesAsync() => _pineconeClient.ListIndexes();
-
-    public Task<Index<GrpcTransport>> GetIndexAsync(string name) => _pineconeClient.GetIndex(name);
+    public Task<Index<GrpcTransport>> GetIndexAsync(string name) => pineconeClient.GetIndex(name);
 
     public Task CreateIndexAsync(string name, uint dimensions = 1536, Metric metric = Metric.Cosine) =>
-        _pineconeClient.CreateIndex(name, dimensions, metric);
+        pineconeClient.CreateIndex(name, dimensions, metric);
 }

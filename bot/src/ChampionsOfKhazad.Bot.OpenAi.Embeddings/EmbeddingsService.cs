@@ -2,19 +2,12 @@
 
 namespace ChampionsOfKhazad.Bot.OpenAi.Embeddings;
 
-public class EmbeddingsService
+public class EmbeddingsService(HttpClient httpClient)
 {
-    private readonly HttpClient _httpClient;
-
-    public EmbeddingsService(HttpClient httpClient)
-    {
-        _httpClient = httpClient;
-    }
-
     public async Task<IEnumerable<Embedding>> CreateEmbeddingsAsync(params TextEntry[] input)
     {
         var request = new CreateEmbeddingsRequest(input.Select(x => x.Text));
-        var response = await _httpClient.PostAsJsonAsync(request);
+        var response = await httpClient.PostAsJsonAsync(request);
 
         response.EnsureSuccessStatusCode();
 

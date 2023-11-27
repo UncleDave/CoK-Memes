@@ -8,7 +8,7 @@ using OpenAI.ObjectModels.ResponseModels;
 
 namespace ChampionsOfKhazad.Bot;
 
-public class Assistant
+public class Assistant(IOpenAIService openAiService, ILogger<Assistant> logger, IGetRelatedLore relatedLoreGetter, BotContext context)
 {
     private static readonly string Instructions = string.Join(
         '\n',
@@ -20,19 +20,6 @@ public class Assistant
 
     private static readonly Regex EmojiExpression = new(@":(?<name>\w+):", RegexOptions.Compiled);
 
-    private readonly IOpenAIService _openAiService;
-    private readonly ILogger<Assistant> _logger;
-    private readonly IGetRelatedLore _relatedLoreGetter;
-    private readonly BotContext _context;
-
-    public Assistant(IOpenAIService openAiService, ILogger<Assistant> logger, IGetRelatedLore relatedLoreGetter, BotContext context)
-    {
-        _openAiService = openAiService;
-        _logger = logger;
-        _relatedLoreGetter = relatedLoreGetter;
-        _context = context;
-    }
-
     public async Task<string> RespondAsync(
         string message,
         User user,
@@ -43,7 +30,7 @@ public class Assistant
         string? model = null
     )
     {
-        var relatedLore = await _relatedLoreGetter.GetRelatedLoreAsync(message);
+        var relatedLore = await relatedLoreGetter.GetRelatedLoreAsync(message);
 
         const string separator = "\n\n###\n\n";
 
@@ -75,7 +62,7 @@ public class Assistant
 
         try
         {
-            result = await _openAiService
+            result = await openAiService
                 .ChatCompletion
                 .CreateCompletion(
                     new ChatCompletionCreateRequest
@@ -90,15 +77,15 @@ public class Assistant
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "Chat completion request failed");
+            logger.LogError(e, "Chat completion request failed");
             return "I'm sorry, I'm having a stroke.";
         }
 
-        _logger.LogDebug("Chat completion successful: {Successful}", result.Successful);
+        logger.LogDebug("Chat completion successful: {Successful}", result.Successful);
 
         if (!result.Successful)
         {
-            _logger.LogError("Chat completion failed: {ErrorCode}:{ErrorMessage}", result.Error?.Code, result.Error?.Message);
+            logger.LogError("Chat completion failed: {ErrorCode}:{ErrorMessage}", result.Error?.Code, result.Error?.Message);
             return "I'm sorry, I'm having a stroke.";
         }
 
@@ -106,18 +93,18 @@ public class Assistant
 
         if (choice is null)
         {
-            _logger.LogWarning("Chat completion failed: {@Error}", result.Error);
+            logger.LogWarning("Chat completion failed: {@Error}", result.Error);
             return "I'm sorry, I don't know what to say.";
         }
 
-        _logger.LogDebug("Chat completion finish reason: {FinishReason}", choice.FinishReason);
+        logger.LogDebug("Chat completion finish reason: {FinishReason}", choice.FinishReason);
 
         return ProcessEmojis(choice.Message.Content);
     }
 
     public async Task<string> RespondAsync(string instruction, string prompt, string? model = null)
     {
-        var result = await _openAiService
+        var result = await openAiService
             .ChatCompletion
             .CreateCompletion(
                 new ChatCompletionCreateRequest
@@ -142,7 +129,7 @@ public class Assistant
         {
             var emojiName = match.Groups["name"].Value;
 
-            if (_context.Guild.Emotes.FirstOrDefault(x => string.Equals(x.Name, emojiName, StringComparison.InvariantCultureIgnoreCase)) is { } emoji)
+            if (context.Guild.Emotes.FirstOrDefault(x => string.Equals(x.Name, emojiName, StringComparison.InvariantCultureIgnoreCase)) is { } emoji)
                 message = message.Replace(match.Value, emoji.ToString());
         }
 

@@ -7,20 +7,11 @@ using OpenAI.ObjectModels.RequestModels;
 
 namespace ChampionsOfKhazad.Bot;
 
-public class MentionHandler : INotificationHandler<MessageReceived>
+public class MentionHandler(IOptions<MentionHandlerOptions> options, Assistant assistant, BotContext context) : INotificationHandler<MessageReceived>
 {
     private static readonly Regex NameExpression = new("^[a-zA-Z0-9_-]{1,64}$", RegexOptions.Compiled);
 
-    private readonly MentionHandlerOptions _options;
-    private readonly Assistant _assistant;
-    private readonly BotContext _context;
-
-    public MentionHandler(IOptions<MentionHandlerOptions> options, Assistant assistant, BotContext context)
-    {
-        _options = options.Value;
-        _assistant = assistant;
-        _context = context;
-    }
+    private readonly MentionHandlerOptions _options = options.Value;
 
     public async Task Handle(MessageReceived notification, CancellationToken cancellationToken)
     {
@@ -29,7 +20,7 @@ public class MentionHandler : INotificationHandler<MessageReceived>
         if (
             message.Channel is not ITextChannel textChannel
             || (textChannel.CategoryId != _options.ChannelId && textChannel.Id != _options.ChannelId)
-            || !message.MentionedUserIds.Contains(_context.BotId)
+            || !message.MentionedUserIds.Contains(context.BotId)
         )
             return;
 
@@ -47,10 +38,10 @@ public class MentionHandler : INotificationHandler<MessageReceived>
         if (message.Author.Id == _options.CringeAsideUserId)
             previousMessages.Add(ChatMessage.FromSystem("Include cringe aside somewhere in your response."));
 
-        var response = await _assistant.RespondAsync(
+        var response = await assistant.RespondAsync(
             message.CleanContent,
             user,
-            _context.Guild.Emotes.Select(x => x.Name),
+            context.Guild.Emotes.Select(x => x.Name),
             previousMessages,
             message.ReferencedMessage is not null
                 ? new ChatMessage(
@@ -74,7 +65,7 @@ public class MentionHandler : INotificationHandler<MessageReceived>
                     : message.Author.Id.ToString();
 
     private string GetMessageRole(IMessage message) =>
-        message.Author.Id == _context.BotId ? StaticValues.ChatMessageRoles.Assistant : StaticValues.ChatMessageRoles.User;
+        message.Author.Id == context.BotId ? StaticValues.ChatMessageRoles.Assistant : StaticValues.ChatMessageRoles.User;
 
     public override string ToString() => nameof(MentionHandler);
 }

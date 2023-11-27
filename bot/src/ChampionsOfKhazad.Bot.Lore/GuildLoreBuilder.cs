@@ -3,8 +3,4 @@
 // ReSharper disable once CheckNamespace
 namespace Microsoft.Extensions.DependencyInjection;
 
-public class GuildLoreBuilder : BotBuilder
-{
-    public GuildLoreBuilder(IServiceCollection services, BotConfiguration botConfiguration)
-        : base(services, botConfiguration) { }
-}
+public class GuildLoreBuilder(IServiceCollection services, BotConfiguration botConfiguration) : BotBuilder(services, botConfiguration);

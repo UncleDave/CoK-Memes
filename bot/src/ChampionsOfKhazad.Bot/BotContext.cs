@@ -3,16 +3,9 @@ using Discord.WebSocket;
 
 namespace ChampionsOfKhazad.Bot;
 
-public class BotContext
+public class BotContext(ulong botId, IGuild guild, DiscordSocketClient client)
 {
-    public ulong BotId { get; }
-    public IGuild Guild { get; }
-    public DiscordSocketClient Client { get; }
-
-    public BotContext(ulong botId, IGuild guild, DiscordSocketClient client)
-    {
-        BotId = botId;
-        Guild = guild;
-        Client = client;
-    }
+    public ulong BotId { get; } = botId;
+    public IGuild Guild { get; } = guild;
+    public DiscordSocketClient Client { get; } = client;
 }

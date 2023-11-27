@@ -5,11 +5,8 @@ using MongoDB.Driver;
 // ReSharper disable once CheckNamespace
 namespace Microsoft.Extensions.DependencyInjection;
 
-public class MongoBuilder : BotBuilder
+public class MongoBuilder(IServiceCollection services, BotConfiguration botConfiguration) : BotBuilder(services, botConfiguration)
 {
-    public MongoBuilder(IServiceCollection services, BotConfiguration botConfiguration)
-        : base(services, botConfiguration) { }
-
     public MongoBuilder AddCollection<T>(string name, Action<IMongoCollection<T>>? configureCollection = null)
     {
         Services.AddSingleton(serviceProvider =>

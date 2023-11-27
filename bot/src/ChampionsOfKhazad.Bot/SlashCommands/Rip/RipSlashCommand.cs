@@ -3,17 +3,8 @@ using MediatR;
 
 namespace ChampionsOfKhazad.Bot;
 
-public class RipSlashCommand : INotificationHandler<RipSlashCommandExecuted>
+public class RipSlashCommand(Assistant assistant, IPublisher publisher) : INotificationHandler<RipSlashCommandExecuted>
 {
-    private readonly Assistant _assistant;
-    private readonly IPublisher _publisher;
-
-    public RipSlashCommand(Assistant assistant, IPublisher publisher)
-    {
-        _assistant = assistant;
-        _publisher = publisher;
-    }
-
     public async Task Handle(RipSlashCommandExecuted notification, CancellationToken cancellationToken)
     {
         var character = (string)notification.Command.Data.Options.Single(x => x.Name == "character").Value;
@@ -22,7 +13,7 @@ public class RipSlashCommand : INotificationHandler<RipSlashCommandExecuted>
         var characterClass = (string)notification.Command.Data.Options.Single(x => x.Name == "class").Value;
         var causeOfDeath = (string)notification.Command.Data.Options.Single(x => x.Name == "cause").Value;
 
-        var obituaryTask = _assistant.RespondAsync(
+        var obituaryTask = assistant.RespondAsync(
             "You are the Dwarf Lorekeeper of a World of Warcraft Classic guild known as Champions of Khazad.",
             $"{character}, a level {level} {race} {characterClass}, has died. Their reported cause of death was {causeOfDeath}. Write an obituary for them, it must be less than 100 words. It must contain all the information you have been given about the character and their cause of death."
         );
@@ -31,7 +22,7 @@ public class RipSlashCommand : INotificationHandler<RipSlashCommandExecuted>
 
         var obituary = await obituaryTask;
 
-        await _publisher.Publish(
+        await publisher.Publish(
             new CharacterDeathReported(
                 new CharacterDeath(
                     notification.Command.User.Id,

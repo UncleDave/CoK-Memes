@@ -1,7 +1,3 @@
 ﻿namespace ChampionsOfKhazad.Bot.Core;
 
-public class MissingConfigurationValueException : ApplicationException
-{
-    public MissingConfigurationValueException(string propertyName)
-        : base($"{propertyName} is required but was missing") { }
-}
+public class MissingConfigurationValueException(string propertyName) : ApplicationException($"{propertyName} is required but was missing");

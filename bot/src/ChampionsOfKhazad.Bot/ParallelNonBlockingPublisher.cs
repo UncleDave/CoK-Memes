@@ -3,15 +3,8 @@ using Microsoft.Extensions.Logging;
 
 namespace ChampionsOfKhazad.Bot;
 
-public class ParallelNonBlockingPublisher : INotificationPublisher
+public class ParallelNonBlockingPublisher(ILogger<ParallelNonBlockingPublisher> logger) : INotificationPublisher
 {
-    private readonly ILogger<ParallelNonBlockingPublisher> _logger;
-
-    public ParallelNonBlockingPublisher(ILogger<ParallelNonBlockingPublisher> logger)
-    {
-        _logger = logger;
-    }
-
     public Task Publish(IEnumerable<NotificationHandlerExecutor> handlerExecutors, INotification notification, CancellationToken cancellationToken)
     {
         foreach (var handler in handlerExecutors)
@@ -25,7 +18,7 @@ public class ParallelNonBlockingPublisher : INotificationPublisher
                     }
                     catch (Exception e)
                     {
-                        _logger.LogError(
+                        logger.LogError(
                             e,
                             "Error handling notification {NotificationType} in handler {HandlerType}",
                             notification.GetType().Name,

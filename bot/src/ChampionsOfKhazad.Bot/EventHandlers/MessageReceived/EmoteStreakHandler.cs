@@ -5,31 +5,19 @@ using Microsoft.Extensions.Options;
 
 namespace ChampionsOfKhazad.Bot;
 
-public class EmoteStreakHandler : INotificationHandler<MessageReceived>
-{
-    private readonly EmoteStreakHandlerOptions _options;
-    private readonly BotContext _botContext;
-    private readonly IGetStreakBreaks _streakBreakGetter;
-    private readonly IPublisher _publisher;
-
-    public EmoteStreakHandler(
-        IOptions<EmoteStreakHandlerOptions> options,
+public class EmoteStreakHandler(IOptions<EmoteStreakHandlerOptions> options,
         BotContext botContext,
         IGetStreakBreaks streakBreakGetter,
-        IPublisher publisher
-    )
-    {
-        _options = options.Value;
-        _botContext = botContext;
-        _streakBreakGetter = streakBreakGetter;
-        _publisher = publisher;
-    }
+        IPublisher publisher)
+    : INotificationHandler<MessageReceived>
+{
+    private readonly EmoteStreakHandlerOptions _options = options.Value;
 
     public async Task Handle(MessageReceived notification, CancellationToken cancellationToken)
     {
         var emote =
-            _botContext.Guild.Emotes.SingleOrDefault(x => x.Name == _options.EmoteName)
-            ?? await _botContext.Guild.GetEmotesAsync().SingleAsync(x => x.Name == _options.EmoteName);
+            botContext.Guild.Emotes.SingleOrDefault(x => x.Name == _options.EmoteName)
+            ?? await botContext.Guild.GetEmotesAsync().SingleAsync(x => x.Name == _options.EmoteName);
 
         var message = notification.Message;
 
@@ -50,7 +38,7 @@ public class EmoteStreakHandler : INotificationHandler<MessageReceived>
             // Otherwise users can edit their messages after a streak is broken to continue it
             if (
                 previousMessage is not IUserMessage previousUserMessage
-                || (previousMessage.Author.IsBot && previousMessage.Author.Id != _botContext.BotId)
+                || (previousMessage.Author.IsBot && previousMessage.Author.Id != botContext.BotId)
             )
                 continue;
 
@@ -68,7 +56,7 @@ public class EmoteStreakHandler : INotificationHandler<MessageReceived>
 
         if (streak > 1)
         {
-            var userStreakBreakCount = await _streakBreakGetter.GetStreakBreakCountByUserAsync(
+            var userStreakBreakCount = await streakBreakGetter.GetStreakBreakCountByUserAsync(
                 message.Author.Id,
                 _options.EmoteName,
                 cancellationToken
@@ -80,7 +68,7 @@ public class EmoteStreakHandler : INotificationHandler<MessageReceived>
                     $"Streak of {streak} {emote} broken by {message.Author.Mention}, shame on them. This is their {(userStreakBreakCount + 1).ToOrdinal()} streak break."
                 );
 
-            await _publisher.Publish(new StreakBroken(message.Author.Id, _options.EmoteName, message.Timestamp), cancellationToken);
+            await publisher.Publish(new StreakBroken(message.Author.Id, _options.EmoteName, message.Timestamp), cancellationToken);
         }
     }
 

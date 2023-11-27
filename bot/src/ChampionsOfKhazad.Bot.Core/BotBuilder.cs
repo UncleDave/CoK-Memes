@@ -3,14 +3,8 @@
 // ReSharper disable once CheckNamespace
 namespace Microsoft.Extensions.DependencyInjection;
 
-public class BotBuilder
+public class BotBuilder(IServiceCollection services, BotConfiguration botConfiguration)
 {
-    public IServiceCollection Services { get; }
-    public BotConfiguration BotConfiguration { get; }
-
-    public BotBuilder(IServiceCollection services, BotConfiguration botConfiguration)
-    {
-        Services = services;
-        BotConfiguration = botConfiguration;
-    }
+    public IServiceCollection Services { get; } = services;
+    public BotConfiguration BotConfiguration { get; } = botConfiguration;
 }

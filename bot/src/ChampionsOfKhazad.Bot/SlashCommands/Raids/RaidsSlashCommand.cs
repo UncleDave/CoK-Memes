@@ -6,12 +6,13 @@ using Microsoft.Extensions.Options;
 
 namespace ChampionsOfKhazad.Bot;
 
-public class RaidsSlashCommand : INotificationHandler<RaidsSlashCommandExecuted>
+public class RaidsSlashCommand(IOptions<RaidsSlashCommandOptions> options,
+        RaidHelperClient raidHelperClient,
+        BotContext botContext,
+        ILogger<RaidsSlashCommand> logger)
+    : INotificationHandler<RaidsSlashCommandExecuted>
 {
-    private readonly RaidsSlashCommandOptions _options;
-    private readonly RaidHelperClient _raidHelperClient;
-    private readonly BotContext _botContext;
-    private readonly ILogger<RaidsSlashCommand> _logger;
+    private readonly RaidsSlashCommandOptions _options = options.Value;
 
     private static readonly string[] Acknowledgements = { "More work?", "Right-o.", "Yes, milord.", "All right.", "Off I go, then!" };
 
@@ -80,19 +81,6 @@ public class RaidsSlashCommand : INotificationHandler<RaidsSlashCommandExecuted>
         "I'm not a real raid description, I'm just a figment of your imagination.",
     };
 
-    public RaidsSlashCommand(
-        IOptions<RaidsSlashCommandOptions> options,
-        RaidHelperClient raidHelperClient,
-        BotContext botContext,
-        ILogger<RaidsSlashCommand> logger
-    )
-    {
-        _options = options.Value;
-        _raidHelperClient = raidHelperClient;
-        _botContext = botContext;
-        _logger = logger;
-    }
-
     public async Task Handle(RaidsSlashCommandExecuted notification, CancellationToken cancellationToken)
     {
         var command = notification.Command;
@@ -106,7 +94,7 @@ public class RaidsSlashCommand : INotificationHandler<RaidsSlashCommandExecuted>
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "Error clearing channels for new raids");
+            logger.LogError(e, "Error clearing channels for new raids");
         }
 
         const DayOfWeek resetDay = DayOfWeek.Wednesday;
@@ -123,7 +111,7 @@ public class RaidsSlashCommand : INotificationHandler<RaidsSlashCommandExecuted>
 
     private async Task ClearChannelAsync(ulong channelId)
     {
-        var channel = await _botContext.Guild.GetChannelAsync(channelId);
+        var channel = await botContext.Guild.GetChannelAsync(channelId);
 
         if (channel is not ITextChannel textChannel)
             throw new ApplicationException("Channel was not found or is not a text channel");
@@ -153,6 +141,6 @@ public class RaidsSlashCommand : INotificationHandler<RaidsSlashCommandExecuted>
             }
         };
 
-        await _raidHelperClient.CreateEventAsync(_botContext.Guild.Id, channelId, request);
+        await raidHelperClient.CreateEventAsync(botContext.Guild.Id, channelId, request);
     }
 }

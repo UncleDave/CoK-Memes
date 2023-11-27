@@ -3,8 +3,4 @@
 // ReSharper disable once CheckNamespace
 namespace Microsoft.Extensions.DependencyInjection;
 
-public class DiscordStatsBuilder : BotBuilder
-{
-    public DiscordStatsBuilder(IServiceCollection services, BotConfiguration botConfiguration)
-        : base(services, botConfiguration) { }
-}
+public class DiscordStatsBuilder(IServiceCollection services, BotConfiguration botConfiguration) : BotBuilder(services, botConfiguration);

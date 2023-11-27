@@ -5,23 +5,16 @@ namespace ChampionsOfKhazad.Bot;
 
 public record GuildMessageReactorOptions(ulong UserId, IEnumerable<IEmote> ReactionEmojis);
 
-public abstract class GuildMessageReactor : INotificationHandler<MessageReceived>
+public abstract class GuildMessageReactor(GuildMessageReactorOptions options) : INotificationHandler<MessageReceived>
 {
-    private readonly GuildMessageReactorOptions _options;
-
-    protected GuildMessageReactor(GuildMessageReactorOptions options)
-    {
-        _options = options;
-    }
-
     public async Task Handle(MessageReceived notification, CancellationToken cancellationToken)
     {
         var message = notification.Message;
 
-        if (message.Channel is ITextChannel && message.Author.Id == _options.UserId && ShouldReact(message))
+        if (message.Channel is ITextChannel && message.Author.Id == options.UserId && ShouldReact(message))
         {
             await BeforeReactingAsync(message);
-            await message.AddReactionsAsync(_options.ReactionEmojis);
+            await message.AddReactionsAsync(options.ReactionEmojis);
             await AfterReactingAsync(message);
         }
     }

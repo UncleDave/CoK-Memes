@@ -29,10 +29,10 @@ public class BotService : IHostedService
         _botContextProvider = botContextProvider;
         _publisher = publisher;
 
-        _client.Ready += Ready;
+        _client.Ready += ReadyAsync;
         _client.MessageReceived += MessageReceivedAsync;
         _client.ReactionAdded += ReactionAddedAsync;
-        _client.SlashCommandExecuted += SlashCommandExecuted;
+        _client.SlashCommandExecuted += SlashCommandExecutedAsync;
     }
 
     public async Task StartAsync(CancellationToken cancellationToken)
@@ -48,7 +48,7 @@ public class BotService : IHostedService
 
     public async Task StopAsync(CancellationToken cancellationToken) => await _client.StopAsync();
 
-    private async Task Ready()
+    private async Task ReadyAsync()
     {
         var guild = _client.GetGuild(_options.GuildId);
 
@@ -64,16 +64,6 @@ public class BotService : IHostedService
             await _client.CreateGlobalApplicationCommandAsync(slashCommand.Properties);
 
         _logger.LogInformation("Bot started");
-
-        if (_options.StartMessageUserId.HasValue)
-        {
-            var startMessageTargetUser = await _client.GetUserAsync(_options.StartMessageUserId.Value);
-            var message = _options.CommitSha is not null
-                ? $"Bot started, commit: [{_options.CommitSha}]({Constants.RepositoryUrl}/commit/{_options.CommitSha})"
-                : "Bot started";
-
-            await startMessageTargetUser.SendMessageAsync(message);
-        }
     }
 
     private Task MessageReceivedAsync(SocketMessage message)
@@ -87,7 +77,7 @@ public class BotService : IHostedService
     private Task ReactionAddedAsync(Cacheable<IUserMessage, ulong> message, Cacheable<IMessageChannel, ulong> channel, SocketReaction reaction) =>
         _publisher.Publish(new ReactionAdded(reaction));
 
-    private Task SlashCommandExecuted(SocketSlashCommand command)
+    private Task SlashCommandExecutedAsync(SocketSlashCommand command)
     {
         var notification = SlashCommands.All.Single(x => x.Properties.Name.Value == command.CommandName).CreateNotification(command);
         return _publisher.Publish(notification);

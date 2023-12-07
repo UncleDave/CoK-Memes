@@ -5,11 +5,12 @@ using Microsoft.Extensions.Options;
 
 namespace ChampionsOfKhazad.Bot;
 
-public class EmoteStreakHandler(IOptions<EmoteStreakHandlerOptions> options,
-        BotContext botContext,
-        IGetStreakBreaks streakBreakGetter,
-        IPublisher publisher)
-    : INotificationHandler<MessageReceived>
+public class EmoteStreakHandler(
+    IOptions<EmoteStreakHandlerOptions> options,
+    BotContext botContext,
+    IGetStreakBreaks streakBreakGetter,
+    IPublisher publisher
+) : INotificationHandler<MessageReceived>
 {
     private readonly EmoteStreakHandlerOptions _options = options.Value;
 

@@ -4,7 +4,8 @@ using Microsoft.Extensions.Options;
 
 namespace ChampionsOfKhazad.Bot;
 
-public class SuggestSlashCommand(IOptions<SuggestSlashCommandOptions> options, BotContext botContext) : INotificationHandler<SuggestSlashCommandExecuted>
+public class SuggestSlashCommand(IOptions<SuggestSlashCommandOptions> options, BotContext botContext)
+    : INotificationHandler<SuggestSlashCommandExecuted>
 {
     private readonly SuggestSlashCommandOptions _options = options.Value;
 

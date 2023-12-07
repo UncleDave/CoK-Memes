@@ -6,11 +6,12 @@ using Microsoft.Extensions.Options;
 
 namespace ChampionsOfKhazad.Bot;
 
-public class RaidsSlashCommand(IOptions<RaidsSlashCommandOptions> options,
-        RaidHelperClient raidHelperClient,
-        BotContext botContext,
-        ILogger<RaidsSlashCommand> logger)
-    : INotificationHandler<RaidsSlashCommandExecuted>
+public class RaidsSlashCommand(
+    IOptions<RaidsSlashCommandOptions> options,
+    RaidHelperClient raidHelperClient,
+    BotContext botContext,
+    ILogger<RaidsSlashCommand> logger
+) : INotificationHandler<RaidsSlashCommandExecuted>
 {
     private readonly RaidsSlashCommandOptions _options = options.Value;
 

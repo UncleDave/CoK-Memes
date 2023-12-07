@@ -15,18 +15,22 @@ public record HarassmentLawyerFollowerOptions : BaseFollowerOptions
     public required string ClientUserName { get; init; }
 }
 
-public class HarassmentLawyerFollower(IOptions<AllFollowersOptions> allFollowersOptions,
-        IOptions<HarassmentLawyerFollowerOptions> options,
-        Assistant assistant,
-        BotContext botContext,
-        ILogger<HarassmentLawyerFollower> logger)
-    : RandomChanceMentionFollower(new RandomChanceMentionFollowerOptions(
-        options.Value.ToFollowerTarget(),
-        allFollowersOptions.Value.IgnoreBotMentionsInChannelId,
-        $"You are Broody Giljotini, a bumbling and inept lawyer representing {options.Value.ClientUserName}. {options.Value.UserName} has a history of harassing {options.Value.ClientUserName} and you are here to put a stop to it. You will threaten {options.Value.UserName} with legal action if they continue to harass {options.Value.ClientUserName}. You may also threaten to call the Stinky Police.",
-        options.Value.Chance,
-        options.Value.ClientUserId
-    ),
-    assistant,
-    botContext,
-    logger);
+public class HarassmentLawyerFollower(
+    IOptions<AllFollowersOptions> allFollowersOptions,
+    IOptions<HarassmentLawyerFollowerOptions> options,
+    Assistant assistant,
+    BotContext botContext,
+    ILogger<HarassmentLawyerFollower> logger
+)
+    : RandomChanceMentionFollower(
+        new RandomChanceMentionFollowerOptions(
+            options.Value.ToFollowerTarget(),
+            allFollowersOptions.Value.IgnoreBotMentionsInChannelId,
+            $"You are Broody Giljotini, a bumbling and inept lawyer representing {options.Value.ClientUserName}. {options.Value.UserName} has a history of harassing {options.Value.ClientUserName} and you are here to put a stop to it. You will threaten {options.Value.UserName} with legal action if they continue to harass {options.Value.ClientUserName}. You may also threaten to call the Stinky Police.",
+            options.Value.Chance,
+            options.Value.ClientUserId
+        ),
+        assistant,
+        botContext,
+        logger
+    );

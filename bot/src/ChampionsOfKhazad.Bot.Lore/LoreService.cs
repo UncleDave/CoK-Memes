@@ -4,7 +4,11 @@ using Pinecone;
 
 namespace ChampionsOfKhazad.Bot.Lore;
 
-internal class LoreService(IStoreLore loreStore, EmbeddingsService embeddingsService, IndexService indexService) : IGetLore, IGetRelatedLore, IUpdateLore, ICreateLore
+internal class LoreService(IStoreLore loreStore, EmbeddingsService embeddingsService, IndexService indexService)
+    : IGetLore,
+        IGetRelatedLore,
+        IUpdateLore,
+        ICreateLore
 {
     public Task<IReadOnlyList<Lore>> GetLoreAsync(CancellationToken cancellationToken = default) => loreStore.ReadLoreAsync(cancellationToken);
 

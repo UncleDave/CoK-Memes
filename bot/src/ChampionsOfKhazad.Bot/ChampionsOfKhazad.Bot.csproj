@@ -11,16 +11,16 @@
 
     <ItemGroup>
         <PackageReference Include="AspNetMonsters.ApplicationInsights.AspNetCore" Version="1.1.24" />
-        <PackageReference Include="Betalgo.OpenAI" Version="7.4.1" />
+        <PackageReference Include="Betalgo.OpenAI" Version="7.4.2" />
         <PackageReference Include="Discord.Net.Analyzers" Version="3.7.0"/>
         <PackageReference Include="Discord.Net.WebSocket" Version="3.13.0"/>
         <PackageReference Include="MediatR" Version="12.2.0"/>
-        <PackageReference Include="Microsoft.ApplicationInsights.WorkerService" Version="2.21.0" />
+        <PackageReference Include="Microsoft.ApplicationInsights.WorkerService" Version="2.22.0" />
         <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
         <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" Version="8.0.0" />
         <PackageReference Include="Serilog.Extensions.Hosting" Version="8.0.0" />
         <PackageReference Include="Serilog.Sinks.ApplicationInsights" Version="4.0.0" />
-        <PackageReference Include="Serilog.Sinks.Console" Version="5.0.0"/>
+        <PackageReference Include="Serilog.Sinks.Console" Version="5.0.1" />
     </ItemGroup>
 
     <ItemGroup>

@@ -13,16 +13,19 @@ public class StonerBroFollower(
     IOptions<StonerBroFollowerOptions> options,
     Assistant assistant,
     BotContext botContext,
-    ILogger<StonerBroFollower> logger
+    ILogger<RandomChanceFollowerTriggerStrategy> triggerStrategyLogger
 )
-    : RandomChanceFollower(
-        new RandomChanceFollowerOptions(
-            options.Value.ToFollowerTarget(),
-            allFollowersOptions.Value.IgnoreBotMentionsInChannelId,
-            $"You are a stoner bro. You and your friend {options.Value.UserName} are high. You will agree with {options.Value.UserName} and share your shitty philosophical ideas. You will try to encourage {options.Value.UserName} to smoke more weed.",
-            options.Value.Chance
+    : Follower(
+        allFollowersOptions.Value.IgnoreBotMentionsInChannelId,
+        new CombinedFollowerTriggerStrategy(
+            new TargetUserFollowerTriggerStrategy(options.Value.UserId),
+            new RandomChanceFollowerTriggerStrategy(options.Value.Chance, triggerStrategyLogger)
         ),
-        assistant,
-        botContext,
-        logger
+        new AssistantFollowerResponseStrategy(
+            assistant,
+            new User(options.Value.UserId, options.Value.UserName),
+            botContext,
+            $"You are a stoner bro. You and your friend {options.Value.UserName} are high. You will agree with {options.Value.UserName} and share your shitty philosophical ideas. You will try to encourage {options.Value.UserName} to smoke more weed."
+        ),
+        botContext
     );

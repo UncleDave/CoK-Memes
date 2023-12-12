@@ -20,12 +20,20 @@ public class Assistant(IOpenAIService openAiService, ILogger<Assistant> logger, 
 
     private static readonly Regex EmojiExpression = new(@":(?<name>\w+):", RegexOptions.Compiled);
 
+    private static readonly Dictionary<Role, string> RoleMap =
+        new()
+        {
+            { Role.System, StaticValues.ChatMessageRoles.System },
+            { Role.Assistant, StaticValues.ChatMessageRoles.Assistant },
+            { Role.User, StaticValues.ChatMessageRoles.User }
+        };
+
     public async Task<string> RespondAsync(
         string message,
         User user,
         IEnumerable<string> availableEmotes,
-        IEnumerable<ChatMessage>? chatContext = null,
-        ChatMessage? referencedMessage = null,
+        IEnumerable<Message>? chatContext = null,
+        Message? referencedMessage = null,
         string? instructions = null,
         string? model = null
     )
@@ -34,7 +42,7 @@ public class Assistant(IOpenAIService openAiService, ILogger<Assistant> logger, 
 
         const string separator = "\n\n###\n\n";
 
-        var messages = (chatContext ?? Array.Empty<ChatMessage>())
+        var messages = (chatContext?.Select(x => new ChatMessage(RoleMap[x.Role], x.Content, x.Author?.Name)) ?? Array.Empty<ChatMessage>())
             .Prepend(
                 ChatMessage.FromSystem(
                     string.Join(
@@ -51,10 +59,12 @@ public class Assistant(IOpenAIService openAiService, ILogger<Assistant> logger, 
             .Append(ChatMessage.FromUser(message, user.Name))
             .ToList();
 
-        if (referencedMessage is not null)
+        if (referencedMessage?.Author is not null)
         {
             messages.Add(
-                ChatMessage.FromSystem($"The user is referencing this message from \"{referencedMessage.Name}\": \"{referencedMessage.Content}\"")
+                ChatMessage.FromSystem(
+                    $"The user is referencing this message from \"{referencedMessage.Author.Name}\": \"{referencedMessage.Content}\""
+                )
             );
         }
 
@@ -91,7 +101,7 @@ public class Assistant(IOpenAIService openAiService, ILogger<Assistant> logger, 
 
         var choice = result.Choices.FirstOrDefault(x => x.FinishReason == "stop") ?? result.Choices.FirstOrDefault();
 
-        if (choice is null)
+        if (choice?.Message.Content is null)
         {
             logger.LogWarning("Chat completion failed: {@Error}", result.Error);
             return "I'm sorry, I don't know what to say.";
@@ -117,6 +127,12 @@ public class Assistant(IOpenAIService openAiService, ILogger<Assistant> logger, 
             );
 
         var choice = result.Choices.FirstOrDefault(x => x.FinishReason == "stop") ?? result.Choices.First();
+
+        if (choice.Message.Content is null)
+        {
+            logger.LogWarning("Chat completion failed: {@Error}", result.Error);
+            return "I'm sorry, I don't know what to say.";
+        }
 
         return ProcessEmojis(choice.Message.Content);
     }

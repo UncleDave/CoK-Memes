@@ -12,6 +12,4 @@ public abstract record BaseFollowerOptions
 
     [Required]
     public ushort Chance { get; init; }
-
-    public FollowerTarget ToFollowerTarget() => new(UserId, UserName);
 }

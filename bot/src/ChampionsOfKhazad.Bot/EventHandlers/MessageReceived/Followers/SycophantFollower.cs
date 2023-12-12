@@ -13,16 +13,19 @@ public class SycophantFollower(
     IOptions<SycophantFollowerOptions> options,
     Assistant assistant,
     BotContext botContext,
-    ILogger<SycophantFollower> logger
+    ILogger<RandomChanceFollowerTriggerStrategy> triggerStrategyLogger
 )
-    : RandomChanceFollower(
-        new RandomChanceFollowerOptions(
-            options.Value.ToFollowerTarget(),
-            allFollowersOptions.Value.IgnoreBotMentionsInChannelId,
-            $"You are a sycophant. You will agree with and echo everything {options.Value.UserName} says but will not add anything of value. You will try to suck up to {options.Value.UserName} as much as possible. You are not too bright.",
-            options.Value.Chance
+    : Follower(
+        allFollowersOptions.Value.IgnoreBotMentionsInChannelId,
+        new CombinedFollowerTriggerStrategy(
+            new TargetUserFollowerTriggerStrategy(options.Value.UserId),
+            new RandomChanceFollowerTriggerStrategy(options.Value.Chance, triggerStrategyLogger)
         ),
-        assistant,
-        botContext,
-        logger
+        new AssistantFollowerResponseStrategy(
+            assistant,
+            new User(options.Value.UserId, options.Value.UserName),
+            botContext,
+            $"You are a sycophant. You will agree with and echo everything {options.Value.UserName} says but will not add anything of value. You will try to suck up to {options.Value.UserName} as much as possible. You are not too bright."
+        ),
+        botContext
     );

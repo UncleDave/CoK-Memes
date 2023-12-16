@@ -1,0 +1,52 @@
+using System.Security.Claims;
+using Auth0.AspNetCore.Authentication;
+using ChampionsOfKhazad.Bot.Core;
+using ChampionsOfKhazad.Bot.Portal;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.IdentityModel.Protocols.OpenIdConnect;
+
+var builder = WebApplication.CreateBuilder(args);
+var authOptions = builder.Configuration.GetSection("Auth").Get<AuthOptions>() ?? throw new MissingConfigurationValueException("Auth");
+
+builder
+    .Services
+    .AddAuthentication(options =>
+    {
+        var auth0WebAppOptions = new Auth0WebAppOptions();
+
+        options.DefaultScheme = auth0WebAppOptions.CookieAuthenticationScheme;
+        options.DefaultChallengeScheme = options.DefaultSignOutScheme = Auth0Constants.AuthenticationScheme;
+    })
+    .AddAuth0WebAppAuthentication(options =>
+    {
+        options.Domain = authOptions.Domain;
+        options.ClientId = authOptions.ClientId;
+        options.ClientSecret = authOptions.ClientSecret;
+        options.ResponseType = OpenIdConnectResponseType.Code;
+    });
+
+builder
+    .Services
+    .AddAuthorization(options =>
+    {
+        options.DefaultPolicy = options.FallbackPolicy = new AuthorizationPolicyBuilder()
+            .RequireAuthenticatedUser()
+            .RequireClaim(ClaimTypes.NameIdentifier, authOptions.AllowedUserIds)
+            .Build();
+    });
+
+if (builder.Environment.IsDevelopment())
+    builder.Services.AddSpaYarp();
+
+var app = builder.Build();
+
+app.UseAuthentication();
+app.UseAuthorization();
+app.UseStaticFiles();
+
+if (builder.Environment.IsDevelopment())
+    app.UseSpaYarp();
+
+app.MapFallbackToFile("index.html");
+
+app.Run();

@@ -8,3 +8,7 @@ updates:
     directory: /
     schedule:
       interval: weekly
+  - package-ecosystem: npm
+    directory: bot/src/ChampionsOfKhazad.Bot.Portal/frontend
+    schedule:
+      interval: weekly

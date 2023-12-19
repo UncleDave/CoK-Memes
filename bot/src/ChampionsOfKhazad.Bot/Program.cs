@@ -79,8 +79,8 @@ host.Services
     })
     .AddGuildLore(configuration =>
     {
-        configuration.EmbeddingsApiKey = host.Configuration.GetRequiredString("OpenAIServiceOptions:ApiKey");
-        configuration.VectorDatabaseApiKey = host.Configuration.GetRequiredString("Pinecone:ApiKey");
+        if (host.Environment.IsProduction())
+            configuration.EmbeddingsApiKey = host.Configuration.GetRequiredString("OpenAIServiceOptions:ApiKey");
     })
     .AddMongoPersistence()
     .AddDiscordStats()

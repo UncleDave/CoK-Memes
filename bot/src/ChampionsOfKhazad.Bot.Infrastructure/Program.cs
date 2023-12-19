@@ -91,7 +91,6 @@ return await Pulumi
         const string botTokenSecretName = "bot-token";
         const string imageRegistryReadPasswordSecretName = "registry-read-password";
         const string openAiApiKeySecretName = "open-ai-api-key";
-        const string pineconeApiKeySecretName = "pinecone-api-key";
         const string raidHelperApiKeySecretName = "raid-helper-api-key";
         const string mongoConnectionStringSecretName = "mongo-connection-string";
         const string applicationInsightsConnectionStringSecretName = "application-insights-connection-string";
@@ -102,7 +101,6 @@ return await Pulumi
             new() { Name = "Bot__Token", SecretRef = botTokenSecretName },
             new() { Name = "DOTNET_ENVIRONMENT", Value = config.Require("environment") },
             new() { Name = "OpenAIServiceOptions__ApiKey", SecretRef = openAiApiKeySecretName },
-            new() { Name = "Pinecone__ApiKey", SecretRef = pineconeApiKeySecretName },
             new() { Name = "RaidHelper__ApiKey", SecretRef = raidHelperApiKeySecretName },
             new() { Name = "ConnectionStrings__Mongo", SecretRef = mongoConnectionStringSecretName },
             new() { Name = "ConnectionStrings__ApplicationInsights", SecretRef = applicationInsightsConnectionStringSecretName }
@@ -132,7 +130,6 @@ return await Pulumi
                         new SecretArgs { Name = botTokenSecretName, Value = config.RequireSecret("botToken") },
                         new SecretArgs { Name = imageRegistryReadPasswordSecretName, Value = config.RequireSecret("imageRegistryReadPassword") },
                         new SecretArgs { Name = openAiApiKeySecretName, Value = config.RequireSecret("openAiApiKey") },
-                        new SecretArgs { Name = pineconeApiKeySecretName, Value = config.RequireSecret("pineconeApiKey") },
                         new SecretArgs { Name = raidHelperApiKeySecretName, Value = config.RequireSecret("raidHelperApiKey") },
                         new SecretArgs { Name = mongoConnectionStringSecretName, Value = config.RequireSecret("mongoConnectionString") },
                         new SecretArgs { Name = applicationInsightsConnectionStringSecretName, Value = applicationInsights.ConnectionString }

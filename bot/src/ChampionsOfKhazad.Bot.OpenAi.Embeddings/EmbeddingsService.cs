@@ -4,9 +4,9 @@ namespace ChampionsOfKhazad.Bot.OpenAi.Embeddings;
 
 public class EmbeddingsService(HttpClient httpClient)
 {
-    public async Task<IEnumerable<Embedding>> CreateEmbeddingsAsync(params TextEntry[] input)
+    public async Task<float[]> CreateEmbeddingAsync(string input)
     {
-        var request = new CreateEmbeddingsRequest(input.Select(x => x.Text));
+        var request = new CreateEmbeddingsRequest([input]);
         var response = await httpClient.PostAsJsonAsync(request);
 
         response.EnsureSuccessStatusCode();
@@ -16,13 +16,7 @@ public class EmbeddingsService(HttpClient httpClient)
         if (responseContent is null)
             throw new ApplicationException("Response content was null");
 
-        return responseContent
-            .Data
-            .Select(x =>
-            {
-                var entry = input[x.Index];
-                return new Embedding(entry.Id, entry.Text, x.Embedding);
-            });
+        return responseContent.Data.Single().Embedding;
     }
 
     private record EmbeddingResponse(float[] Embedding, int Index);

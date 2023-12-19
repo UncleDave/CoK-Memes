@@ -2,6 +2,6 @@
 
 public interface ICreateLore
 {
-    Task CreateLoreAsync(params Lore[] lore);
-    Task CreateMemberLoreAsync(params MemberLore[] lore);
+    Task CreateLoreAsync(GuildLore lore);
+    Task CreateLoreAsync(MemberLore lore);
 }

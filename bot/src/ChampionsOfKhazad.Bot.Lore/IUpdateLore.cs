@@ -2,6 +2,6 @@
 
 public interface IUpdateLore
 {
-    Task UpdateLoreAsync(Lore lore);
-    Task UpdateMemberLoreAsync(MemberLore lore);
+    Task UpdateLoreAsync(GuildLore lore);
+    Task UpdateLoreAsync(MemberLore lore);
 }

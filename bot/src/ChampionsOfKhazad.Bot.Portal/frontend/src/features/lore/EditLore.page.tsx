@@ -1,5 +1,6 @@
 import { useLoaderData } from "react-router-dom";
 import LoreContract from "./lore-contract.ts";
+import LoreForm from "./LoreForm.tsx";
 
 const EditLorePage = () => {
   const lore = useLoaderData() as LoreContract;
@@ -7,7 +8,7 @@ const EditLorePage = () => {
   return (
     <article>
       <h1>{lore.name}</h1>
-      <textarea>{lore.content}</textarea>
+      <LoreForm lore={lore}/>
     </article>
   );
 };

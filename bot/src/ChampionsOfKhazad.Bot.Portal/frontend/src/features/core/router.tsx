@@ -9,11 +9,18 @@ const router = createBrowserRouter([
     children: [
       {
         path: "lore",
+        element: <div />,
+        loader: () => fetch("/api/lore"),
       },
       {
         path: "lore/:name",
         element: <EditLorePage />,
         loader: ({ params }) => fetch(`/api/lore/${params.name}`),
+        action: async ({ params, request }) =>
+          fetch(`/api/lore/${params.name}`, {
+            method: "PUT",
+            body: await request.formData(),
+          }),
       },
     ],
   },

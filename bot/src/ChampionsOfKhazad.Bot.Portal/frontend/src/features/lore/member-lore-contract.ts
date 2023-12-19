@@ -7,3 +7,5 @@ export default interface MemberLoreContract {
   mainCharacter: string;
   biography?: string;
 }
+
+export const isMemberLore = (lore: any): lore is MemberLoreContract => 'mainCharacter' in lore;

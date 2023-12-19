@@ -6,10 +6,10 @@ namespace Microsoft.Extensions.DependencyInjection;
 
 public static class LoreBotBuilderExtensions
 {
-    public static GuildLoreBuilder AddGuildLore(this BotBuilder builder, Action<GuildLoreConfiguration> configureGuildLore)
+    public static GuildLoreBuilder AddGuildLore(this BotBuilder builder, Action<GuildLoreConfiguration>? configureGuildLore = null)
     {
         var options = new GuildLoreConfiguration();
-        configureGuildLore(options);
+        configureGuildLore?.Invoke(options);
 
         builder
             .Services

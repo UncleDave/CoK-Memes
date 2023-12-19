@@ -1,6 +1,7 @@
 ﻿using System.Globalization;
 using AspNetMonsters.ApplicationInsights.AspNetCore;
 using ChampionsOfKhazad.Bot;
+using ChampionsOfKhazad.Bot.Core;
 using ChampionsOfKhazad.Bot.RaidHelper;
 using Discord;
 using Discord.WebSocket;

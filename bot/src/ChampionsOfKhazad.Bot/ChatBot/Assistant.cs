@@ -51,7 +51,7 @@ public class Assistant(IOpenAIService openAiService, ILogger<Assistant> logger, 
                         string.Join(
                             '\n',
                             instructions ?? Instructions,
-                            $"You can use unicode emojis and the following guild emojis: {string.Join(", ", availableEmotes.Select(x => $":{x}:"))}"
+                            $"You can use unicode emojis and the following guild emojis (do not invent extra emojis that are not in this list): {string.Join(", ", availableEmotes.Select(x => $":{x}:"))}"
                         )
                     )
                 )

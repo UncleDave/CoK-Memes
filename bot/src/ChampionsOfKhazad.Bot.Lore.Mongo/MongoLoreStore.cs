@@ -28,7 +28,12 @@ internal class MongoLoreStore(IMongoCollection<LoreDocument> loreCollection) : I
     public async Task<IReadOnlyList<Lore>> SearchLoreAsync(float[] queryVector, uint max, CancellationToken cancellationToken = default)
     {
         var result = await loreCollection.AggregateAsync(
-            new EmptyPipelineDefinition<LoreDocument>().VectorSearch("embedding", new QueryVector(queryVector), (int)max),
+            new EmptyPipelineDefinition<LoreDocument>().VectorSearch(
+                "embedding",
+                new QueryVector(queryVector),
+                (int)max,
+                new VectorSearchOptions<LoreDocument> { IndexName = "vector" }
+            ),
             cancellationToken: cancellationToken
         );
 

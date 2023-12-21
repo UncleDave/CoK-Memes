@@ -9,6 +9,7 @@ const LoreForm = ({ children }: PropsWithChildren) => (
       css={css`
         display: block;
         margin-left: auto;
+        margin-top: 10px;
       `}
     >
       Save

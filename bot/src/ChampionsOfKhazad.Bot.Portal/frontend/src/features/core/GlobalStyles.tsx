@@ -22,8 +22,16 @@ const GlobalStyles = () => (
           sans-serif;
       }
 
-      textarea {
+      textarea,
+      input {
         color: #848d97;
+        border: 1px solid #30363d;
+        border-radius: 6px;
+
+        &:focus {
+          outline: 1px solid #2f81f7;
+          border-color: #2f81f7;
+        }
       }
     `}
   />

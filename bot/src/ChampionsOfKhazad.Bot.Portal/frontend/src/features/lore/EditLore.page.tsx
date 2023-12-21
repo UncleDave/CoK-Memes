@@ -15,7 +15,7 @@ const EditLorePage = () => {
       <Breadcrumbs
         crumbs={[
           { label: "Lore", to: "/lore" },
-          { label: lore.name, to: "." },
+          { label: lore.name },
         ]}
         css={css`
           margin-bottom: 20px;

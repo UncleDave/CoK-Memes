@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 
 interface Crumb {
   label: string;
-  to: string;
+  to?: string;
 }
 
 interface BreadcrumbsProps {
@@ -32,7 +32,20 @@ const Breadcrumbs = ({ crumbs, className }: BreadcrumbsProps) => (
           }
         `}
       >
-        <Link to={to}>{label}</Link>
+        {to ? (
+          <Link
+            to={to}
+            css={css`
+              &:visited {
+                color: #2f81f7;
+              }
+            `}
+          >
+            {label}
+          </Link>
+        ) : (
+          label
+        )}
       </li>
     ))}
   </ul>

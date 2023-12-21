@@ -49,18 +49,24 @@ var app = builder.Build();
 app.UseAuthentication();
 app.UseAuthorization();
 
-var api = app.MapGroup("api");
-var lore = api.MapGroup("lore");
+var apiGroup = app.MapGroup("api");
+var loreGroup = apiGroup.MapGroup("lore");
 
-lore.MapGet("", async (IGetLore loreGetter, CancellationToken cancellationToken) => Results.Ok(await loreGetter.GetLoreAsync(cancellationToken)));
-
-lore.MapGet(
-    "{name}",
-    async (string name, IGetLore loreGetter, CancellationToken cancellationToken) =>
-        Results.Ok(await loreGetter.GetLoreAsync(name, cancellationToken))
+loreGroup.MapGet(
+    "",
+    async (IGetLore loreGetter, CancellationToken cancellationToken) => Results.Ok(await loreGetter.GetLoreAsync(cancellationToken))
 );
 
-var guildLore = api.MapGroup("guild-lore");
+loreGroup.MapGet(
+    "{name}",
+    async (string name, IGetLore loreGetter, CancellationToken cancellationToken) =>
+    {
+        var lore = await loreGetter.GetLoreAsync(name, cancellationToken);
+        return lore is null ? Results.NotFound() : Results.Ok(lore);
+    }
+);
+
+var guildLore = apiGroup.MapGroup("guild-lore");
 
 guildLore.MapPut(
     "{name}",

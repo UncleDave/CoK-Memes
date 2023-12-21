@@ -4,7 +4,7 @@ internal class LoreService(IStoreLore loreStore) : IGetLore, IUpdateLore, ICreat
 {
     public Task<IReadOnlyList<Lore>> GetLoreAsync(CancellationToken cancellationToken = default) => loreStore.ReadLoreAsync(cancellationToken);
 
-    public Task<Lore> GetLoreAsync(string name, CancellationToken cancellationToken = default) => loreStore.ReadLoreAsync(name, cancellationToken);
+    public Task<Lore?> GetLoreAsync(string name, CancellationToken cancellationToken = default) => loreStore.ReadLoreAsync(name, cancellationToken);
 
     public Task UpdateLoreAsync(GuildLore guildLore) => loreStore.UpsertLoreAsync(guildLore);
 

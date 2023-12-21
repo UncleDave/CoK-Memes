@@ -14,6 +14,7 @@ const LoreForm = ({ lore }: LoreFormProps) => (
       rows={20}
       css={css`
         width: 100%;
+        resize: vertical;
       `}
     />
     <button

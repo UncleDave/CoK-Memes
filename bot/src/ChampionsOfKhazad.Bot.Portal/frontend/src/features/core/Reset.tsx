@@ -33,6 +33,8 @@ const Reset = () => (
       textarea,
       select {
         font: inherit;
+        background: inherit;
+        color: inherit;
       }
       p,
       h1,

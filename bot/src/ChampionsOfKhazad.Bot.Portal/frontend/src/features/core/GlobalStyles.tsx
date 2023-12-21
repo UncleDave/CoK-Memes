@@ -21,6 +21,10 @@ const GlobalStyles = () => (
           arial,
           sans-serif;
       }
+
+      textarea {
+        color: #848d97;
+      }
     `}
   />
 );

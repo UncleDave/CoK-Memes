@@ -1,3 +1,4 @@
+import { css } from "@emotion/react";
 import { Form } from "react-router-dom";
 import LoreContract from "./lore-contract.ts";
 
@@ -6,8 +7,15 @@ interface LoreFormProps {
 }
 
 const LoreForm = ({ lore }: LoreFormProps) => (
-  <Form>
-    <textarea>{lore.content}</textarea>
+  <Form action={`guild-lore/${lore.name}/update`}>
+    <textarea
+      name="content"
+      defaultValue={lore.content}
+      rows={20}
+      css={css`
+        width: 100%;
+      `}
+    ></textarea>
   </Form>
 );
 

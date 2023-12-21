@@ -16,8 +16,11 @@ const router = createBrowserRouter([
         path: "lore/:name",
         element: <EditLorePage />,
         loader: ({ params }) => fetch(`/api/lore/${params.name}`),
+      },
+      {
+        path: "guild-lore/:name/update",
         action: async ({ params, request }) =>
-          fetch(`/api/lore/${params.name}`, {
+          fetch(`/api/guild-lore/${params.name}`, {
             method: "PUT",
             body: await request.formData(),
           }),

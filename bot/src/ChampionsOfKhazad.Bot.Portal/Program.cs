@@ -60,6 +60,17 @@ lore.MapGet(
         Results.Ok(await loreGetter.GetLoreAsync(name, cancellationToken))
 );
 
+var guildLore = api.MapGroup("guild-lore");
+
+guildLore.MapPut(
+    "{name}",
+    async (string name, UpdateGuildLoreContract contract, IUpdateLore loreUpdater) =>
+    {
+        await loreUpdater.UpdateLoreAsync(new GuildLore(name, contract.Content));
+        return Results.NoContent();
+    }
+);
+
 app.UseStaticFiles();
 
 if (builder.Environment.IsDevelopment())
@@ -68,3 +79,5 @@ if (builder.Environment.IsDevelopment())
 app.MapFallbackToFile("index.html");
 
 app.Run();
+
+public record UpdateGuildLoreContract(string Content);

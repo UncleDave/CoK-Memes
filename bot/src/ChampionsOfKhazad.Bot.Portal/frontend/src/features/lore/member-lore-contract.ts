@@ -1,3 +1,5 @@
+import GuildLoreContract from "./guild-lore-contract.ts";
+
 export default interface MemberLoreContract {
   name: string;
   aliases: string[];
@@ -8,4 +10,6 @@ export default interface MemberLoreContract {
   biography?: string;
 }
 
-export const isMemberLore = (lore: any): lore is MemberLoreContract => 'mainCharacter' in lore;
+export const isMemberLore = (
+  lore: GuildLoreContract | MemberLoreContract,
+): lore is MemberLoreContract => lore && "mainCharacter" in lore;

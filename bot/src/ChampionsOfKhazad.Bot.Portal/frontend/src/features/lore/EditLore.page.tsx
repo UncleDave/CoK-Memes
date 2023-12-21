@@ -1,12 +1,14 @@
 import { css } from "@emotion/react";
 import { useLoaderData } from "react-router-dom";
 import Panel from "../core/Panel.tsx";
-import LoreContract from "./lore-contract.ts";
-import LoreForm from "./LoreForm.tsx";
+import GuildLoreContract from "./guild-lore-contract.ts";
+import GuildLoreForm from "./GuildLoreForm.tsx";
 import Breadcrumbs from "../core/Breadcrumbs.tsx";
+import MemberLoreContract, { isMemberLore } from "./member-lore-contract.ts";
+import MemberLoreForm from "./MemberLoreForm.tsx";
 
 const EditLorePage = () => {
-  const lore = useLoaderData() as LoreContract;
+  const lore = useLoaderData() as GuildLoreContract | MemberLoreContract;
 
   return (
     <article>
@@ -27,7 +29,11 @@ const EditLorePage = () => {
         >
           {lore.name}
         </h1>
-        <LoreForm lore={lore} />
+        {isMemberLore(lore) ? (
+          <MemberLoreForm lore={lore} />
+        ) : (
+          <GuildLoreForm lore={lore} />
+        )}
       </Panel>
     </article>
   );

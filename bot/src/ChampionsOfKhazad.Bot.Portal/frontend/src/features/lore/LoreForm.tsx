@@ -7,7 +7,7 @@ interface LoreFormProps {
 }
 
 const LoreForm = ({ lore }: LoreFormProps) => (
-  <Form action={`guild-lore/${lore.name}/update`}>
+  <Form method="put">
     <textarea
       name="content"
       defaultValue={lore.content}
@@ -15,7 +15,15 @@ const LoreForm = ({ lore }: LoreFormProps) => (
       css={css`
         width: 100%;
       `}
-    ></textarea>
+    />
+    <button
+      css={css`
+        display: block;
+        margin-left: auto;
+      `}
+    >
+      Save
+    </button>
   </Form>
 );
 

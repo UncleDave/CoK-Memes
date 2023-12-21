@@ -12,3 +12,22 @@ updates:
     directory: bot/src/ChampionsOfKhazad.Bot.Portal/frontend
     schedule:
       interval: weekly
+    groups: 
+      react:
+        patterns:
+          - react
+          - react-dom
+          - "@types/react"
+          - "@types/react-dom"
+      linters:
+        patterns:
+          - eslint*
+          - "@typescript-eslint/*"
+          - prettier
+      emotion:
+        patterns:
+          - "@emotion/*"
+      vite:
+        patterns:
+          - vite
+          - "@vitejs/*"

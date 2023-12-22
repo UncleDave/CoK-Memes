@@ -1,5 +1,6 @@
 import { createBrowserRouter, redirect } from "react-router-dom";
 import EditLorePage from "../lore/EditLore.page.tsx";
+import LorePage from "../lore/Lore.page.tsx";
 import api from "./api.ts";
 import Root from "./Root.tsx";
 
@@ -10,7 +11,7 @@ const router = createBrowserRouter([
     children: [
       {
         path: "lore",
-        element: <div />,
+        element: <LorePage />,
         loader: () => fetch("/api/lore"),
       },
       {
@@ -27,3 +28,5 @@ const router = createBrowserRouter([
 ]);
 
 export default router;
+
+// TODO: Action for saving member lore

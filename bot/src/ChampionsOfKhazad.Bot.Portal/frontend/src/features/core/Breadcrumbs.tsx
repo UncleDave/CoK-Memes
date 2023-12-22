@@ -5,7 +5,7 @@ import {
   Typography,
 } from "@mui/joy";
 
-interface Crumb {
+export interface Crumb {
   label: string;
   to?: string;
 }

@@ -1,15 +1,10 @@
-import { css } from "@emotion/react";
+import { Container } from "@mui/joy";
 import { Outlet } from "react-router-dom";
 
 const Root = () => (
-  <div
-    css={css`
-      margin: 20px auto 0;
-      max-width: 800px;
-    `}
-  >
+  <Container maxWidth="md" sx={{ pb: 2 }}>
     <Outlet />
-  </div>
+  </Container>
 );
 
 export default Root;

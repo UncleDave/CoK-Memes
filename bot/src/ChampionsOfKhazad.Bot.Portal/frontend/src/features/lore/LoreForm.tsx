@@ -1,19 +1,15 @@
-import { css } from "@emotion/react";
+import { Button, Stack } from "@mui/joy";
 import { PropsWithChildren } from "react";
 import { Form } from "react-router-dom";
 
 const LoreForm = ({ children }: PropsWithChildren) => (
   <Form method="put">
-    {children}
-    <button
-      css={css`
-        display: block;
-        margin-left: auto;
-        margin-top: 10px;
-      `}
-    >
-      Save
-    </button>
+    <Stack spacing={1}>
+      {children}
+      <Button type="submit" sx={{ alignSelf: "end" }}>
+        Save
+      </Button>
+    </Stack>
   </Form>
 );
 

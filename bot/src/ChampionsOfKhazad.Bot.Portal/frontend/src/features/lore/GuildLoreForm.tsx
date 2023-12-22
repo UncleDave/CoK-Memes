@@ -1,4 +1,4 @@
-import TextArea from "../core/TextArea.tsx";
+import FormTextarea from '../core/FormTextarea.tsx';
 import GuildLoreContract from "./guild-lore-contract.ts";
 import LoreForm from "./LoreForm.tsx";
 
@@ -8,8 +8,10 @@ interface GuildLoreFormProps {
 
 const GuildLoreForm = ({ lore }: GuildLoreFormProps) => (
   <LoreForm>
-    <TextArea name="content" defaultValue={lore.content} />
+    <FormTextarea label="Content" name="content" defaultValue={lore.content} />
   </LoreForm>
 );
 
 export default GuildLoreForm;
+
+// TODO: Validation

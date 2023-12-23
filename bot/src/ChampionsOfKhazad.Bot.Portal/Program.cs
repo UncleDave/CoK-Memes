@@ -52,6 +52,7 @@ app.UseAuthorization();
 var apiGroup = app.MapGroup("api");
 var loreGroup = apiGroup.MapGroup("lore");
 
+// TODO: Order alphabetically, with guild lore at the top
 loreGroup.MapGet(
     "",
     async (IGetLore loreGetter, CancellationToken cancellationToken) => Results.Ok(await loreGetter.GetLoreAsync(cancellationToken))
@@ -77,6 +78,23 @@ guildLore.MapPut(
     }
 );
 
+var memberLore = apiGroup.MapGroup("member-lore");
+
+memberLore.MapPut(
+    "{name}",
+    async (string name, UpdateMemberLoreContract contract, IUpdateLore loreUpdater) =>
+    {
+        await loreUpdater.UpdateLoreAsync(
+            new MemberLore(name, contract.Pronouns, contract.Nationality, contract.MainCharacter, contract.Biography)
+            {
+                Aliases = contract.Aliases ?? Array.Empty<string>(),
+                Roles = contract.Roles ?? Array.Empty<string>()
+            }
+        );
+        return Results.NoContent();
+    }
+);
+
 app.UseStaticFiles();
 
 if (builder.Environment.IsDevelopment())
@@ -87,3 +105,13 @@ app.MapFallbackToFile("index.html");
 app.Run();
 
 public record UpdateGuildLoreContract(string Content);
+
+public record UpdateMemberLoreContract(
+    string Name,
+    string Pronouns,
+    string Nationality,
+    string MainCharacter,
+    string? Biography,
+    IReadOnlyList<string>? Aliases,
+    IReadOnlyList<string>? Roles
+);

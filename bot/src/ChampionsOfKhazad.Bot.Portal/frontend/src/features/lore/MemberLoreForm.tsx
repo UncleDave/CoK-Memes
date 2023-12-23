@@ -1,4 +1,5 @@
 import FormInput from "../core/FormInput.tsx";
+import FormMultiInput from "../core/FormMultiInput.tsx";
 import FormTextarea from "../core/FormTextarea.tsx";
 import LoreForm from "./LoreForm.tsx";
 import MemberLoreContract from "./member-lore-contract.ts";
@@ -10,14 +11,18 @@ interface MemberLoreFormProps {
 const MemberLoreForm = ({ lore }: MemberLoreFormProps) => (
   <LoreForm>
     <FormInput label="Name" name="name" defaultValue={lore.name} />
-    {/* TODO: Aliases */}
+    <FormMultiInput
+      label="Aliases"
+      name="aliases"
+      defaultValues={lore.aliases}
+    />
     <FormInput label="Pronouns" name="pronouns" defaultValue={lore.pronouns} />
     <FormInput
       label="Nationality"
       name="nationality"
       defaultValue={lore.nationality}
     />
-    {/* TODO: Roles */}
+    <FormMultiInput label="Roles" name="roles" defaultValues={lore.roles} />
     <FormInput
       label="Main Character"
       name="mainCharacter"

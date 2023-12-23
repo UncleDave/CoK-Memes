@@ -19,7 +19,13 @@ const router = createBrowserRouter([
         element: <EditLorePage />,
         loader: ({ params }) => fetch(`/api/lore/${params.name}`),
         action: async ({ params, request }) => {
-          await api.update(`/api/guild-lore/${params.name}`, request);
+          const formData = await request.formData();
+          await api.update(
+            `/api/${
+              formData.has("mainCharacter") ? "member-lore" : "guild-lore"
+            }/${params.name}`,
+            formData,
+          );
           return redirect("/lore");
         },
       },
@@ -28,5 +34,3 @@ const router = createBrowserRouter([
 ]);
 
 export default router;
-
-// TODO: Action for saving member lore

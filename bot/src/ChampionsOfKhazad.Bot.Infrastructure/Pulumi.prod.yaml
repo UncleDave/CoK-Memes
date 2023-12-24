@@ -10,6 +10,8 @@ config:
     secure: AAABAPzXPvKSmhwS65Ag18oX8vk56leMrls0Dw0y1A7owHHC50ZwlboqeR8f9tEhDm+TPZx+cGDRpR55TAzWHxpo2TPTqM1YCjOh4axvQMx/PJfjHQK0hMJxK7kqHnY4CPvKKmy4qnXc/WuoX1y1HEeWF8HwkZxyBjclMUTxLg2bsGACrg==
   ChampionsOfKhazad.Bot.Infrastructure:openAiApiKey:
     secure: AAABACbPJ/lEiFQYbpyKV0jkixduBfbPTQCkuhYyqKn3YWBQxVlOiDBTebDMHpEE5ZXvCfb7koh0YrRWvneaNYkT+PnnjwKIW1aib5UrEJ70xc0=
+  ChampionsOfKhazad.Bot.Infrastructure:portalAuthClientSecret:
+    secure: AAABAMnhR8B3MnVoHfoiXHOa+UmgCjHvvvx5XxuV2Ieesay7QQR7BFwrlbf8pAoMhL1nJejMFOlN9fbXFMPNciPSXXDLEWiTzCtlxBSOUxE+KMeNfn/gZ9tm3NvnSFc0
   ChampionsOfKhazad.Bot.Infrastructure:raidHelperApiKey:
     secure: AAABAKCgX8IXhfRF88JxDXvpqpxErBwmPbjWMl3W5qcduQHNb3Z6jzHfCTVdVIR0MVqydg2DwVVJswoUYHpWSBO1In8SJSew
   azure-native:clientId: 23eb70a2-0327-4c11-b88b-8cf0077efddd

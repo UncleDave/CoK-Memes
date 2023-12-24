@@ -11,14 +11,31 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\ChampionsOfKhazad.Bot.Core\ChampionsOfKhazad.Bot.Core.csproj" />
-      <ProjectReference Include="..\ChampionsOfKhazad.Bot.Lore.Mongo\ChampionsOfKhazad.Bot.Lore.Mongo.csproj" />
-      <ProjectReference Include="..\ChampionsOfKhazad.Bot.Lore\ChampionsOfKhazad.Bot.Lore.csproj" />
+        <ProjectReference Include="..\ChampionsOfKhazad.Bot.Core\ChampionsOfKhazad.Bot.Core.csproj"/>
+        <ProjectReference Include="..\ChampionsOfKhazad.Bot.Lore.Mongo\ChampionsOfKhazad.Bot.Lore.Mongo.csproj"/>
+        <ProjectReference Include="..\ChampionsOfKhazad.Bot.Lore\ChampionsOfKhazad.Bot.Lore.csproj"/>
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="AspNetCore.SpaYarp" Version="2.0.1" />
-      <PackageReference Include="Auth0.AspNetCore.Authentication" Version="1.4.0" />
+        <PackageReference Include="AspNetCore.SpaYarp" Version="2.0.1"/>
+        <PackageReference Include="Auth0.AspNetCore.Authentication" Version="1.4.0"/>
     </ItemGroup>
+
+    <ItemGroup>
+        <Content Remove="frontend\**"/>
+        <Compile Remove="frontend\**"/>
+        <EmbeddedResource Remove="frontend\**"/>
+        <None Remove="frontend\**"/>
+        <_ContentIncludedByDefault Remove="frontend\package-lock.json"/>
+        <_ContentIncludedByDefault Remove="frontend\package.json"/>
+        <_ContentIncludedByDefault Remove="frontend\tsconfig.json"/>
+        <_ContentIncludedByDefault Remove="frontend\tsconfig.node.json"/>
+    </ItemGroup>
+
+    <Target Name="PublishFrontend" AfterTargets="ComputeFilesToPublish">
+        <Exec WorkingDirectory="$(SpaRoot)" Command="npm install"/>
+        <Exec WorkingDirectory="$(SpaRoot)" Command="npm run build"/>
+        <Exec WorkingDirectory="$(SpaRoot)" Command="cp -r dist ..\bin\Production\net8.0\linux-x64\publish\wwwroot"/>
+    </Target>
 
 </Project>

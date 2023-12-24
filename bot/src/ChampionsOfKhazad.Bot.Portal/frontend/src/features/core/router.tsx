@@ -1,4 +1,4 @@
-import { createBrowserRouter, redirect } from "react-router-dom";
+import { createBrowserRouter, Navigate, redirect } from "react-router-dom";
 import EditLorePage from "../lore/EditLore.page.tsx";
 import LorePage from "../lore/Lore.page.tsx";
 import api from "./api.ts";
@@ -9,6 +9,10 @@ const router = createBrowserRouter([
     path: "/",
     element: <Root />,
     children: [
+      {
+        index: true,
+        element: <Navigate to="/lore" replace={true} />,
+      },
       {
         path: "lore",
         element: <LorePage />,

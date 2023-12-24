@@ -52,10 +52,10 @@ app.UseAuthorization();
 var apiGroup = app.MapGroup("api");
 var loreGroup = apiGroup.MapGroup("lore");
 
-// TODO: Order alphabetically, with guild lore at the top
 loreGroup.MapGet(
     "",
-    async (IGetLore loreGetter, CancellationToken cancellationToken) => Results.Ok(await loreGetter.GetLoreAsync(cancellationToken))
+    async (IGetLore loreGetter, CancellationToken cancellationToken) =>
+        Results.Ok((await loreGetter.GetLoreAsync(cancellationToken)).OrderByDescending(x => x is GuildLore).ThenBy(x => x.Name))
 );
 
 loreGroup.MapGet(
@@ -107,7 +107,6 @@ app.Run();
 public record UpdateGuildLoreContract(string Content);
 
 public record UpdateMemberLoreContract(
-    string Name,
     string Pronouns,
     string Nationality,
     string MainCharacter,

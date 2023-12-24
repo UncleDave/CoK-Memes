@@ -1,14 +1,17 @@
 import { Button, Stack } from "@mui/joy";
 import { PropsWithChildren } from "react";
-import { Form } from "react-router-dom";
+import { Form, Link } from "react-router-dom";
 
 const LoreForm = ({ children }: PropsWithChildren) => (
   <Form method="put">
     <Stack spacing={1}>
       {children}
-      <Button type="submit" sx={{ alignSelf: "end" }}>
-        Save
-      </Button>
+      <Stack direction="row" justifyContent="space-between">
+        <Button component={Link} to="/lore">
+          Cancel
+        </Button>
+        <Button type="submit">Save</Button>
+      </Stack>
     </Stack>
   </Form>
 );

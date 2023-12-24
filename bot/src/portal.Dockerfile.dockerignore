@@ -1,0 +1,7 @@
+﻿**/.idea
+**/bin
+**/obj
+**/node_modules
+**/dist
+ChampionsOfKhazad.Bot.Infrastructure/
+ChampionsOfKhazad.Bot/

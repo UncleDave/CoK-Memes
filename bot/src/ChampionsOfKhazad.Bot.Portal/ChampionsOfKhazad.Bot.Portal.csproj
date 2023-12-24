@@ -32,10 +32,4 @@
         <_ContentIncludedByDefault Remove="frontend\tsconfig.node.json"/>
     </ItemGroup>
 
-    <Target Name="PublishFrontend" AfterTargets="ComputeFilesToPublish">
-        <Exec WorkingDirectory="$(SpaRoot)" Command="npm install"/>
-        <Exec WorkingDirectory="$(SpaRoot)" Command="npm run build"/>
-        <Exec WorkingDirectory="$(SpaRoot)" Command="cp -r dist ../bin/Production/net8.0/linux-x64/publish/wwwroot"/>
-    </Target>
-
 </Project>

@@ -4,11 +4,8 @@ using Pulumi.AzureNative.Insights;
 using Pulumi.AzureNative.OperationalInsights;
 using Pulumi.AzureNative.OperationalInsights.Inputs;
 using Pulumi.AzureNative.Resources;
-using Pulumi.AzureNative.Storage;
-using Pulumi.AzureNative.Storage.Inputs;
 using Pulumi.AzureNative.Web;
 using Pulumi.AzureNative.Web.Inputs;
-using Pulumi.Command.Local;
 using Pulumi.Docker;
 using Pulumi.Docker.Inputs;
 using AppLogsConfigurationArgs = Pulumi.AzureNative.App.Inputs.AppLogsConfigurationArgs;
@@ -23,8 +20,6 @@ using LogAnalyticsConfigurationArgs = Pulumi.AzureNative.App.Inputs.LogAnalytics
 using RegistryCredentialsArgs = Pulumi.AzureNative.App.Inputs.RegistryCredentialsArgs;
 using ScaleArgs = Pulumi.AzureNative.App.Inputs.ScaleArgs;
 using SecretArgs = Pulumi.AzureNative.App.Inputs.SecretArgs;
-using SkuName = Pulumi.AzureNative.Storage.SkuName;
-using StorageAccountArgs = Pulumi.AzureNative.Storage.StorageAccountArgs;
 using TemplateArgs = Pulumi.AzureNative.App.Inputs.TemplateArgs;
 
 return await Pulumi.Deployment.RunAsync(() =>
@@ -83,18 +78,25 @@ return await Pulumi.Deployment.RunAsync(() =>
     const string imageRegistryServer = "docker.io";
     var imageRegistryUsername = config.Require("imageRegistryUsername");
 
+    var dockerRegistryArgs = new RegistryArgs
+    {
+        Server = imageRegistryServer,
+        Username = imageRegistryUsername,
+        Password = config.RequireSecret("imageRegistryWritePassword")
+    };
+
     var botImage = new Image(
         "bot-image",
         new ImageArgs
         {
             ImageName = "uncledave/cok-bot:latest",
-            Build = new DockerBuildArgs { Context = "..", Platform = "linux/amd64" },
-            Registry = new RegistryArgs
+            Build = new DockerBuildArgs
             {
-                Server = imageRegistryServer,
-                Username = imageRegistryUsername,
-                Password = config.RequireSecret("imageRegistryWritePassword")
-            }
+                Context = "..",
+                Dockerfile = "../bot.Dockerfile",
+                Platform = "linux/amd64"
+            },
+            Registry = dockerRegistryArgs
         }
     );
 
@@ -164,48 +166,6 @@ return await Pulumi.Deployment.RunAsync(() =>
         }
     );
 
-    var storageAccount = new StorageAccount(
-        "storage",
-        new StorageAccountArgs
-        {
-            ResourceGroupName = resourceGroup.Name,
-            Kind = "StorageV2",
-            Sku = new SkuArgs { Name = SkuName.Standard_LRS },
-            AllowBlobPublicAccess = true,
-            PublicNetworkAccess = PublicNetworkAccess.Enabled
-        }
-    );
-
-    var portalDeploymentsBlobContainer = new BlobContainer(
-        "portal-deployments",
-        new BlobContainerArgs
-        {
-            ResourceGroupName = resourceGroup.Name,
-            AccountName = storageAccount.Name,
-            PublicAccess = PublicAccess.Blob
-        },
-        new CustomResourceOptions { Parent = storageAccount }
-    );
-
-    var publishPortalResult = Run.Invoke(
-        new RunInvokeArgs { Command = "dotnet publish -c Production -r linux-x64", Dir = "../ChampionsOfKhazad.Bot.Portal", }
-    );
-
-    var portalBlob = new Blob(
-        "portal-deployment",
-        new BlobArgs
-        {
-            ResourceGroupName = resourceGroup.Name,
-            AccountName = storageAccount.Name,
-            ContainerName = portalDeploymentsBlobContainer.Name,
-            Type = BlobType.Block,
-            Source = publishPortalResult.Apply(
-                _ => (AssetOrArchive)new FileArchive("../ChampionsOfKhazad.Bot.Portal/bin/Production/net8.0/linux-x64/publish")
-            )
-        },
-        new CustomResourceOptions { Parent = portalDeploymentsBlobContainer }
-    );
-
     var portalAppServicePlan = new AppServicePlan(
         "portal-app-service-plan",
         new AppServicePlanArgs
@@ -214,6 +174,21 @@ return await Pulumi.Deployment.RunAsync(() =>
             Kind = "Linux",
             Reserved = true,
             Sku = new SkuDescriptionArgs { Name = "F1", Tier = "Free" }
+        }
+    );
+
+    var portalImage = new Image(
+        "portal-image",
+        new ImageArgs
+        {
+            ImageName = "uncledave/cok-bot-portal:latest",
+            Build = new DockerBuildArgs
+            {
+                Context = "..",
+                Dockerfile = "../portal.Dockerfile",
+                Platform = "linux/amd64"
+            },
+            Registry = dockerRegistryArgs
         }
     );
 
@@ -226,13 +201,12 @@ return await Pulumi.Deployment.RunAsync(() =>
             ServerFarmId = portalAppServicePlan.Id,
             SiteConfig = new SiteConfigArgs
             {
-                LinuxFxVersion = "DOTNETCORE|8.0",
+                LinuxFxVersion = $"DOCKER|{portalImage.RepoDigest}",
                 AppSettings =
                 [
                     new NameValuePairArgs { Name = "APPLICATIONINSIGHTS_CONNECTION_STRING", Value = applicationInsights.ConnectionString },
                     new NameValuePairArgs { Name = "ApplicationInsightsAgent_EXTENSION_VERSION", Value = "~2" },
                     new NameValuePairArgs { Name = "XDT_MicrosoftApplicationInsights_Mode", Value = "default" },
-                    new NameValuePairArgs { Name = "WEBSITE_RUN_FROM_PACKAGE", Value = portalBlob.Url },
                     new NameValuePairArgs { Name = "TZ", Value = timezone },
                     new NameValuePairArgs { Name = "DOTNET_ENVIRONMENT", Value = dotnetEnvironment },
                     new NameValuePairArgs { Name = "OpenAIServiceOptions__ApiKey", Value = openAiApiKey },

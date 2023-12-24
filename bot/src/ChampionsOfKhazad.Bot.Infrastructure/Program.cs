@@ -170,7 +170,9 @@ return await Pulumi.Deployment.RunAsync(() =>
         {
             ResourceGroupName = resourceGroup.Name,
             Kind = "StorageV2",
-            Sku = new SkuArgs { Name = SkuName.Standard_LRS }
+            Sku = new SkuArgs { Name = SkuName.Standard_LRS },
+            AllowBlobPublicAccess = true,
+            PublicNetworkAccess = PublicNetworkAccess.Enabled
         }
     );
 
@@ -180,19 +182,13 @@ return await Pulumi.Deployment.RunAsync(() =>
         {
             ResourceGroupName = resourceGroup.Name,
             AccountName = storageAccount.Name,
-            PublicAccess = PublicAccess.None
+            PublicAccess = PublicAccess.Blob
         },
         new CustomResourceOptions { Parent = storageAccount }
     );
 
-    var publishPortalCommand = new Command(
-        "publish-portal",
-        new CommandArgs
-        {
-            Create = "dotnet publish -c Production -r linux-x64",
-            Dir = "../ChampionsOfKhazad.Bot.Portal",
-            ArchivePaths = "bin/Production/net8.0/linux-x64/publish"
-        }
+    var publishPortalResult = Run.Invoke(
+        new RunInvokeArgs { Command = "dotnet publish -c Production -r linux-x64", Dir = "../ChampionsOfKhazad.Bot.Portal", }
     );
 
     var portalBlob = new Blob(
@@ -203,7 +199,9 @@ return await Pulumi.Deployment.RunAsync(() =>
             AccountName = storageAccount.Name,
             ContainerName = portalDeploymentsBlobContainer.Name,
             Type = BlobType.Block,
-            Source = publishPortalCommand.Archive.Apply(x => (AssetOrArchive)x!)
+            Source = publishPortalResult.Apply(
+                _ => (AssetOrArchive)new FileArchive("../ChampionsOfKhazad.Bot.Portal/bin/Production/net8.0/linux-x64/publish")
+            )
         },
         new CustomResourceOptions { Parent = portalDeploymentsBlobContainer }
     );
@@ -239,7 +237,8 @@ return await Pulumi.Deployment.RunAsync(() =>
                     new NameValuePairArgs { Name = "DOTNET_ENVIRONMENT", Value = dotnetEnvironment },
                     new NameValuePairArgs { Name = "OpenAIServiceOptions__ApiKey", Value = openAiApiKey },
                     new NameValuePairArgs { Name = "ConnectionStrings__Mongo", Value = mongoConnectionString },
-                    new NameValuePairArgs { Name = "Auth__ClientSecret", Value = config.RequireSecret("portalAuthClientSecret") }
+                    new NameValuePairArgs { Name = "Auth__ClientSecret", Value = config.RequireSecret("portalAuthClientSecret") },
+                    new NameValuePairArgs { Name = "WEBSITES_PORT", Value = "8080" }
                 ],
                 FtpsState = FtpsState.Disabled,
             },

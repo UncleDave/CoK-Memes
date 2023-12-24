@@ -10,23 +10,29 @@ interface MemberLoreFormProps {
 
 const MemberLoreForm = ({ lore }: MemberLoreFormProps) => (
   <LoreForm>
-    <FormInput label="Name" name="name" defaultValue={lore.name} />
     <FormMultiInput
       label="Aliases"
       name="aliases"
       defaultValues={lore.aliases}
     />
-    <FormInput label="Pronouns" name="pronouns" defaultValue={lore.pronouns} />
+    <FormInput
+      label="Pronouns"
+      name="pronouns"
+      defaultValue={lore.pronouns}
+      required
+    />
     <FormInput
       label="Nationality"
       name="nationality"
       defaultValue={lore.nationality}
+      required
     />
     <FormMultiInput label="Roles" name="roles" defaultValues={lore.roles} />
     <FormInput
       label="Main Character"
       name="mainCharacter"
       defaultValue={lore.mainCharacter}
+      required
     />
     <FormTextarea
       label="Biography"
@@ -37,5 +43,3 @@ const MemberLoreForm = ({ lore }: MemberLoreFormProps) => (
 );
 
 export default MemberLoreForm;
-
-// TODO: Validation

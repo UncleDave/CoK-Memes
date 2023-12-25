@@ -221,6 +221,7 @@ return await Pulumi.Deployment.RunAsync(() =>
                 AppSettings = portalAppSettings,
                 FtpsState = FtpsState.Disabled,
             },
+            Reserved = true,
             HttpsOnly = true,
         },
         new CustomResourceOptions { Parent = portalAppServicePlan }

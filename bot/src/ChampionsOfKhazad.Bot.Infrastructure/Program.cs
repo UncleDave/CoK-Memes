@@ -202,7 +202,8 @@ return await Pulumi.Deployment.RunAsync(() =>
         new() { Name = "OpenAIServiceOptions__ApiKey", Value = openAiApiKey },
         new() { Name = "ConnectionStrings__Mongo", Value = mongoConnectionString },
         new() { Name = "Auth__ClientSecret", Value = config.RequireSecret("portalAuthClientSecret") },
-        new() { Name = "WEBSITES_PORT", Value = "8080" }
+        new() { Name = "WEBSITES_PORT", Value = "8080" },
+        new() { Name = "ASPNETCORE_FORWARDEDHEADERS_ENABLED", Value = "true" }
     };
 
     if (commitSha is not null)

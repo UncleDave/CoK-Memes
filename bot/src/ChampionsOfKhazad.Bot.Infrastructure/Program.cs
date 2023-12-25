@@ -124,9 +124,13 @@ return await Pulumi.Deployment.RunAsync(() =>
     };
 
     var commitSha = Environment.GetEnvironmentVariable("COMMIT_SHA");
+    var containerAppIgnoreChanges = new List<string>();
 
     if (commitSha is not null)
+    {
         containerEnv.Add(new EnvironmentVarArgs { Name = "Bot__CommitSha", Value = commitSha });
+        containerAppIgnoreChanges.Add($"template.containers[0].env[{containerEnv.Count - 1}]");
+    }
 
     var containerApp = new ContainerApp(
         "bot-app",
@@ -163,7 +167,8 @@ return await Pulumi.Deployment.RunAsync(() =>
                 },
                 Scale = new ScaleArgs { MinReplicas = 1, MaxReplicas = 1 }
             }
-        }
+        },
+        new CustomResourceOptions { IgnoreChanges = containerAppIgnoreChanges }
     );
 
     var portalAppServicePlan = new AppServicePlan(
@@ -206,8 +211,13 @@ return await Pulumi.Deployment.RunAsync(() =>
         new() { Name = "ASPNETCORE_FORWARDEDHEADERS_ENABLED", Value = "true" }
     };
 
+    var portalAppIgnoreChanges = new List<string>();
+
     if (commitSha is not null)
+    {
         portalAppSettings.Add(new NameValuePairArgs { Name = "CommitSha", Value = commitSha });
+        portalAppIgnoreChanges.Add($"siteConfig.appSettings[{portalAppSettings.Count - 1}]");
+    }
 
     var portalWebApp = new WebApp(
         "portal-app",
@@ -224,6 +234,6 @@ return await Pulumi.Deployment.RunAsync(() =>
             },
             HttpsOnly = true,
         },
-        new CustomResourceOptions { Parent = portalAppServicePlan }
+        new CustomResourceOptions { Parent = portalAppServicePlan, IgnoreChanges = portalAppIgnoreChanges }
     );
 });

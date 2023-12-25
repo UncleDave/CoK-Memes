@@ -4,6 +4,7 @@ using ChampionsOfKhazad.Bot.Core;
 using ChampionsOfKhazad.Bot.Lore;
 using ChampionsOfKhazad.Bot.Portal;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -45,6 +46,8 @@ builder
     .AddMongoPersistence();
 
 var app = builder.Build();
+
+app.UseForwardedHeaders(new ForwardedHeadersOptions { ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto });
 
 app.UseAuthentication();
 app.UseAuthorization();

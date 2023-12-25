@@ -192,6 +192,22 @@ return await Pulumi.Deployment.RunAsync(() =>
         }
     );
 
+    var portalAppSettings = new List<NameValuePairArgs>
+    {
+        new() { Name = "APPLICATIONINSIGHTS_CONNECTION_STRING", Value = applicationInsights.ConnectionString },
+        new() { Name = "ApplicationInsightsAgent_EXTENSION_VERSION", Value = "~2" },
+        new() { Name = "XDT_MicrosoftApplicationInsights_Mode", Value = "default" },
+        new() { Name = "TZ", Value = timezone },
+        new() { Name = "DOTNET_ENVIRONMENT", Value = dotnetEnvironment },
+        new() { Name = "OpenAIServiceOptions__ApiKey", Value = openAiApiKey },
+        new() { Name = "ConnectionStrings__Mongo", Value = mongoConnectionString },
+        new() { Name = "Auth__ClientSecret", Value = config.RequireSecret("portalAuthClientSecret") },
+        new() { Name = "WEBSITES_PORT", Value = "8080" }
+    };
+
+    if (commitSha is not null)
+        portalAppSettings.Add(new NameValuePairArgs { Name = "CommitSha", Value = commitSha });
+
     var portalWebApp = new WebApp(
         "portal-app",
         new WebAppArgs
@@ -202,18 +218,7 @@ return await Pulumi.Deployment.RunAsync(() =>
             SiteConfig = new SiteConfigArgs
             {
                 LinuxFxVersion = $"DOCKER|{portalImage.RepoDigest}",
-                AppSettings =
-                [
-                    new NameValuePairArgs { Name = "APPLICATIONINSIGHTS_CONNECTION_STRING", Value = applicationInsights.ConnectionString },
-                    new NameValuePairArgs { Name = "ApplicationInsightsAgent_EXTENSION_VERSION", Value = "~2" },
-                    new NameValuePairArgs { Name = "XDT_MicrosoftApplicationInsights_Mode", Value = "default" },
-                    new NameValuePairArgs { Name = "TZ", Value = timezone },
-                    new NameValuePairArgs { Name = "DOTNET_ENVIRONMENT", Value = dotnetEnvironment },
-                    new NameValuePairArgs { Name = "OpenAIServiceOptions__ApiKey", Value = openAiApiKey },
-                    new NameValuePairArgs { Name = "ConnectionStrings__Mongo", Value = mongoConnectionString },
-                    new NameValuePairArgs { Name = "Auth__ClientSecret", Value = config.RequireSecret("portalAuthClientSecret") },
-                    new NameValuePairArgs { Name = "WEBSITES_PORT", Value = "8080" }
-                ],
+                AppSettings = portalAppSettings,
                 FtpsState = FtpsState.Disabled,
             },
             HttpsOnly = true,

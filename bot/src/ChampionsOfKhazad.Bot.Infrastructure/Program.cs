@@ -217,7 +217,7 @@ return await Pulumi.Deployment.RunAsync(() =>
             ServerFarmId = portalAppServicePlan.Id,
             SiteConfig = new SiteConfigArgs
             {
-                LinuxFxVersion = $"DOCKER|{portalImage.RepoDigest}",
+                LinuxFxVersion = $"DOCKER|{portalImage.ImageName}",
                 AppSettings = portalAppSettings,
                 FtpsState = FtpsState.Disabled,
             },

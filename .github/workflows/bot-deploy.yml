@@ -16,7 +16,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Deploy Bot
-        uses: pulumi/actions@v4
+        uses: pulumi/actions@v5
         with:
           command: up
           stack-name: prod

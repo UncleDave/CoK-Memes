@@ -76,7 +76,7 @@ public class Assistant(IOpenAIService openAiService, ILogger<Assistant> logger, 
                 new ChatCompletionCreateRequest
                 {
                     Messages = messages,
-                    Model = model ?? Models.Gpt_4_1106_preview,
+                    Model = model ?? Constants.DefaultAssistantModel,
                     MaxTokens = 500,
                     N = 1,
                     User = user.Id.ToString()
@@ -116,7 +116,7 @@ public class Assistant(IOpenAIService openAiService, ILogger<Assistant> logger, 
             new ChatCompletionCreateRequest
             {
                 Messages = new[] { ChatMessage.FromSystem(instruction), ChatMessage.FromSystem(prompt) },
-                Model = model ?? Models.Gpt_4_1106_preview,
+                Model = model ?? Constants.DefaultAssistantModel,
                 MaxTokens = 500,
                 N = 1
             }

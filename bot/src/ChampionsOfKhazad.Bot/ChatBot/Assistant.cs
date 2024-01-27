@@ -72,18 +72,16 @@ public class Assistant(IOpenAIService openAiService, ILogger<Assistant> logger, 
 
         try
         {
-            result = await openAiService
-                .ChatCompletion
-                .CreateCompletion(
-                    new ChatCompletionCreateRequest
-                    {
-                        Messages = messages,
-                        Model = model ?? Models.Gpt_4_1106_preview,
-                        MaxTokens = 500,
-                        N = 1,
-                        User = user.Id.ToString()
-                    }
-                );
+            result = await openAiService.ChatCompletion.CreateCompletion(
+                new ChatCompletionCreateRequest
+                {
+                    Messages = messages,
+                    Model = model ?? Models.Gpt_4_1106_preview,
+                    MaxTokens = 500,
+                    N = 1,
+                    User = user.Id.ToString()
+                }
+            );
         }
         catch (Exception e)
         {
@@ -114,17 +112,15 @@ public class Assistant(IOpenAIService openAiService, ILogger<Assistant> logger, 
 
     public async Task<string> RespondAsync(string instruction, string prompt, string? model = null)
     {
-        var result = await openAiService
-            .ChatCompletion
-            .CreateCompletion(
-                new ChatCompletionCreateRequest
-                {
-                    Messages = new[] { ChatMessage.FromSystem(instruction), ChatMessage.FromSystem(prompt) },
-                    Model = model ?? Models.Gpt_4_1106_preview,
-                    MaxTokens = 500,
-                    N = 1
-                }
-            );
+        var result = await openAiService.ChatCompletion.CreateCompletion(
+            new ChatCompletionCreateRequest
+            {
+                Messages = new[] { ChatMessage.FromSystem(instruction), ChatMessage.FromSystem(prompt) },
+                Model = model ?? Models.Gpt_4_1106_preview,
+                MaxTokens = 500,
+                N = 1
+            }
+        );
 
         var choice = result.Choices.FirstOrDefault(x => x.FinishReason == "stop") ?? result.Choices.First();
 

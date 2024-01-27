@@ -12,8 +12,7 @@ public static class LoreBotBuilderExtensions
         configureGuildLore?.Invoke(options);
 
         builder
-            .Services
-            .AddSingleton<LoreService>()
+            .Services.AddSingleton<LoreService>()
             .AddSingleton<IGetLore>(sp => sp.GetRequiredService<LoreService>())
             .AddSingleton<ICreateLore>(sp => sp.GetRequiredService<LoreService>())
             .AddSingleton<IUpdateLore>(sp => sp.GetRequiredService<LoreService>());

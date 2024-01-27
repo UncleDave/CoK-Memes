@@ -4,7 +4,6 @@ using ChampionsOfKhazad.Bot.Core;
 using ChampionsOfKhazad.Bot.Lore;
 using ChampionsOfKhazad.Bot.Portal;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 
 var builder = WebApplication.CreateBuilder(args);

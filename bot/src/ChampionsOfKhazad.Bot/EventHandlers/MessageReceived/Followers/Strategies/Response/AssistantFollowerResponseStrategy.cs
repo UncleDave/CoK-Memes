@@ -14,8 +14,7 @@ public class AssistantFollowerResponseStrategy(Assistant assistant, User user, B
     private async Task<IEnumerable<Message>> GetContextAsync(MessageReceived notification, CancellationToken cancellationToken) =>
         // Get the unbroken message chain from the same author within the last 60 seconds
         await notification
-            .Message
-            .GetPreviousMessagesAsync()
+            .Message.GetPreviousMessagesAsync()
             .TakeWhile(x => x.Author.Id == user.Id && DateTimeOffset.UtcNow - x.Timestamp < TimeSpan.FromSeconds(60))
             .Reverse()
             .Select(x => new Message(x.CleanContent, user))

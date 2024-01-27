@@ -27,8 +27,8 @@ LoggerConfiguration ConfigureLogger(LoggerConfiguration loggerConfiguration, IHo
 
 Log.Logger = ConfigureLogger(new LoggerConfiguration(), host.Environment).CreateBootstrapLogger();
 
-host.Services
-    .AddApplicationInsightsTelemetryWorkerService(options =>
+host
+    .Services.AddApplicationInsightsTelemetryWorkerService(options =>
     {
         options.ConnectionString = host.Configuration.GetConnectionString("ApplicationInsights");
     })
@@ -38,29 +38,27 @@ host.Services.AddSerilog(
     (provider, configuration) =>
     {
         ConfigureLogger(configuration, host.Environment)
-            .WriteTo
-            .ApplicationInsights(provider.GetRequiredService<TelemetryConfiguration>(), TelemetryConverter.Traces);
+            .WriteTo.ApplicationInsights(provider.GetRequiredService<TelemetryConfiguration>(), TelemetryConverter.Traces);
     }
 );
 
 host.Services.AddOptionsWithEagerValidation<BotOptions>(host.Configuration.GetSection(BotOptions.Key));
 
-host.Services.AddSingleton<DiscordSocketClient>(
-    services =>
-        ActivatorUtilities.CreateInstance<LoggingDiscordSocketClient>(
-            services,
-            new DiscordSocketConfig
-            {
-                MessageCacheSize = 100,
-                GatewayIntents =
-                    GatewayIntents.Guilds
-                    | GatewayIntents.GuildMessages
-                    | GatewayIntents.DirectMessages
-                    | GatewayIntents.MessageContent
-                    | GatewayIntents.GuildMessageReactions,
-                LogLevel = LogSeverity.Debug
-            }
-        )
+host.Services.AddSingleton<DiscordSocketClient>(services =>
+    ActivatorUtilities.CreateInstance<LoggingDiscordSocketClient>(
+        services,
+        new DiscordSocketConfig
+        {
+            MessageCacheSize = 100,
+            GatewayIntents =
+                GatewayIntents.Guilds
+                | GatewayIntents.GuildMessages
+                | GatewayIntents.DirectMessages
+                | GatewayIntents.MessageContent
+                | GatewayIntents.GuildMessageReactions,
+            LogLevel = LogSeverity.Debug
+        }
+    )
 );
 
 // Must be the first AddMediatR invocation.
@@ -73,8 +71,8 @@ host.Services.AddMediatR(configuration =>
 
 host.Services.AddOpenAIService();
 
-host.Services
-    .AddBot(configuration =>
+host
+    .Services.AddBot(configuration =>
     {
         configuration.Persistence.ConnectionString = host.Configuration.GetRequiredConnectionString("Mongo");
     })
@@ -93,8 +91,8 @@ host.Services.AddSingleton<Assistant>();
 
 host.Services.AddRaidHelperClient(host.Configuration.GetRequiredString("RaidHelper:ApiKey"));
 
-host.Services
-    .AddOptionsWithEagerValidation<EmoteStreakHandlerOptions>(host.Configuration.GetEventHandlerSection(EmoteStreakHandlerOptions.Key))
+host
+    .Services.AddOptionsWithEagerValidation<EmoteStreakHandlerOptions>(host.Configuration.GetEventHandlerSection(EmoteStreakHandlerOptions.Key))
     .AddOptionsWithEagerValidation<SummonUserHandlerOptions>(host.Configuration.GetEventHandlerSection(SummonUserHandlerOptions.Key))
     .AddOptionsWithEagerValidation<ClownReactorOptions>(host.Configuration.GetEventHandlerSection(ClownReactorOptions.Key))
     .AddOptionsWithEagerValidation<QuestionMarkReactorOptions>(host.Configuration.GetEventHandlerSection(QuestionMarkReactorOptions.Key))
@@ -111,12 +109,11 @@ host.Services
     .AddOptionsWithEagerValidation<HarassmentLawyerFollowerOptions>(host.Configuration.GetFollowerSection(HarassmentLawyerFollowerOptions.Key))
     .AddOptionsWithEagerValidation<NumberwangFollowerOptions>(host.Configuration.GetFollowerSection(NumberwangFollowerOptions.Key));
 
-host.Services
-    .AddHostedService<BotService>()
+host
+    .Services.AddHostedService<BotService>()
     .AddSingleton<BotContextProvider>()
-    .AddSingleton<BotContext>(
-        serviceProvider =>
-            serviceProvider.GetRequiredService<BotContextProvider>().BotContext ?? throw new InvalidOperationException("BotContext is not available")
+    .AddSingleton<BotContext>(serviceProvider =>
+        serviceProvider.GetRequiredService<BotContextProvider>().BotContext ?? throw new InvalidOperationException("BotContext is not available")
     );
 
 host.Build().Run();

@@ -8,8 +8,7 @@ public static class HardcoreStatsBotBuilderExtensions
     public static HardcoreStatsBuilder AddHardcoreStats(this BotBuilder botBuilder)
     {
         botBuilder
-            .Services
-            .AddMediatR(configuration =>
+            .Services.AddMediatR(configuration =>
             {
                 configuration.RegisterServicesFromAssemblyContaining<CharacterDeath>();
             })

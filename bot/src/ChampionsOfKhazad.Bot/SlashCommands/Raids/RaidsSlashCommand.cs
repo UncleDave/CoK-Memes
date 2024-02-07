@@ -54,6 +54,7 @@ public class RaidsSlashCommand(
         "Wooper's Cat Edition",
         "Rat Edition",
         "Camaraderie Edition",
+        "Carbon Monoxide Edition",
     };
 
     private static readonly string[] RaidDescriptions =

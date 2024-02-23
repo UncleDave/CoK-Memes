@@ -13,12 +13,10 @@ public class RaidsSlashCommand(
     ILogger<RaidsSlashCommand> logger
 ) : INotificationHandler<RaidsSlashCommandExecuted>
 {
-    private readonly RaidsSlashCommandOptions _options = options.Value;
-
-    private static readonly string[] Acknowledgements = { "More work?", "Right-o.", "Yes, milord.", "All right.", "Off I go, then!" };
+    private static readonly string[] Acknowledgements = ["More work?", "Right-o.", "Yes, milord.", "All right.", "Off I go, then!"];
 
     private static readonly string[] RaidNames =
-    {
+    [
         "Prepare To Wipe Edition",
         "The Movie: The Game",
         "The Movie: The Game: The Sequel",
@@ -54,11 +52,11 @@ public class RaidsSlashCommand(
         "Wooper's Cat Edition",
         "Rat Edition",
         "Camaraderie Edition",
-        "Carbon Monoxide Edition",
-    };
+        "Carbon Monoxide Edition"
+    ];
 
     private static readonly string[] RaidDescriptions =
-    {
+    [
         "Bring your own glizzy.",
         "Yeet.",
         "If you haven't started pinging Cokebeard yet it's already too late.",
@@ -80,8 +78,8 @@ public class RaidsSlashCommand(
         "If you or any of your loved ones have been affected by any of the issues raised in this raid, please call 0800-RAID-HELP.",
         "If you or any of your loved ones have been affected by the rat-like behaviour of certain rat-like individuals, please call 0800-RAT-HELP.",
         "Shadowmourne is Blood DK prio.",
-        "I'm not a real raid description, I'm just a figment of your imagination.",
-    };
+        "I'm not a real raid description, I'm just a figment of your imagination."
+    ];
 
     public async Task Handle(RaidsSlashCommandExecuted notification, CancellationToken cancellationToken)
     {
@@ -91,7 +89,7 @@ public class RaidsSlashCommand(
 
         try
         {
-            var clearChannelTasks = _options.Raids.Select(x => ClearChannelAsync(x.ChannelId));
+            var clearChannelTasks = options.Value.Raids.Select(x => ClearChannelAsync(x.ChannelId));
             await Task.WhenAll(clearChannelTasks);
         }
         catch (Exception e)
@@ -100,11 +98,11 @@ public class RaidsSlashCommand(
         }
 
         const DayOfWeek resetDay = DayOfWeek.Wednesday;
-        var firstRaidDayOfWeek = _options.Raids.Min(x => x.DayOfWeek.Offset(resetDay));
+        var firstRaidDayOfWeek = options.Value.Raids.Min(x => x.DayOfWeek.Offset(resetDay));
         var dayOfWeek = DateTime.Now.DayOfWeek.Offset(resetDay);
         var dateOffset = dayOfWeek >= firstRaidDayOfWeek ? 7 - (int)dayOfWeek : 0;
 
-        var createRaidTasks = _options.Raids.Select(x =>
+        var createRaidTasks = options.Value.Raids.Select(x =>
             CreateRaidAsync(command.User.Id, x.ChannelId, DateTime.Now.NextDayOfWeek(x.DayOfWeek, dateOffset))
         );
 
@@ -139,7 +137,7 @@ public class RaidsSlashCommand(
                 Duration = 210,
                 FontStyle = 0,
                 TentativeEmote = "remove",
-                Mentions = string.Join(',', _options.Mentions)
+                Mentions = string.Join(',', options.Value.Mentions)
             }
         };
 

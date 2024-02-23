@@ -13,6 +13,6 @@ public record MemberLore(string Name, string Pronouns, string Nationality, strin
             .Append($"Pronouns: {Pronouns}\nNationality: {Nationality}\n")
             .AppendIf(Roles.Any(), $"Roles: {string.Join(", ", Roles)}\n")
             .Append($"Main Character: {MainCharacter}\n")
-            .AppendIf(Biography is not null, $"Biography: {Biography}\n")
+            .AppendIf(!string.IsNullOrWhiteSpace(Biography), $"Biography: {Biography}\n")
             .ToString();
 }

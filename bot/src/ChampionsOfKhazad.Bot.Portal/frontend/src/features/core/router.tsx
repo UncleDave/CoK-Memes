@@ -24,12 +24,13 @@ const router = createBrowserRouter([
         loader: ({ params }) => fetch(`/api/lore/${params.name}`),
         action: async ({ params, request }) => {
           const formData = await request.formData();
-          await api.update(
-            `/api/${
-              formData.has("mainCharacter") ? "member-lore" : "guild-lore"
-            }/${params.name}`,
-            formData,
-          );
+
+          if (formData.has("mainCharacter")) {
+            await api.updateMemberLore(params.name!, formData);
+          } else {
+            await api.updateGuildLore(params.name!, formData);
+          }
+
           return redirect("/lore");
         },
       },

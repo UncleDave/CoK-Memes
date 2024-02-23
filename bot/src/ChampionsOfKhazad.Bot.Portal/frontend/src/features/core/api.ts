@@ -1,24 +1,24 @@
 const api = {
-  update: async (path: string, formData: FormData) =>
-    fetch(path, {
+  updateGuildLore: async (name: string, formData: FormData) =>
+    fetch(`/api/guild-lore/${name}`, {
       method: "PUT",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify(
-        Array.from(formData.entries()).reduce<
-          Record<string, FormDataEntryValue | FormDataEntryValue[]>
-        >((acc, [key, value]) => {
-          const existingValue = acc[key];
-
-          if (existingValue) {
-            if (Array.isArray(existingValue)) {
-              return { ...acc, [key]: [...existingValue, value] };
-            }
-            return { ...acc, [key]: [existingValue, value] };
-          }
-
-          return { ...acc, [key]: value };
-        }, {}),
-      ),
+      body: JSON.stringify({
+        content: formData.get("content"),
+      }),
+    }),
+  updateMemberLore: async (name: string, formData: FormData) =>
+    fetch(`/api/member-lore/${name}`, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        pronouns: formData.get("pronouns"),
+        nationality: formData.get("nationality"),
+        mainCharacter: formData.get("mainCharacter"),
+        biography: formData.get("biography"),
+        aliases: formData.getAll("aliases"),
+        roles: formData.getAll("roles"),
+      }),
     }),
 };
 

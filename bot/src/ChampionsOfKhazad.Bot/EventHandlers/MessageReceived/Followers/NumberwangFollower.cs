@@ -22,7 +22,8 @@ public class NumberwangFollower(
         allFollowersOptions.Value.IgnoreBotMentionsInChannelId,
         new CombinedFollowerTriggerStrategy(
             new RandomChanceFollowerTriggerStrategy(options.Value.Chance, triggerStrategyLogger),
-            new NumberTriggerStrategy()
+            new NoEmbedsFollowerTriggerStrategy(),
+            new NumberFollowerTriggerStrategy(3)
         ),
         new StaticFollowerResponseStrategy("That's Numberwang!"),
         botContext

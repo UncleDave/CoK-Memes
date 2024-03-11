@@ -67,9 +67,15 @@ public static class SlashCommands
             command => new RipSlashCommandExecuted(command)
         );
 
-    public static readonly SlashCommand[] GuildCommands = { Raids, Rip };
+    public static readonly SlashCommand Summarise =
+        new(
+            new SlashCommandBuilder().WithName("summarise").WithDescription("Summarise the last 50 messages in this channel").Build(),
+            command => new SummariseSlashCommandExecuted(command)
+        );
 
-    public static readonly SlashCommand[] GlobalCommands = { Suggest };
+    public static readonly SlashCommand[] GuildCommands = [Raids, Rip, Summarise];
+
+    public static readonly SlashCommand[] GlobalCommands = [Suggest];
 
     public static readonly SlashCommand[] All = GuildCommands.Concat(GlobalCommands).ToArray();
 }

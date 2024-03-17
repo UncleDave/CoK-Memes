@@ -27,11 +27,10 @@ LoggerConfiguration ConfigureLogger(LoggerConfiguration loggerConfiguration, IHo
 
 Log.Logger = ConfigureLogger(new LoggerConfiguration(), host.Environment).CreateBootstrapLogger();
 
-host
-    .Services.AddApplicationInsightsTelemetryWorkerService(options =>
-    {
-        options.ConnectionString = host.Configuration.GetConnectionString("ApplicationInsights");
-    })
+host.Services.AddApplicationInsightsTelemetryWorkerService(options =>
+{
+    options.ConnectionString = host.Configuration.GetConnectionString("ApplicationInsights");
+})
     .AddCloudRoleNameInitializer("Bot");
 
 host.Services.AddSerilog(
@@ -71,11 +70,19 @@ host.Services.AddMediatR(configuration =>
 
 host.Services.AddOpenAIService();
 
-host
-    .Services.AddBot(configuration =>
-    {
-        configuration.Persistence.ConnectionString = host.Configuration.GetRequiredConnectionString("Mongo");
-    })
+var openAiApiKey = host.Configuration.GetRequiredString("OpenAIServiceOptions:ApiKey");
+var mongoConnectionString = host.Configuration.GetRequiredConnectionString("Mongo");
+
+host.Services.AddGenAi(config =>
+{
+    config.OpenAiApiKey = openAiApiKey;
+    config.MongoConnectionString = mongoConnectionString;
+});
+
+host.Services.AddBot(configuration =>
+{
+    configuration.Persistence.ConnectionString = mongoConnectionString;
+})
     .AddGuildLore(configuration =>
     {
         if (host.Environment.IsProduction())
@@ -91,8 +98,7 @@ host.Services.AddSingleton<Assistant>();
 
 host.Services.AddRaidHelperClient(host.Configuration.GetRequiredString("RaidHelper:ApiKey"));
 
-host
-    .Services.AddOptionsWithEagerValidation<EmoteStreakHandlerOptions>(host.Configuration.GetEventHandlerSection(EmoteStreakHandlerOptions.Key))
+host.Services.AddOptionsWithEagerValidation<EmoteStreakHandlerOptions>(host.Configuration.GetEventHandlerSection(EmoteStreakHandlerOptions.Key))
     .AddOptionsWithEagerValidation<SummonUserHandlerOptions>(host.Configuration.GetEventHandlerSection(SummonUserHandlerOptions.Key))
     .AddOptionsWithEagerValidation<ClownReactorOptions>(host.Configuration.GetEventHandlerSection(ClownReactorOptions.Key))
     .AddOptionsWithEagerValidation<QuestionMarkReactorOptions>(host.Configuration.GetEventHandlerSection(QuestionMarkReactorOptions.Key))
@@ -109,8 +115,7 @@ host
     .AddOptionsWithEagerValidation<HarassmentLawyerFollowerOptions>(host.Configuration.GetFollowerSection(HarassmentLawyerFollowerOptions.Key))
     .AddOptionsWithEagerValidation<NumberwangFollowerOptions>(host.Configuration.GetFollowerSection(NumberwangFollowerOptions.Key));
 
-host
-    .Services.AddHostedService<BotService>()
+host.Services.AddHostedService<BotService>()
     .AddSingleton<BotContextProvider>()
     .AddSingleton<BotContext>(serviceProvider =>
         serviceProvider.GetRequiredService<BotContextProvider>().BotContext ?? throw new InvalidOperationException("BotContext is not available")

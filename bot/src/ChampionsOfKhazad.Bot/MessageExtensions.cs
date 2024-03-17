@@ -1,12 +1,9 @@
-﻿using System.Text.RegularExpressions;
-using Discord;
+﻿using Discord;
 
 namespace ChampionsOfKhazad.Bot;
 
 public static class MessageExtensions
 {
-    private static readonly Regex NameExpression = new("^[a-zA-Z0-9_-]{1,64}$", RegexOptions.Compiled);
-
     public static async IAsyncEnumerable<IMessage> GetPreviousMessagesAsync(this IMessage message, int batchSize = 20)
     {
         var from = message;
@@ -29,12 +26,8 @@ public static class MessageExtensions
         } while (length >= batchSize);
     }
 
-    public static string GetFriendlyAuthorName(this IMessage message) =>
-        message.Author is IGuildUser { DisplayName: not null } guildUser && NameExpression.IsMatch(guildUser.DisplayName)
+    public static string GetAuthorName(this IMessage message) =>
+        message.Author is IGuildUser { DisplayName: not null } guildUser
             ? guildUser.DisplayName
-            : message.Author.GlobalName is not null && NameExpression.IsMatch(message.Author.GlobalName)
-                ? message.Author.GlobalName
-                : message.Author.Username is not null && NameExpression.IsMatch(message.Author.Username)
-                    ? message.Author.Username
-                    : message.Author.Id.ToString();
+            : message.Author.GlobalName ?? (message.Author.Username ?? message.Author.Id.ToString());
 }

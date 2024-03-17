@@ -1,10 +1,12 @@
-﻿using Discord;
+﻿using ChampionsOfKhazad.Bot.GenAi;
+using Discord;
 using MediatR;
 using Microsoft.Extensions.Options;
 
 namespace ChampionsOfKhazad.Bot;
 
-public class MentionHandler(IOptions<MentionHandlerOptions> options, Assistant assistant, BotContext context) : INotificationHandler<MessageReceived>
+public class MentionHandler(IOptions<MentionHandlerOptions> options, BotContext context, ILorekeeperPersonality lorekeeper)
+    : INotificationHandler<MessageReceived>
 {
     private readonly MentionHandlerOptions _options = options.Value;
 
@@ -21,36 +23,33 @@ public class MentionHandler(IOptions<MentionHandlerOptions> options, Assistant a
 
         using var typing = textChannel.EnterTypingState();
 
-        var user = new User(message.Author.Id, message.GetFriendlyAuthorName());
-
-        var previousMessages = await message
+        var previousMessages = message
             .GetPreviousMessagesAsync()
             .Take(20)
             .Reverse()
-            .Select(x => new Message(x.CleanContent, new User(x.Author.Id, x.GetFriendlyAuthorName()), GetMessageRole(x)))
-            .ToListAsync(cancellationToken: cancellationToken);
+            .Select(x => new ChatMessage(
+                x.Author.Id == context.BotId ? GenAi.Constants.LorekeeperName : x.GetAuthorName(),
+                GetMessageCleanContentWithoutBotMention(x)
+            ))
+            .ToListAsync(cancellationToken);
 
-        if (message.Author.Id == _options.CringeAsideUserId)
-            previousMessages.Add(new Message("Include cringe aside somewhere in your response.", null, Role.System));
-
-        var response = await assistant.RespondAsync(
-            message.CleanContent,
-            user,
-            context.Guild.Emotes.Select(x => x.Name),
-            previousMessages,
-            message.ReferencedMessage is not null
-                ? new Message(
-                    message.ReferencedMessage.CleanContent,
-                    new User(message.ReferencedMessage.Author.Id, message.ReferencedMessage.GetFriendlyAuthorName()),
-                    GetMessageRole(message.ReferencedMessage)
-                )
-                : null
+        var response = await lorekeeper.InvokeAsync(
+            new ChatMessage(message.GetAuthorName(), GetMessageCleanContentWithoutBotMention(message)),
+            await previousMessages,
+            cancellationToken
         );
 
         await message.ReplyAsync(response);
     }
 
-    private Role GetMessageRole(IMessage message) => message.Author.Id == context.BotId ? Role.Assistant : Role.User;
+    private string GetMessageCleanContentWithoutBotMention(IMessage message)
+    {
+        var botTag = $"{context.Client.CurrentUser.Username}#{context.Client.CurrentUser.Discriminator}";
+        var botTagIndex = message.CleanContent.IndexOf(botTag, StringComparison.Ordinal);
+        var messageContentWithoutBotMentionAtStart = botTagIndex == 1 ? message.CleanContent[(botTag.Length + 1)..].Trim() : message.CleanContent;
+
+        return messageContentWithoutBotMentionAtStart.Replace(botTag, GenAi.Constants.LorekeeperName);
+    }
 
     public override string ToString() => nameof(MentionHandler);
 }

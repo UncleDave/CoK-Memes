@@ -16,7 +16,7 @@ internal class LorekeeperMemory(ISemanticTextMemory memory)
         [EnumeratorCancellation] CancellationToken cancellationToken = default
     )
     {
-        var results = memory.SearchAsync(Collection, input, 10, 0, cancellationToken: cancellationToken);
+        var results = memory.SearchAsync(Collection, input, 20, 0, cancellationToken: cancellationToken);
 
         await foreach (var result in results)
             yield return selector(new Memory(result.Metadata.Id, result.Metadata.Text));

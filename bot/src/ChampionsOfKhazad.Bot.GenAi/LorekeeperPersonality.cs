@@ -5,7 +5,12 @@ namespace ChampionsOfKhazad.Bot.GenAi;
 
 public interface ILorekeeperPersonality
 {
-    Task<string> InvokeAsync(ChatMessage input, IEnumerable<ChatMessage> chatHistory, CancellationToken cancellationToken = default);
+    Task<string> InvokeAsync(
+        ChatMessage input,
+        IEnumerable<ChatMessage> chatHistory,
+        IEnumerable<string> emojis,
+        CancellationToken cancellationToken = default
+    );
 }
 
 internal class LorekeeperPersonality(LorekeeperMemory memory, Kernel kernel, IGetRelatedLore relatedLoreGetter) : Personality, ILorekeeperPersonality
@@ -24,6 +29,10 @@ internal class LorekeeperPersonality(LorekeeperMemory memory, Kernel kernel, IGe
             "###",
             "{{$lore}}",
             "###",
+            "\nStandard unicode emojis and these guild emojis are available for use:",
+            "###",
+            "{{$emojis}}",
+            "###",
             "\n{{$chatHistory}}",
             "{{$input}}",
             $"{Constants.LorekeeperName}: "
@@ -32,27 +41,40 @@ internal class LorekeeperPersonality(LorekeeperMemory memory, Kernel kernel, IGe
         "Lorekeeper"
     );
 
-    public async Task<string> InvokeAsync(ChatMessage input, IEnumerable<ChatMessage> chatHistory, CancellationToken cancellationToken = default)
+    public async Task<string> InvokeAsync(
+        ChatMessage input,
+        IEnumerable<ChatMessage> chatHistory,
+        IEnumerable<string> emojis,
+        CancellationToken cancellationToken = default
+    )
     {
-        var memories = memory.SearchAsync(input.Message, x => $"{x.Key}: {x.Value}", cancellationToken);
-        var enumeratedMemories = new List<string>();
+        var memories = GetRelatedMemoriesAsync(input.Message, cancellationToken);
         var lore = relatedLoreGetter.GetRelatedLoreAsync(input.Message);
-
-        await foreach (var m in memories)
-            enumeratedMemories.Add(m);
 
         var response = await _function.InvokeAsync(
             kernel,
             new KernelArguments
             {
                 { "input", input.ToString() },
-                { "memories", string.Join('\n', enumeratedMemories) },
+                { "memories", string.Join('\n', await memories) },
                 { "lore", string.Join("\n---\n\n", (await lore).Select(x => x.ToString())) },
-                { "chatHistory", string.Join('\n', chatHistory.Select(x => x.ToString())) }
+                { "chatHistory", string.Join('\n', chatHistory.Select(x => x.ToString())) },
+                { "emojis", string.Join(' ', emojis.Select(x => $":{x}:")) }
             },
             cancellationToken
         );
 
         return response.ToString();
+    }
+
+    private async Task<IReadOnlyList<string>> GetRelatedMemoriesAsync(string input, CancellationToken cancellationToken)
+    {
+        var memories = memory.SearchAsync(input, x => $"{x.Key}: {x.Value}", cancellationToken);
+        var enumeratedMemories = new List<string>();
+
+        await foreach (var m in memories)
+            enumeratedMemories.Add(m);
+
+        return enumeratedMemories;
     }
 }

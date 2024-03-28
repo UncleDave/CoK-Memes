@@ -85,8 +85,7 @@ host.Services.AddBot(configuration =>
 })
     .AddGuildLore(configuration =>
     {
-        if (host.Environment.IsProduction())
-            configuration.EmbeddingsApiKey = host.Configuration.GetRequiredString("OpenAIServiceOptions:ApiKey");
+        configuration.EmbeddingsApiKey = host.Configuration.GetRequiredString("OpenAIServiceOptions:ApiKey");
     })
     .AddMongoPersistence()
     .AddDiscordStats()

@@ -24,7 +24,7 @@ public class HarassmentLawyerFollower(
 )
     : Follower(
         allFollowersOptions.Value.IgnoreBotMentionsInChannelId,
-        new CombinedFollowerTriggerStrategy(
+        new AllOfFollowerTriggerStrategy(
             new TargetUserFollowerTriggerStrategy(options.Value.UserId),
             new RandomChanceFollowerTriggerStrategy(options.Value.Chance, triggerStrategyLogger),
             new MentionFollowerTriggerStrategy(options.Value.ClientUserId)

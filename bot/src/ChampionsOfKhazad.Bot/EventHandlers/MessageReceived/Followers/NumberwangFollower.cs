@@ -20,7 +20,7 @@ public class NumberwangFollower(
 )
     : Follower(
         allFollowersOptions.Value.IgnoreBotMentionsInChannelId,
-        new CombinedFollowerTriggerStrategy(
+        new AllOfFollowerTriggerStrategy(
             new RandomChanceFollowerTriggerStrategy(options.Value.Chance, triggerStrategyLogger),
             new NoEmbedsFollowerTriggerStrategy(),
             new NumberFollowerTriggerStrategy(3)

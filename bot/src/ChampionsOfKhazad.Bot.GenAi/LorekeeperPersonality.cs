@@ -3,17 +3,9 @@ using Microsoft.SemanticKernel;
 
 namespace ChampionsOfKhazad.Bot.GenAi;
 
-public interface ILorekeeperPersonality
-{
-    Task<string> InvokeAsync(
-        ChatMessage input,
-        IEnumerable<ChatMessage> chatHistory,
-        IEnumerable<string> emojis,
-        CancellationToken cancellationToken = default
-    );
-}
-
-internal class LorekeeperPersonality(LorekeeperMemory memory, Kernel kernel, IGetRelatedLore relatedLoreGetter) : Personality, ILorekeeperPersonality
+internal class LorekeeperPersonality(LorekeeperMemory memory, Kernel kernel, IGetRelatedLore relatedLoreGetter, IEmojiHandler emojiHandler)
+    : PersonalityBase,
+        IPersonality
 {
     private readonly KernelFunction _function = kernel.CreateFunctionFromPrompt(
         string.Join(
@@ -41,12 +33,7 @@ internal class LorekeeperPersonality(LorekeeperMemory memory, Kernel kernel, IGe
         "Lorekeeper"
     );
 
-    public async Task<string> InvokeAsync(
-        ChatMessage input,
-        IEnumerable<ChatMessage> chatHistory,
-        IEnumerable<string> emojis,
-        CancellationToken cancellationToken = default
-    )
+    public async Task<string> InvokeAsync(ChatMessage input, IEnumerable<ChatMessage> chatHistory, CancellationToken cancellationToken = default)
     {
         var memories = GetRelatedMemoriesAsync(input.Message, cancellationToken);
         var lore = relatedLoreGetter.GetRelatedLoreAsync(input.Message);
@@ -59,12 +46,12 @@ internal class LorekeeperPersonality(LorekeeperMemory memory, Kernel kernel, IGe
                 { "memories", string.Join('\n', await memories) },
                 { "lore", string.Join("\n---\n\n", (await lore).Select(x => x.ToString())) },
                 { "chatHistory", string.Join('\n', chatHistory.Select(x => x.ToString())) },
-                { "emojis", string.Join(' ', emojis.Select(x => $":{x}:")) }
+                { "emojis", string.Join(' ', emojiHandler.GetEmojis()) }
             },
             cancellationToken
         );
 
-        return response.ToString();
+        return emojiHandler.ProcessMessage(response.ToString());
     }
 
     private async Task<IReadOnlyList<string>> GetRelatedMemoriesAsync(string input, CancellationToken cancellationToken)

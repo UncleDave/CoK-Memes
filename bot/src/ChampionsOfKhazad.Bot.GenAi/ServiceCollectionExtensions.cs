@@ -12,7 +12,8 @@ namespace Microsoft.Extensions.DependencyInjection;
 
 public static class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddGenAi(this IServiceCollection services, Action<GenAiConfig> configurator)
+    public static IServiceCollection AddGenAi<TEmojiHandler>(this IServiceCollection services, Action<GenAiConfig> configurator)
+        where TEmojiHandler : class, IEmojiHandler
     {
         var config = new GenAiConfig();
 
@@ -31,7 +32,11 @@ public static class ServiceCollectionExtensions
             .AddFromType<TimePlugin>()
             .AddMongoLorekeeperMemoryPlugin(config.MongoConnectionString, config.OpenAiApiKey);
 
-        services.AddSingleton<ILorekeeperPersonality, LorekeeperPersonality>();
+        services
+            .AddSingleton<ICompletionService, CompletionService>()
+            .AddSingleton<IEmojiHandler, TEmojiHandler>()
+            .AddSingleton<LorekeeperPersonality>()
+            .AddSingleton<SycophantPersonality>();
 
         return services;
     }

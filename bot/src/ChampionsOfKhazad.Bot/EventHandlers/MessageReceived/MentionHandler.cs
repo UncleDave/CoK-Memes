@@ -1,15 +1,13 @@
-﻿using System.Text.RegularExpressions;
-using ChampionsOfKhazad.Bot.GenAi;
+﻿using ChampionsOfKhazad.Bot.GenAi;
 using Discord;
 using MediatR;
 using Microsoft.Extensions.Options;
 
 namespace ChampionsOfKhazad.Bot;
 
-public class MentionHandler(IOptions<MentionHandlerOptions> options, BotContext context, ILorekeeperPersonality lorekeeper)
+public class MentionHandler(IOptions<MentionHandlerOptions> options, BotContext context, ICompletionService completionService)
     : INotificationHandler<MessageReceived>
 {
-    private static readonly Regex EmojiExpression = new(@":(?<name>\w+):", RegexOptions.Compiled);
     private readonly MentionHandlerOptions _options = options.Value;
 
     public async Task Handle(MessageReceived notification, CancellationToken cancellationToken)
@@ -35,14 +33,13 @@ public class MentionHandler(IOptions<MentionHandlerOptions> options, BotContext 
             ))
             .ToListAsync(cancellationToken);
 
-        var response = await lorekeeper.InvokeAsync(
+        var response = await completionService.Lorekeeper.InvokeAsync(
             new ChatMessage(message.GetAuthorName(), GetMessageCleanContentWithoutBotMention(message)),
             previousMessages,
-            context.Guild.Emotes.Select(x => x.Name),
             cancellationToken
         );
 
-        await message.ReplyAsync(ProcessEmojis(response));
+        await message.ReplyAsync(response);
     }
 
     private string GetMessageCleanContentWithoutBotMention(IMessage message)
@@ -52,21 +49,6 @@ public class MentionHandler(IOptions<MentionHandlerOptions> options, BotContext 
         var messageContentWithoutBotMentionAtStart = botTagIndex == 1 ? message.CleanContent[(botTag.Length + 1)..].Trim() : message.CleanContent;
 
         return messageContentWithoutBotMentionAtStart.Replace(botTag, GenAi.Constants.LorekeeperName);
-    }
-
-    private string ProcessEmojis(string message)
-    {
-        var matches = EmojiExpression.Matches(message);
-
-        foreach (Match match in matches)
-        {
-            var emojiName = match.Groups["name"].Value;
-
-            if (context.Guild.Emotes.FirstOrDefault(x => string.Equals(x.Name, emojiName, StringComparison.InvariantCultureIgnoreCase)) is { } emoji)
-                message = message.Replace(match.Value, emoji.ToString());
-        }
-
-        return message;
     }
 
     public override string ToString() => nameof(MentionHandler);

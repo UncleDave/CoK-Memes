@@ -73,7 +73,7 @@ host.Services.AddOpenAIService();
 var openAiApiKey = host.Configuration.GetRequiredString("OpenAIServiceOptions:ApiKey");
 var mongoConnectionString = host.Configuration.GetRequiredConnectionString("Mongo");
 
-host.Services.AddGenAi(config =>
+host.Services.AddGenAi<DiscordEmojiHandler>(config =>
 {
     config.OpenAiApiKey = openAiApiKey;
     config.MongoConnectionString = mongoConnectionString;

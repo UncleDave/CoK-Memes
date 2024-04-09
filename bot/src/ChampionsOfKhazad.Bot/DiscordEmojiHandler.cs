@@ -13,7 +13,7 @@ public class DiscordEmojiHandler(BotContext botContext) : IEmojiHandler
     {
         var matches = EmojiExpression.Matches(message);
 
-        foreach (Match match in matches)
+        foreach (var match in matches.DistinctBy(x => x.Value))
         {
             var emojiName = match.Groups["name"].Value;
 

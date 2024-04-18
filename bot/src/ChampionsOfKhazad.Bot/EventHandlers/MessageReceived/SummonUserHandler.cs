@@ -22,7 +22,8 @@ public class SummonUserHandler(IOptions<SummonUserHandlerOptions> options) : INo
         "LF orange stick wielder.",
         "keep Absti up!",
         "heal Kachika heal Kachika heal Kachika heal Kachika heal Kachika!",
-        "could you please cut some gems for me?"
+        "could you please cut some gems for me?",
+        "https://youtu.be/MbvLadXPm2s"
     };
 
     private readonly SummonUserHandlerOptions _options = options.Value;

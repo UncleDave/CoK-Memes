@@ -2,5 +2,5 @@
 
 public static class ListExtensions
 {
-    public static T PickRandom<T>(this IList<T> source) => RandomUtils.PickRandom(source);
+    public static T PickRandom<T>(this IReadOnlyList<T> source) => RandomUtils.PickRandom(source);
 }

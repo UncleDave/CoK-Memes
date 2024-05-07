@@ -2,9 +2,9 @@
 
 public static class RandomUtils
 {
-    public static T PickRandom<T>(IList<T> source)
+    public static T PickRandom<T>(IReadOnlyList<T> source)
     {
-        if (!source.Any())
+        if (source.Count == 0)
             throw new InvalidOperationException("Cannot pick random item from empty list");
 
         return source.Count == 1 ? source[0] : source[Random.Shared.Next(0, source.Count)];

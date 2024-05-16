@@ -29,8 +29,7 @@ public static class ServiceCollectionExtensions
             .AddKernel()
             .AddOpenAIChatCompletion(Constants.DefaultCompletionsModel, config.OpenAiApiKey)
             .Plugins.AddFromType<MathPlugin>()
-            .AddFromType<TimePlugin>()
-            .AddMongoLorekeeperMemoryPlugin(config.MongoConnectionString, config.OpenAiApiKey);
+            .AddFromType<TimePlugin>();
 
         services
             .AddSingleton<ICompletionService, CompletionService>()

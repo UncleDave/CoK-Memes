@@ -2,8 +2,5 @@
 
 public enum EventTemplate
 {
-    Standard = 1,
-    WoWClassic,
-    WoWClassicTheBurningCrusade,
-    WoWClassicWrathOfTheLichKing,
+    WoWClassicCataclysm = 38,
 }

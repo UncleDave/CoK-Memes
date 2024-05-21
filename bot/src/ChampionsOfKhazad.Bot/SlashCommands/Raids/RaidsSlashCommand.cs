@@ -52,7 +52,8 @@ public class RaidsSlashCommand(
         "Wooper's Cat Edition",
         "Rat Edition",
         "Camaraderie Edition",
-        "Carbon Monoxide Edition"
+        "Carbon Monoxide Edition",
+        "DIG DIG DIG"
     ];
 
     private static readonly string[] RaidDescriptions =
@@ -63,12 +64,12 @@ public class RaidsSlashCommand(
         "The one where Wooper finally gets pushed too far.",
         "Ask Beaver about his guns.",
         "Don't mass report Yoric again, it's not funny guys, come on.",
+        "Don't mass report Endz again, it's not funny guys, come on... okay it was kinda funny.",
         "Jk, it's actually Naxx.",
         "The one where Sam and Mards finally kiss.",
         "Hey can we do some achievements?",
         "Stick around for the post-raid zeppelin show!",
         "Come, pig.",
-        "I just can't wait for Ruby Sanctum!",
         "BOOOOOOOOOOOOOONESTOOOOOOOOOOOOORM",
         "🎵 _If you want any loot trade Finky_ 🎵",
         "SUFFER, mortals, as your PATHETIC magic BETRAAAAYS YOU!",
@@ -77,8 +78,9 @@ public class RaidsSlashCommand(
         "I've been kidnapped and forced to create amusing descriptions for raids! Please send help!",
         "If you or any of your loved ones have been affected by any of the issues raised in this raid, please call 0800-RAID-HELP.",
         "If you or any of your loved ones have been affected by the rat-like behaviour of certain rat-like individuals, please call 0800-RAT-HELP.",
-        "Shadowmourne is Blood DK prio.",
-        "I'm not a real raid description, I'm just a figment of your imagination."
+        "I'm not a real raid description, I'm just a figment of your imagination.",
+        "A minor and temporary distraction from digging.",
+        "The one where we finally get to the bottom of the mystery of the missing glizzy."
     ];
 
     public async Task Handle(RaidsSlashCommandExecuted notification, CancellationToken cancellationToken)
@@ -127,10 +129,10 @@ public class RaidsSlashCommand(
         var request = new CreateEventRequest
         {
             LeaderId = userId.ToString(),
-            TemplateId = EventTemplate.WoWClassicWrathOfTheLichKing,
+            TemplateId = EventTemplate.WoWClassicCataclysm,
             Date = date.ToShortDateString(),
             Time = "19:30",
-            Title = $"ICC 25: {RandomUtils.PickRandom(RaidNames)}",
+            Title = $"Tier 11: {RandomUtils.PickRandom(RaidNames)}",
             Description = RandomUtils.PickRandom(RaidDescriptions),
             AdvancedSettings = new CreateEventRequestAdvancedSettings
             {

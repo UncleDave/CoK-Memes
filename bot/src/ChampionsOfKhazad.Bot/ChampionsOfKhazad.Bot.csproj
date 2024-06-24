@@ -13,7 +13,7 @@
         <PackageReference Include="AspNetMonsters.ApplicationInsights.AspNetCore" Version="1.1.24" />
         <PackageReference Include="Betalgo.OpenAI" Version="8.5.1" />
         <PackageReference Include="Discord.Net.Analyzers" Version="3.14.1"/>
-        <PackageReference Include="Discord.Net.WebSocket" Version="3.15.0"/>
+        <PackageReference Include="Discord.Net.WebSocket" Version="3.15.2"/>
         <PackageReference Include="MediatR" Version="12.3.0"/>
         <PackageReference Include="Microsoft.ApplicationInsights.WorkerService" Version="2.22.0" />
         <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />

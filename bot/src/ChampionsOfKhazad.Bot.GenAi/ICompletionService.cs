@@ -4,4 +4,5 @@ public interface ICompletionService
 {
     IPersonality Lorekeeper { get; }
     IPersonality Sycophant { get; }
+    IPersonality Contrarian { get; }
 }

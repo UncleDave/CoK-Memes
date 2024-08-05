@@ -28,9 +28,9 @@ LoggerConfiguration ConfigureLogger(LoggerConfiguration loggerConfiguration, IHo
 Log.Logger = ConfigureLogger(new LoggerConfiguration(), host.Environment).CreateBootstrapLogger();
 
 host.Services.AddApplicationInsightsTelemetryWorkerService(options =>
-{
-    options.ConnectionString = host.Configuration.GetConnectionString("ApplicationInsights");
-})
+    {
+        options.ConnectionString = host.Configuration.GetConnectionString("ApplicationInsights");
+    })
     .AddCloudRoleNameInitializer("Bot");
 
 host.Services.AddSerilog(
@@ -80,9 +80,9 @@ host.Services.AddGenAi<DiscordEmojiHandler>(config =>
 });
 
 host.Services.AddBot(configuration =>
-{
-    configuration.Persistence.ConnectionString = mongoConnectionString;
-})
+    {
+        configuration.Persistence.ConnectionString = mongoConnectionString;
+    })
     .AddGuildLore(configuration =>
     {
         configuration.EmbeddingsApiKey = host.Configuration.GetRequiredString("OpenAIServiceOptions:ApiKey");
@@ -112,7 +112,8 @@ host.Services.AddOptionsWithEagerValidation<EmoteStreakHandlerOptions>(host.Conf
     .AddOptionsWithEagerValidation<NoNutNovemberExpertFollowerOptions>(host.Configuration.GetFollowerSection(NoNutNovemberExpertFollowerOptions.Key))
     .AddOptionsWithEagerValidation<RatFactsFollowerOptions>(host.Configuration.GetFollowerSection(RatFactsFollowerOptions.Key))
     .AddOptionsWithEagerValidation<HarassmentLawyerFollowerOptions>(host.Configuration.GetFollowerSection(HarassmentLawyerFollowerOptions.Key))
-    .AddOptionsWithEagerValidation<NumberwangFollowerOptions>(host.Configuration.GetFollowerSection(NumberwangFollowerOptions.Key));
+    .AddOptionsWithEagerValidation<NumberwangFollowerOptions>(host.Configuration.GetFollowerSection(NumberwangFollowerOptions.Key))
+    .AddOptionsWithEagerValidation<TeacherFollowerOptions>(host.Configuration.GetFollowerSection(TeacherFollowerOptions.Key));
 
 host.Services.AddHostedService<BotService>()
     .AddSingleton<BotContextProvider>()

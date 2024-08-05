@@ -36,7 +36,9 @@ public static class ServiceCollectionExtensions
             .AddSingleton<IEmojiHandler, TEmojiHandler>()
             .AddSingleton<LorekeeperPersonality>()
             .AddSingleton<SycophantPersonality>()
-            .AddSingleton<ContrarianPersonality>();
+            .AddSingleton<ContrarianPersonality>()
+            .AddSingleton<DisappointedTeacherPersonality>()
+            .AddSingleton<CondescendingTeacherPersonality>();
 
         return services;
     }

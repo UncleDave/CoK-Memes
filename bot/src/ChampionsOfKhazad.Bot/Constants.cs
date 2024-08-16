@@ -3,5 +3,5 @@
 public static class Constants
 {
     public const string RepositoryUrl = "https://github.com/UncleDave/CoK-Memes";
-    public const string DefaultAssistantModel = "gpt-4o";
+    public const string DefaultAssistantModel = "gpt-4o-2024-08-06";
 }

@@ -11,6 +11,7 @@
     <PackageReference Include="Pulumi" Version="3.66.1" />
     <PackageReference Include="Pulumi.AzureNative" Version="2.56.0" />
     <PackageReference Include="Pulumi.Docker" Version="4.5.5" />
+    <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
   </ItemGroup>
 
 </Project>

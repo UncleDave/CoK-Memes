@@ -26,6 +26,6 @@ public class SplitPersonalityAssistantFollowerResponseStrategy(
             .Message.GetPreviousMessagesAsync()
             .TakeWhile(x => DateTimeOffset.UtcNow - x.Timestamp < TimeSpan.FromSeconds(60))
             .Reverse()
-            .Select(x => new Message(x.CleanContent, new User(x.Author.Id, x.GetAuthorName())))
+            .Select(x => new Message(x.CleanContent, new User(x.Author.Id, x.GetOpenAiFriendlyAuthorName())))
             .ToListAsync(cancellationToken: cancellationToken);
 }

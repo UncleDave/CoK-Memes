@@ -78,7 +78,15 @@ public static class MessageExtensions
                     || attachment.Filename.EndsWith(".gif")
                 )
                 {
-                    content.Add(new ImageContent(new Uri(attachment.Url)));
+                    // 20 MB
+                    if (attachment.Size >= 20_000_000)
+                    {
+                        content.Add(new TextContent("User attached an image that was too large to process."));
+                    }
+                    else
+                    {
+                        content.Add(new ImageContent(new Uri(attachment.Url)));
+                    }
                 }
             }
 

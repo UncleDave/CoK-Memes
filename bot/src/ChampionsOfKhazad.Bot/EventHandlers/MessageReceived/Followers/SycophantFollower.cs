@@ -22,6 +22,6 @@ public class SycophantFollower(
             new TargetUserFollowerTriggerStrategy(options.Value.UserId),
             new RandomChanceFollowerTriggerStrategy(options.Value.Chance, triggerStrategyLogger)
         ),
-        new SplitPersonalityFollowerResponseStrategy([completionService.Sycophant, completionService.Contrarian]),
+        new SplitPersonalityFollowerResponseStrategy([completionService.Sycophant, completionService.Contrarian], botContext.BotId),
         botContext
     );

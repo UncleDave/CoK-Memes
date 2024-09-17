@@ -23,32 +23,10 @@ public class MentionHandler(IOptions<MentionHandlerOptions> options, BotContext 
 
         using var typing = textChannel.EnterTypingState();
 
-        var previousMessages = await message
-            .GetPreviousMessagesAsync()
-            .Take(20)
-            .Reverse()
-            .Select(x => new ChatMessage(
-                x.Author.Id == context.BotId ? GenAi.Constants.LorekeeperName : x.GetAuthorName(),
-                GetMessageCleanContentWithoutBotMention(x)
-            ))
-            .ToListAsync(cancellationToken);
-
-        var response = await completionService.Lorekeeper.InvokeAsync(
-            new ChatMessage(message.GetAuthorName(), GetMessageCleanContentWithoutBotMention(message)),
-            previousMessages,
-            cancellationToken
-        );
+        var chatHistory = await message.GetChatHistoryAsync(20, context.BotId, GenAi.Constants.OpenAiFriendlyLorekeeperName, cancellationToken);
+        var response = await completionService.Lorekeeper.InvokeAsync(chatHistory, cancellationToken);
 
         await message.ReplyAsync(response);
-    }
-
-    private string GetMessageCleanContentWithoutBotMention(IMessage message)
-    {
-        var botTag = $"{context.Client.CurrentUser.Username}#{context.Client.CurrentUser.Discriminator}";
-        var botTagIndex = message.CleanContent.IndexOf(botTag, StringComparison.Ordinal);
-        var messageContentWithoutBotMentionAtStart = botTagIndex == 1 ? message.CleanContent[(botTag.Length + 1)..].Trim() : message.CleanContent;
-
-        return messageContentWithoutBotMentionAtStart.Replace(botTag, GenAi.Constants.LorekeeperName);
     }
 
     public override string ToString() => nameof(MentionHandler);

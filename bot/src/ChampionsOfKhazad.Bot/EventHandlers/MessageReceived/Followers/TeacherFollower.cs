@@ -22,6 +22,9 @@ public class TeacherFollower(
             new TargetUserFollowerTriggerStrategy(options.Value.UserId),
             new RandomChanceFollowerTriggerStrategy(options.Value.Chance, triggerStrategyLogger)
         ),
-        new SplitPersonalityFollowerResponseStrategy([completionService.DisappointedTeacher, completionService.CondescendingTeacher]),
+        new SplitPersonalityFollowerResponseStrategy(
+            [completionService.DisappointedTeacher, completionService.CondescendingTeacher],
+            botContext.BotId
+        ),
         botContext
     );

@@ -75,7 +75,6 @@ public static class MessageExtensions
                     || attachment.Filename.EndsWith(".jpeg")
                     || attachment.Filename.EndsWith(".jpg")
                     || attachment.Filename.EndsWith(".webp")
-                    || attachment.Filename.EndsWith(".gif")
                 )
                 {
                     // 20 MB

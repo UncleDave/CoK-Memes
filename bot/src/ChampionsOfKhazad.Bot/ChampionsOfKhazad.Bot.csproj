@@ -12,7 +12,7 @@
 
     <ItemGroup>
         <PackageReference Include="AspNetMonsters.ApplicationInsights.AspNetCore" Version="1.1.24" />
-        <PackageReference Include="Betalgo.OpenAI" Version="8.6.2" />
+        <PackageReference Include="Betalgo.OpenAI" Version="8.7.1" />
         <PackageReference Include="Discord.Net.Analyzers" Version="3.14.1"/>
         <PackageReference Include="Discord.Net.WebSocket" Version="3.16.0" />
         <PackageReference Include="MediatR" Version="12.4.1" />

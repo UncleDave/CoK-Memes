@@ -53,7 +53,11 @@ public class RaidsSlashCommand(
         "Rat Edition",
         "Camaraderie Edition",
         "Carbon Monoxide Edition",
-        "DIG DIG DIG"
+        "DIG DIG DIG",
+        "DANGER ZONE",
+        "The fire in his ass",
+        "No fucking QUESTS",
+        "Ample Bench Edition",
     ];
 
     private static readonly string[] RaidDescriptions =
@@ -80,7 +84,8 @@ public class RaidsSlashCommand(
         "If you or any of your loved ones have been affected by the rat-like behaviour of certain rat-like individuals, please call 0800-RAT-HELP.",
         "I'm not a real raid description, I'm just a figment of your imagination.",
         "A minor and temporary distraction from digging.",
-        "The one where we finally get to the bottom of the mystery of the missing glizzy."
+        "The one where we finally get to the bottom of the mystery of the missing glizzy.",
+        "The one where everyone hits the correct target.",
     ];
 
     public async Task Handle(RaidsSlashCommandExecuted notification, CancellationToken cancellationToken)
@@ -132,15 +137,15 @@ public class RaidsSlashCommand(
             TemplateId = EventTemplate.WoWClassicCataclysm,
             Date = date.ToShortDateString(),
             Time = "19:30",
-            Title = $"Tier 11: {RandomUtils.PickRandom(RaidNames)}",
+            Title = $"Firelands: {RandomUtils.PickRandom(RaidNames)}",
             Description = RandomUtils.PickRandom(RaidDescriptions),
             AdvancedSettings = new CreateEventRequestAdvancedSettings
             {
                 Duration = 210,
                 FontStyle = 0,
                 TentativeEmote = "remove",
-                Mentions = string.Join(',', options.Value.Mentions)
-            }
+                Mentions = string.Join(',', options.Value.Mentions),
+            },
         };
 
         await raidHelperClient.CreateEventAsync(botContext.Guild.Id, channelId, request);

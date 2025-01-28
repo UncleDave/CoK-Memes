@@ -13,7 +13,7 @@ public class SummariseSlashCommand(Assistant assistant, BotContext botContext) :
     {
         await notification.Command.DeferAsync();
 
-        var messages = (await notification.Command.Channel.GetMessagesAsync(50).FlattenAsync()).ToList();
+        var messages = (await notification.Command.Channel.GetMessagesAsync(200).FlattenAsync()).ToList();
 
         if (messages.Count < 10)
         {

@@ -36,7 +36,9 @@ public class SummariseSlashCommand(Assistant assistant, BotContext botContext) :
 
         var formattedMessages = string.Join(
             '\n',
-            messagesSinceLastSummary.Select(x => $"{(x.Author as IGuildUser)?.DisplayName ?? x.Author.GlobalName ?? x.Author.Username}: {x.Content}")
+            messagesSinceLastSummary.Select(x =>
+                $"[{x.Timestamp:G}] {(x.Author as IGuildUser)?.DisplayName ?? x.Author.GlobalName ?? x.Author.Username}: {x.Content}"
+            )
         );
 
         var summary = await assistant.RespondAsync(

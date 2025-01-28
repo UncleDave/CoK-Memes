@@ -1,9 +1,10 @@
-﻿using ChampionsOfKhazad.Bot.HardcoreStats.CharacterDeaths;
+﻿using ChampionsOfKhazad.Bot.GenAi;
+using ChampionsOfKhazad.Bot.HardcoreStats.CharacterDeaths;
 using MediatR;
 
 namespace ChampionsOfKhazad.Bot;
 
-public class RipSlashCommand(Assistant assistant, IPublisher publisher) : INotificationHandler<RipSlashCommandExecuted>
+public class RipSlashCommand(IPublisher publisher, ICompletionService completionService) : INotificationHandler<RipSlashCommandExecuted>
 {
     public async Task Handle(RipSlashCommandExecuted notification, CancellationToken cancellationToken)
     {
@@ -13,9 +14,10 @@ public class RipSlashCommand(Assistant assistant, IPublisher publisher) : INotif
         var characterClass = (string)notification.Command.Data.Options.Single(x => x.Name == "class").Value;
         var causeOfDeath = (string)notification.Command.Data.Options.Single(x => x.Name == "cause").Value;
 
-        var obituaryTask = assistant.RespondAsync(
+        var obituaryTask = completionService.InvokeAsync(
             "You are the Dwarf Lorekeeper of a World of Warcraft Classic guild known as Champions of Khazad.",
-            $"{character}, a level {level} {race} {characterClass}, has died. Their reported cause of death was {causeOfDeath}. Write an obituary for them, it must be less than 100 words. It must contain all the information you have been given about the character and their cause of death."
+            $"{character}, a level {level} {race} {characterClass}, has died. Their reported cause of death was {causeOfDeath}. Write an obituary for them, it must be less than 100 words. It must contain all the information you have been given about the character and their cause of death.",
+            cancellationToken
         );
 
         await notification.Command.DeferAsync();

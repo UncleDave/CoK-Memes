@@ -1,10 +1,11 @@
 ﻿using System.Text.Json;
+using ChampionsOfKhazad.Bot.GenAi;
 using Discord;
 using MediatR;
 
 namespace ChampionsOfKhazad.Bot;
 
-public class SummariseSlashCommand(Assistant assistant, BotContext botContext) : INotificationHandler<SummariseSlashCommandExecuted>
+public class SummariseSlashCommand(BotContext botContext, ICompletionService completionService) : INotificationHandler<SummariseSlashCommandExecuted>
 {
     private const string FooterText = "Summarised for";
     private static readonly JsonSerializerOptions JsonSerializerOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
@@ -41,9 +42,10 @@ public class SummariseSlashCommand(Assistant assistant, BotContext botContext) :
             )
         );
 
-        var summary = await assistant.RespondAsync(
+        var summary = await completionService.InvokeAsync(
             $"Summarise the following messages from the #{notification.Command.Channel.Name} channel. Respond with a JSON object in the following format: {{ \"title\": \"Short title that summarises the messages\", \"description\": \"The full summary of the messages\" }}",
-            formattedMessages
+            formattedMessages,
+            cancellationToken
         );
 
         var parsedSummary = JsonSerializer.Deserialize<Summary>(summary.Trim(['`', 'j', 's', 'o', 'n', '\n']), JsonSerializerOptions);

@@ -25,7 +25,7 @@ public class Assistant(IOpenAIService openAiService, ILogger<Assistant> logger, 
         {
             { Role.System, StaticValues.ChatMessageRoles.System },
             { Role.Assistant, StaticValues.ChatMessageRoles.Assistant },
-            { Role.User, StaticValues.ChatMessageRoles.User }
+            { Role.User, StaticValues.ChatMessageRoles.User },
         };
 
     public async Task<string> RespondAsync(
@@ -79,7 +79,7 @@ public class Assistant(IOpenAIService openAiService, ILogger<Assistant> logger, 
                     Model = model ?? Constants.DefaultAssistantModel,
                     MaxTokens = 500,
                     N = 1,
-                    User = user.Id.ToString()
+                    User = user.Id.ToString(),
                 }
             );
         }
@@ -106,29 +106,6 @@ public class Assistant(IOpenAIService openAiService, ILogger<Assistant> logger, 
         }
 
         logger.LogDebug("Chat completion finish reason: {FinishReason}", choice.FinishReason);
-
-        return ProcessEmojis(choice.Message.Content);
-    }
-
-    public async Task<string> RespondAsync(string instruction, string prompt, string? model = null)
-    {
-        var result = await openAiService.ChatCompletion.CreateCompletion(
-            new ChatCompletionCreateRequest
-            {
-                Messages = new[] { ChatMessage.FromSystem(instruction), ChatMessage.FromSystem(prompt) },
-                Model = model ?? Constants.DefaultAssistantModel,
-                MaxTokens = 500,
-                N = 1
-            }
-        );
-
-        var choice = result.Choices.FirstOrDefault(x => x.FinishReason == "stop") ?? result.Choices.First();
-
-        if (choice.Message.Content is null)
-        {
-            logger.LogWarning("Chat completion failed: {@Error}", result.Error);
-            return "I'm sorry, I don't know what to say.";
-        }
 
         return ProcessEmojis(choice.Message.Content);
     }

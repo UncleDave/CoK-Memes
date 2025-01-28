@@ -1,6 +1,11 @@
-﻿namespace ChampionsOfKhazad.Bot.GenAi;
+﻿using Microsoft.SemanticKernel;
+using Microsoft.SemanticKernel.ChatCompletion;
+
+namespace ChampionsOfKhazad.Bot.GenAi;
 
 internal class CompletionService(
+    Kernel kernel,
+    IChatCompletionService chatCompletionService,
     LorekeeperPersonality lorekeeperPersonality,
     SycophantPersonality sycophantPersonality,
     ContrarianPersonality contrarianPersonality,
@@ -13,4 +18,15 @@ internal class CompletionService(
     public IPersonality Contrarian => contrarianPersonality;
     public IPersonality DisappointedTeacher => disappointedTeacherPersonality;
     public IPersonality CondescendingTeacher => condescendingTeacherPersonality;
+
+    public async Task<string> InvokeAsync(string instruction, string prompt, CancellationToken cancellationToken = default)
+    {
+        var chatHistory = new ChatHistory(
+            [new ChatMessageContent(AuthorRole.System, instruction), new ChatMessageContent(AuthorRole.System, prompt)]
+        );
+
+        var response = await chatCompletionService.GetChatMessageContentAsync(chatHistory, kernel: kernel, cancellationToken: cancellationToken);
+
+        return response.ToString();
+    }
 }

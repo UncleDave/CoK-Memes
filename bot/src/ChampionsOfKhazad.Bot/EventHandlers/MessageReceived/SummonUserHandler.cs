@@ -7,7 +7,7 @@ namespace ChampionsOfKhazad.Bot;
 public class SummonUserHandler(IOptions<SummonUserHandlerOptions> options) : INotificationHandler<MessageReceived>
 {
     private static readonly string[] Messages =
-    {
+    [
         "time to get out of the bath.",
         "we summon thee!",
         "ay yo waddup?",
@@ -24,10 +24,10 @@ public class SummonUserHandler(IOptions<SummonUserHandlerOptions> options) : INo
         "heal Kachika heal Kachika heal Kachika heal Kachika heal Kachika!",
         "could you please cut some gems for me?",
         "https://youtu.be/MbvLadXPm2s",
-    };
+    ];
 
     private readonly SummonUserHandlerOptions _options = options.Value;
-    private static DateTime? lastSummon;
+    private static DateTime? _lastSummon;
 
     public async Task Handle(MessageReceived notification, CancellationToken cancellationToken)
     {
@@ -36,7 +36,7 @@ public class SummonUserHandler(IOptions<SummonUserHandlerOptions> options) : INo
         if (
             message.Channel is not ITextChannel textChannel
             || !message.MentionedUserIds.Contains(_options.UserId)
-            || (lastSummon is not null && (DateTime.Now - lastSummon.Value).TotalMinutes < 15)
+            || (_lastSummon is not null && (DateTime.Now - _lastSummon.Value).TotalMinutes < 15)
         )
             return;
 
@@ -70,7 +70,7 @@ public class SummonUserHandler(IOptions<SummonUserHandlerOptions> options) : INo
                 .Replace("{Leader}", MentionUtils.MentionUser(_options.LeaderId))
                 .Replace("{RandomOrdinal}", RandomUtils.RandomOrdinal(1, 10000));
 
-            lastSummon = DateTime.Now;
+            _lastSummon = DateTime.Now;
 
             await textChannel.SendMessageAsync($"{MentionUtils.MentionUser(_options.UserId)}, {summonMessage}");
         }

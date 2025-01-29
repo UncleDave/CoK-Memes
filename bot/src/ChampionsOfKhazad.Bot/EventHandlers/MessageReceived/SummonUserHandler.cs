@@ -24,6 +24,7 @@ public class SummonUserHandler(IOptions<SummonUserHandlerOptions> options) : INo
         "heal Kachika heal Kachika heal Kachika heal Kachika heal Kachika!",
         "could you please cut some gems for me?",
         "https://youtu.be/MbvLadXPm2s",
+        "take me to snurch!",
     ];
 
     private readonly SummonUserHandlerOptions _options = options.Value;

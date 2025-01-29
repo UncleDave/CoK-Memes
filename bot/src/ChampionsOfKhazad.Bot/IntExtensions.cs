@@ -12,7 +12,7 @@ public static class IntExtensions
             1 => $"{value}st",
             2 => $"{value}nd",
             3 => $"{value}rd",
-            _ => $"{value}th"
+            _ => $"{value}th",
         };
     }
 
@@ -26,7 +26,7 @@ public static class IntExtensions
             1 => $"{value}st",
             2 => $"{value}nd",
             3 => $"{value}rd",
-            _ => $"{value}th"
+            _ => $"{value}th",
         };
     }
 }

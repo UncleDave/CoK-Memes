@@ -23,7 +23,7 @@ public class SummonUserHandler(IOptions<SummonUserHandlerOptions> options) : INo
         "keep Absti up!",
         "heal Kachika heal Kachika heal Kachika heal Kachika heal Kachika!",
         "could you please cut some gems for me?",
-        "https://youtu.be/MbvLadXPm2s"
+        "https://youtu.be/MbvLadXPm2s",
     };
 
     private readonly SummonUserHandlerOptions _options = options.Value;

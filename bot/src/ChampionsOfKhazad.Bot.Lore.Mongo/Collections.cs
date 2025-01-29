@@ -9,6 +9,8 @@ internal record Collection<T>(string Name, Index<T> UniqueIndex);
 
 internal static class Collections
 {
-    public static readonly Collection<LoreDocument> Lore =
-        new("lore", new Index<LoreDocument>(x => x.Name, new Collation("en", strength: CollationStrength.Primary)));
+    public static readonly Collection<LoreDocument> Lore = new(
+        "lore",
+        new Index<LoreDocument>(x => x.Name, new Collation("en", strength: CollationStrength.Primary))
+    );
 }

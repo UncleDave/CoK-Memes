@@ -39,7 +39,7 @@ return await Pulumi.Deployment.RunAsync(() =>
         {
             ResourceGroupName = resourceGroup.Name,
             Sku = new WorkspaceSkuArgs { Name = WorkspaceSkuNameEnum.PerGB2018 },
-            RetentionInDays = 30
+            RetentionInDays = 30,
         }
     );
 
@@ -50,13 +50,13 @@ return await Pulumi.Deployment.RunAsync(() =>
             ApplicationType = ApplicationType.Other,
             Kind = "other",
             ResourceGroupName = resourceGroup.Name,
-            WorkspaceResourceId = logAnalytics.Id
+            WorkspaceResourceId = logAnalytics.Id,
         }
     );
 
     var logAnalyticsSharedKeys = Output
         .Tuple(resourceGroup.Name, logAnalytics.Name)
-        .Apply(items => GetSharedKeys.InvokeAsync(new GetSharedKeysArgs { ResourceGroupName = items.Item1, WorkspaceName = items.Item2, }));
+        .Apply(items => GetSharedKeys.InvokeAsync(new GetSharedKeysArgs { ResourceGroupName = items.Item1, WorkspaceName = items.Item2 }));
 
     var environment = new ManagedEnvironment(
         "environment",
@@ -69,9 +69,9 @@ return await Pulumi.Deployment.RunAsync(() =>
                 LogAnalyticsConfiguration = new LogAnalyticsConfigurationArgs
                 {
                     CustomerId = logAnalytics.CustomerId,
-                    SharedKey = logAnalyticsSharedKeys.Apply(r => r.PrimarySharedKey!)
-                }
-            }
+                    SharedKey = logAnalyticsSharedKeys.Apply(r => r.PrimarySharedKey!),
+                },
+            },
         }
     );
 
@@ -82,7 +82,7 @@ return await Pulumi.Deployment.RunAsync(() =>
     {
         Server = imageRegistryServer,
         Username = imageRegistryUsername,
-        Password = config.RequireSecret("imageRegistryWritePassword")
+        Password = config.RequireSecret("imageRegistryWritePassword"),
     };
 
     var botImage = new Image(
@@ -94,9 +94,9 @@ return await Pulumi.Deployment.RunAsync(() =>
             {
                 Context = "..",
                 Dockerfile = "../bot.Dockerfile",
-                Platform = "linux/amd64"
+                Platform = "linux/amd64",
             },
-            Registry = dockerRegistryArgs
+            Registry = dockerRegistryArgs,
         }
     );
 
@@ -120,7 +120,7 @@ return await Pulumi.Deployment.RunAsync(() =>
         new() { Name = "OpenAIServiceOptions__ApiKey", SecretRef = openAiApiKeySecretName },
         new() { Name = "RaidHelper__ApiKey", SecretRef = raidHelperApiKeySecretName },
         new() { Name = "ConnectionStrings__Mongo", SecretRef = mongoConnectionStringSecretName },
-        new() { Name = "ConnectionStrings__ApplicationInsights", SecretRef = applicationInsightsConnectionStringSecretName }
+        new() { Name = "ConnectionStrings__ApplicationInsights", SecretRef = applicationInsightsConnectionStringSecretName },
     };
 
     var commitSha = Environment.GetEnvironmentVariable("COMMIT_SHA");
@@ -140,7 +140,7 @@ return await Pulumi.Deployment.RunAsync(() =>
                 {
                     Server = imageRegistryServer,
                     Username = imageRegistryUsername,
-                    PasswordSecretRef = imageRegistryReadPasswordSecretName
+                    PasswordSecretRef = imageRegistryReadPasswordSecretName,
                 },
                 Secrets =
                 {
@@ -149,8 +149,8 @@ return await Pulumi.Deployment.RunAsync(() =>
                     new SecretArgs { Name = openAiApiKeySecretName, Value = openAiApiKey },
                     new SecretArgs { Name = raidHelperApiKeySecretName, Value = config.RequireSecret("raidHelperApiKey") },
                     new SecretArgs { Name = mongoConnectionStringSecretName, Value = mongoConnectionString },
-                    new SecretArgs { Name = applicationInsightsConnectionStringSecretName, Value = applicationInsights.ConnectionString }
-                }
+                    new SecretArgs { Name = applicationInsightsConnectionStringSecretName, Value = applicationInsights.ConnectionString },
+                },
             },
             Template = new TemplateArgs
             {
@@ -159,10 +159,10 @@ return await Pulumi.Deployment.RunAsync(() =>
                     Name = "bot",
                     Image = botImage.RepoDigest,
                     Env = containerEnv,
-                    Resources = new ContainerResourcesArgs { Cpu = .25, Memory = "0.5Gi" }
+                    Resources = new ContainerResourcesArgs { Cpu = .25, Memory = "0.5Gi" },
                 },
-                Scale = new ScaleArgs { MinReplicas = 1, MaxReplicas = 1 }
-            }
+                Scale = new ScaleArgs { MinReplicas = 1, MaxReplicas = 1 },
+            },
         }
     );
 
@@ -173,7 +173,7 @@ return await Pulumi.Deployment.RunAsync(() =>
             ResourceGroupName = resourceGroup.Name,
             Kind = "Linux",
             Reserved = true,
-            Sku = new SkuDescriptionArgs { Name = "F1", Tier = "Free" }
+            Sku = new SkuDescriptionArgs { Name = "F1", Tier = "Free" },
         }
     );
 
@@ -186,9 +186,9 @@ return await Pulumi.Deployment.RunAsync(() =>
             {
                 Context = "..",
                 Dockerfile = "../portal.Dockerfile",
-                Platform = "linux/amd64"
+                Platform = "linux/amd64",
             },
-            Registry = dockerRegistryArgs
+            Registry = dockerRegistryArgs,
         }
     );
 
@@ -203,7 +203,7 @@ return await Pulumi.Deployment.RunAsync(() =>
         new() { Name = "ConnectionStrings__Mongo", Value = mongoConnectionString },
         new() { Name = "Auth__ClientSecret", Value = config.RequireSecret("portalAuthClientSecret") },
         new() { Name = "WEBSITES_PORT", Value = "8080" },
-        new() { Name = "ASPNETCORE_FORWARDEDHEADERS_ENABLED", Value = "true" }
+        new() { Name = "ASPNETCORE_FORWARDEDHEADERS_ENABLED", Value = "true" },
     };
 
     if (commitSha is not null)

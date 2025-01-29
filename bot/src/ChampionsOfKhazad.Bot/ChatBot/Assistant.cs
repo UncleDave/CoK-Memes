@@ -20,13 +20,12 @@ public class Assistant(IOpenAIService openAiService, ILogger<Assistant> logger, 
 
     private static readonly Regex EmojiExpression = new(@":(?<name>\w+):", RegexOptions.Compiled);
 
-    private static readonly Dictionary<Role, string> RoleMap =
-        new()
-        {
-            { Role.System, StaticValues.ChatMessageRoles.System },
-            { Role.Assistant, StaticValues.ChatMessageRoles.Assistant },
-            { Role.User, StaticValues.ChatMessageRoles.User },
-        };
+    private static readonly Dictionary<Role, string> RoleMap = new()
+    {
+        { Role.System, StaticValues.ChatMessageRoles.System },
+        { Role.Assistant, StaticValues.ChatMessageRoles.Assistant },
+        { Role.User, StaticValues.ChatMessageRoles.User },
+    };
 
     public async Task<string> RespondAsync(
         string message,

@@ -88,7 +88,7 @@ memberLore.MapPut(
             new MemberLore(name, contract.Pronouns, contract.Nationality, contract.MainCharacter, contract.Biography)
             {
                 Aliases = contract.Aliases ?? Array.Empty<string>(),
-                Roles = contract.Roles ?? Array.Empty<string>()
+                Roles = contract.Roles ?? Array.Empty<string>(),
             }
         );
         return Results.NoContent();

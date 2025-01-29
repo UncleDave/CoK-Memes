@@ -13,8 +13,10 @@ internal abstract class PersonalityBase(
     IChatCompletionService chatCompletionService
 ) : IPersonality
 {
-    protected static readonly OpenAIPromptExecutionSettings DefaultPromptSettings =
-        new() { ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions };
+    protected static readonly OpenAIPromptExecutionSettings DefaultPromptSettings = new()
+    {
+        ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions,
+    };
 
     private static readonly IPromptTemplateFactory PromptTemplateFactory = new KernelPromptTemplateFactory();
 

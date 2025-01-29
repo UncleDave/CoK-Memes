@@ -46,7 +46,7 @@ public class LoggingDiscordSocketClient : DiscordSocketClient
             LogSeverity.Info => LogLevel.Information,
             LogSeverity.Verbose => LogLevel.Trace,
             LogSeverity.Debug => LogLevel.Debug,
-            _ => LogLevel.Information
+            _ => LogLevel.Information,
         };
 
         _logger.Log(severity, message.Exception, "[{Source}] {Message}", message.Source, message.Message);

@@ -13,7 +13,7 @@ public static class CollectionExtensions
                 {
                     Unique = true,
                     Background = true,
-                    Collation = collation
+                    Collation = collation,
                 }
             )
         );

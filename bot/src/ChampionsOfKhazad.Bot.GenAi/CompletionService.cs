@@ -11,7 +11,8 @@ internal class CompletionService(
     ContrarianPersonality contrarianPersonality,
     DisappointedTeacherPersonality disappointedTeacherPersonality,
     CondescendingTeacherPersonality condescendingTeacherPersonality,
-    NoNutNovemberExpertPersonality noNutNovemberExpertPersonality
+    NoNutNovemberExpertPersonality noNutNovemberExpertPersonality,
+    RatExpertPersonality ratExpertPersonality
 ) : ICompletionService
 {
     public IPersonality Lorekeeper => lorekeeperPersonality;
@@ -20,6 +21,7 @@ internal class CompletionService(
     public IPersonality DisappointedTeacher => disappointedTeacherPersonality;
     public IPersonality CondescendingTeacher => condescendingTeacherPersonality;
     public IPersonality NoNutNovemberExpert => noNutNovemberExpertPersonality;
+    public IPersonality RatExpert => ratExpertPersonality;
 
     public async Task<string> InvokeAsync(string instruction, string prompt, CancellationToken cancellationToken = default)
     {

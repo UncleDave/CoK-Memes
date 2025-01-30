@@ -118,7 +118,5 @@ host.Services.AddHostedService<BotService>()
 
 host.Build().Run();
 
-// TODO: Tidy up follower configs
-// TODO: Remove old openai package
 // TODO: Update Semantic Kernel
 // TODO: dotnet 9

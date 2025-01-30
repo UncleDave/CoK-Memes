@@ -118,5 +118,4 @@ host.Services.AddHostedService<BotService>()
 
 host.Build().Run();
 
-// TODO: Update Semantic Kernel
 // TODO: dotnet 9

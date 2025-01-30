@@ -38,7 +38,12 @@ public static class ServiceCollectionExtensions
             .AddSingleton<SycophantPersonality>()
             .AddSingleton<ContrarianPersonality>()
             .AddSingleton<DisappointedTeacherPersonality>()
-            .AddSingleton<CondescendingTeacherPersonality>();
+            .AddSingleton<CondescendingTeacherPersonality>()
+            .AddSingleton<NoNutNovemberExpertPersonality>()
+            .AddSingleton<RatExpertPersonality>()
+            .AddSingleton<StonerBroPersonality>()
+            .AddSingleton<HarassmentLawyerPersonality>()
+            .AddSingleton<ProHarassmentLawyerPersonality>();
 
         return services;
     }

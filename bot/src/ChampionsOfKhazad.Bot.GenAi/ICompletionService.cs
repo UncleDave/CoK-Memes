@@ -10,6 +10,8 @@ public interface ICompletionService
     IPersonality NoNutNovemberExpert { get; }
     IPersonality RatExpert { get; }
     IPersonality StonerBro { get; }
+    IPersonality HarassmentLawyer { get; }
+    IPersonality ProHarassmentLawyer { get; }
 
     public Task<string> InvokeAsync(string instruction, string prompt, CancellationToken cancellationToken = default);
 }

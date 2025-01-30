@@ -9,7 +9,6 @@ using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using OpenAI.Extensions;
 using Serilog;
 using Serilog.Events;
 
@@ -68,8 +67,6 @@ host.Services.AddMediatR(configuration =>
     configuration.Lifetime = ServiceLifetime.Singleton;
 });
 
-host.Services.AddOpenAIService();
-
 var openAiApiKey = host.Configuration.GetRequiredString("OpenAIServiceOptions:ApiKey");
 var mongoConnectionString = host.Configuration.GetRequiredConnectionString("Mongo");
 
@@ -92,8 +89,6 @@ host.Services.AddBot(configuration =>
     .AddMongoPersistence()
     .AddHardcoreStats()
     .AddMongoPersistence();
-
-host.Services.AddSingleton<Assistant>();
 
 host.Services.AddRaidHelperClient(host.Configuration.GetRequiredString("RaidHelper:ApiKey"));
 
@@ -122,3 +117,8 @@ host.Services.AddHostedService<BotService>()
     );
 
 host.Build().Run();
+
+// TODO: Tidy up follower configs
+// TODO: Remove old openai package
+// TODO: Update Semantic Kernel
+// TODO: dotnet 9

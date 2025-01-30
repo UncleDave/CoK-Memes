@@ -27,7 +27,7 @@ internal abstract class PersonalityBase(
                 systemPrompt,
                 "Limit your replies to 100 words.\n",
                 "###",
-                "\nThese lore entries may be relevant to the user's message:\n",
+                "\nThese lore entries may be relevant:\n",
                 "###\n",
                 "{{$lore}}",
                 "###\n",
@@ -38,14 +38,21 @@ internal abstract class PersonalityBase(
         )
     );
 
-    public virtual async Task<string> InvokeAsync(ChatHistory chatHistory, CancellationToken cancellationToken = default)
+    public virtual async Task<string> InvokeAsync(ChatHistory chatHistory, CancellationToken cancellationToken = default) =>
+        await InvokeAsync(chatHistory, new Dictionary<string, object?>(), cancellationToken);
+
+    public virtual async Task<string> InvokeAsync(
+        ChatHistory chatHistory,
+        IDictionary<string, object?> arguments,
+        CancellationToken cancellationToken = default
+    )
     {
         var input = chatHistory.Last();
         var lore = input.Content is not null ? await relatedLoreGetter.GetRelatedLoreAsync(input.Content) : [];
 
         var systemPrompt = await _systemPromptTemplate.RenderAsync(
             kernel,
-            new KernelArguments
+            new KernelArguments(arguments)
             {
                 { "userName", input.AuthorName },
                 { "lore", string.Join("\n---\n\n", lore.Select(x => x.ToString())) },

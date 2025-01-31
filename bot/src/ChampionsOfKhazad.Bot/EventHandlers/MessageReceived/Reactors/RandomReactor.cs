@@ -14,45 +14,45 @@ public class RandomReactor(ILogger<RandomReactor> logger, ICompletionService com
     {
         var message = notification.Message;
 
-        if (message.Channel is ITextChannel)
+        if (message.Channel is not ITextChannel || string.IsNullOrWhiteSpace(message.CleanContent))
+            return;
+
+        var (success, roll) = RandomUtils.Roll(1, 200);
+
+        logger.LogInformation(
+            "{ReactorType} rolling for message from {Author}: {Roll} - {Result}",
+            GetType().Name,
+            message.Author.GlobalName ?? message.Author.Username,
+            roll,
+            success ? "Success" : "Failure"
+        );
+
+        if (!success)
+            return;
+
+        var guildEmojis = botContext.Guild.Emotes;
+
+        var chatHistory = new ChatHistory(
+            string.Join(
+                '\n',
+                "Choose the most appropriate emoji reaction to the user's message. You may choose any custom emoji from the following list, or any standard unicode emoji.\n",
+                string.Join(' ', guildEmojis.Select(x => x.Name)),
+                "\nRespond with the chosen emoji and nothing else."
+            )
+        )
         {
-            var (success, roll) = RandomUtils.Roll(1, 200);
+            new ChatMessageContent(AuthorRole.User, message.CleanContent) { AuthorName = message.GetOpenAiFriendlyAuthorName() },
+        };
 
-            logger.LogInformation(
-                "{ReactorType} rolling for message from {Author}: {Roll} - {Result}",
-                GetType().Name,
-                message.Author.GlobalName ?? message.Author.Username,
-                roll,
-                success ? "Success" : "Failure"
-            );
+        var completionResult = await completionService.InvokeAsync(chatHistory, cancellationToken);
 
-            if (success)
-            {
-                var guildEmojis = botContext.Guild.Emotes;
+        IEmote? chosenGuildEmoji = guildEmojis.SingleOrDefault(x =>
+            string.Equals(x.Name, completionResult, StringComparison.InvariantCultureIgnoreCase)
+        );
 
-                var chatHistory = new ChatHistory(
-                    string.Join(
-                        '\n',
-                        "Choose the most appropriate emoji reaction to the user's message. You may choose any custom emoji from the following list, or any standard unicode emoji.\n",
-                        string.Join(' ', guildEmojis.Select(x => x.Name)),
-                        "\nRespond with the chosen emoji and nothing else."
-                    )
-                )
-                {
-                    new ChatMessageContent(AuthorRole.User, message.CleanContent) { AuthorName = message.GetOpenAiFriendlyAuthorName() },
-                };
+        var chosenEmoji = chosenGuildEmoji ?? new Emoji(completionResult);
 
-                var completionResult = await completionService.InvokeAsync(chatHistory, cancellationToken);
-
-                IEmote? chosenGuildEmoji = guildEmojis.SingleOrDefault(x =>
-                    string.Equals(x.Name, completionResult, StringComparison.InvariantCultureIgnoreCase)
-                );
-
-                var chosenEmoji = chosenGuildEmoji ?? new Emoji(completionResult);
-
-                await message.AddReactionAsync(chosenEmoji);
-            }
-        }
+        await message.AddReactionAsync(chosenEmoji);
     }
 
     public override string ToString() => nameof(RandomReactor);

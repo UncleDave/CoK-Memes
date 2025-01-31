@@ -2,6 +2,7 @@
 using ChampionsOfKhazad.Bot.GenAi;
 using Discord;
 using MediatR;
+using Microsoft.SemanticKernel.ChatCompletion;
 
 namespace ChampionsOfKhazad.Bot;
 
@@ -43,8 +44,13 @@ public class SummariseSlashCommand(BotContext botContext, ICompletionService com
         );
 
         var summary = await completionService.InvokeAsync(
-            $"Summarise the following messages from the #{notification.Command.Channel.Name} channel. Respond with a JSON object in the following format: {{ \"title\": \"Short title that summarises the messages\", \"description\": \"The full summary of the messages\" }}",
-            formattedMessages,
+            new ChatHistory(
+                string.Join(
+                    '\n',
+                    $"Summarise the following messages from the #{notification.Command.Channel.Name} channel. Respond with a JSON object in the following format: {{ \"title\": \"Short title that summarises the messages\", \"description\": \"The full summary of the messages\" }}",
+                    formattedMessages
+                )
+            ),
             cancellationToken
         );
 

@@ -29,12 +29,8 @@ internal class CompletionService(
     public IPersonality HarassmentLawyer => harassmentLawyerPersonality;
     public IPersonality ProHarassmentLawyer => proHarassmentLawyerPersonality;
 
-    public async Task<string> InvokeAsync(string instruction, string prompt, CancellationToken cancellationToken = default)
+    public async Task<string> InvokeAsync(ChatHistory chatHistory, CancellationToken cancellationToken = default)
     {
-        var chatHistory = new ChatHistory(
-            [new ChatMessageContent(AuthorRole.System, instruction), new ChatMessageContent(AuthorRole.System, prompt)]
-        );
-
         var response = await chatCompletionService.GetChatMessageContentAsync(chatHistory, kernel: kernel, cancellationToken: cancellationToken);
 
         return response.ToString();

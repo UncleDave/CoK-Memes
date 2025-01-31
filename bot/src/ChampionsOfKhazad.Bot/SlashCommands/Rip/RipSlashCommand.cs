@@ -1,6 +1,7 @@
 ﻿using ChampionsOfKhazad.Bot.GenAi;
 using ChampionsOfKhazad.Bot.HardcoreStats.CharacterDeaths;
 using MediatR;
+using Microsoft.SemanticKernel.ChatCompletion;
 
 namespace ChampionsOfKhazad.Bot;
 
@@ -15,8 +16,13 @@ public class RipSlashCommand(IPublisher publisher, ICompletionService completion
         var causeOfDeath = (string)notification.Command.Data.Options.Single(x => x.Name == "cause").Value;
 
         var obituaryTask = completionService.InvokeAsync(
-            "You are the Dwarf Lorekeeper of a World of Warcraft Classic guild known as Champions of Khazad.",
-            $"{character}, a level {level} {race} {characterClass}, has died. Their reported cause of death was {causeOfDeath}. Write an obituary for them, it must be less than 100 words. It must contain all the information you have been given about the character and their cause of death.",
+            new ChatHistory(
+                string.Join(
+                    '\n',
+                    "You are the Dwarf Lorekeeper of a World of Warcraft Classic guild known as Champions of Khazad.",
+                    $"{character}, a level {level} {race} {characterClass}, has died. Their reported cause of death was {causeOfDeath}. Write an obituary for them, it must be less than 100 words. It must contain all the information you have been given about the character and their cause of death."
+                )
+            ),
             cancellationToken
         );
 

@@ -1,4 +1,6 @@
-﻿namespace ChampionsOfKhazad.Bot.GenAi;
+﻿using Microsoft.SemanticKernel.ChatCompletion;
+
+namespace ChampionsOfKhazad.Bot.GenAi;
 
 public interface ICompletionService
 {
@@ -13,5 +15,5 @@ public interface ICompletionService
     IPersonality HarassmentLawyer { get; }
     IPersonality ProHarassmentLawyer { get; }
 
-    public Task<string> InvokeAsync(string instruction, string prompt, CancellationToken cancellationToken = default);
+    public Task<string> InvokeAsync(ChatHistory chatHistory, CancellationToken cancellationToken = default);
 }

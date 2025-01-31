@@ -55,5 +55,5 @@ public class RandomReactor(ILogger<RandomReactor> logger, ICompletionService com
         }
     }
 
-    public override string ToString() => nameof(QuestionMarkReactor);
+    public override string ToString() => nameof(RandomReactor);
 }

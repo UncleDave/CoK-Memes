@@ -111,6 +111,8 @@ return await Pulumi.Deployment.RunAsync(() =>
     var dotnetEnvironment = config.Require("environment");
     var openAiApiKey = config.RequireSecret("openAiApiKey");
     var mongoConnectionString = config.RequireSecret("mongoConnectionString");
+    var discordSerilogSinkWebhookId = config.RequireSecret("discordSerilogSinkWebhookId");
+    var discordSerilogSinkWebhookToken = config.RequireSecret("discordSerilogSinkWebhookToken");
 
     var containerEnv = new List<EnvironmentVarArgs>
     {
@@ -121,6 +123,8 @@ return await Pulumi.Deployment.RunAsync(() =>
         new() { Name = "RaidHelper__ApiKey", SecretRef = raidHelperApiKeySecretName },
         new() { Name = "ConnectionStrings__Mongo", SecretRef = mongoConnectionStringSecretName },
         new() { Name = "ConnectionStrings__ApplicationInsights", SecretRef = applicationInsightsConnectionStringSecretName },
+        new() { Name = "DiscordSerilogSink__WebhookId", SecretRef = discordSerilogSinkWebhookId },
+        new() { Name = "DiscordSerilogSink__WebhookToken", SecretRef = discordSerilogSinkWebhookToken },
     };
 
     var commitSha = Environment.GetEnvironmentVariable("COMMIT_SHA");

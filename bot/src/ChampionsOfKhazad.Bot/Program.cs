@@ -11,18 +11,23 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Serilog;
 using Serilog.Events;
+using Serilog.Sinks.Discord;
 
 CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("en-GB");
 
 var host = Host.CreateApplicationBuilder(args);
 
-// csharpier-ignore
 // ReSharper disable once MoveLocalFunctionAfterJumpStatement
 LoggerConfiguration ConfigureLogger(LoggerConfiguration loggerConfiguration, IHostEnvironment hostEnvironment) =>
     loggerConfiguration
         .MinimumLevel.Is(hostEnvironment.IsDevelopment() ? LogEventLevel.Debug : LogEventLevel.Information)
         .Enrich.FromLogContext()
-        .WriteTo.Console();
+        .WriteTo.Console()
+        .WriteTo.Discord(
+            host.Configuration.GetValue<ulong>("DiscordSerilogSink:WebhookId"),
+            host.Configuration.GetValue<string>("DiscordSerilogSink:WebhookToken"),
+            restrictedToMinimumLevel: LogEventLevel.Warning
+        );
 
 Log.Logger = ConfigureLogger(new LoggerConfiguration(), host.Environment).CreateBootstrapLogger();
 

@@ -106,6 +106,8 @@ return await Pulumi.Deployment.RunAsync(() =>
     const string raidHelperApiKeySecretName = "raid-helper-api-key";
     const string mongoConnectionStringSecretName = "mongo-connection-string";
     const string applicationInsightsConnectionStringSecretName = "application-insights-connection-string";
+    const string discordSerilogSinkWebhookIdSecretName = "discord-serilog-sink-webhook-id";
+    const string discordSerilogSinkWebhookTokenSecretName = "discord-serilog-sink-webhook-token";
 
     const string timezone = "Europe/Copenhagen";
     var dotnetEnvironment = config.Require("environment");
@@ -123,8 +125,8 @@ return await Pulumi.Deployment.RunAsync(() =>
         new() { Name = "RaidHelper__ApiKey", SecretRef = raidHelperApiKeySecretName },
         new() { Name = "ConnectionStrings__Mongo", SecretRef = mongoConnectionStringSecretName },
         new() { Name = "ConnectionStrings__ApplicationInsights", SecretRef = applicationInsightsConnectionStringSecretName },
-        new() { Name = "DiscordSerilogSink__WebhookId", SecretRef = discordSerilogSinkWebhookId },
-        new() { Name = "DiscordSerilogSink__WebhookToken", SecretRef = discordSerilogSinkWebhookToken },
+        new() { Name = "DiscordSerilogSink__WebhookId", SecretRef = discordSerilogSinkWebhookIdSecretName },
+        new() { Name = "DiscordSerilogSink__WebhookToken", SecretRef = discordSerilogSinkWebhookTokenSecretName },
     };
 
     var commitSha = Environment.GetEnvironmentVariable("COMMIT_SHA");
@@ -154,6 +156,8 @@ return await Pulumi.Deployment.RunAsync(() =>
                     new SecretArgs { Name = raidHelperApiKeySecretName, Value = config.RequireSecret("raidHelperApiKey") },
                     new SecretArgs { Name = mongoConnectionStringSecretName, Value = mongoConnectionString },
                     new SecretArgs { Name = applicationInsightsConnectionStringSecretName, Value = applicationInsights.ConnectionString },
+                    new SecretArgs { Name = discordSerilogSinkWebhookIdSecretName, Value = discordSerilogSinkWebhookId },
+                    new SecretArgs { Name = discordSerilogSinkWebhookTokenSecretName, Value = discordSerilogSinkWebhookToken },
                 },
             },
             Template = new TemplateArgs

@@ -17,7 +17,7 @@ public class RandomReactor(ILogger<RandomReactor> logger, ICompletionService com
         if (message.Channel is not ITextChannel || string.IsNullOrWhiteSpace(message.CleanContent))
             return;
 
-        var (success, roll) = RandomUtils.Roll(1, 200);
+        var (success, roll) = RandomUtils.Roll(1);
 
         logger.LogInformation(
             "{ReactorType} rolling for message from {Author}: {Roll} - {Result}",

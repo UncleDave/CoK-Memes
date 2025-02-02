@@ -26,7 +26,7 @@ LoggerConfiguration ConfigureLogger(LoggerConfiguration loggerConfiguration, IHo
         .WriteTo.Discord(
             host.Configuration.GetValue<ulong>("DiscordSerilogSink:WebhookId"),
             host.Configuration.GetValue<string>("DiscordSerilogSink:WebhookToken"),
-            restrictedToMinimumLevel: LogEventLevel.Warning
+            restrictedToMinimumLevel: LogEventLevel.Error
         );
 
 Log.Logger = ConfigureLogger(new LoggerConfiguration(), host.Environment).CreateBootstrapLogger();

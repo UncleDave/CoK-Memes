@@ -122,5 +122,3 @@ host.Services.AddHostedService<BotService>()
     );
 
 host.Build().Run();
-
-// TODO: dotnet 9

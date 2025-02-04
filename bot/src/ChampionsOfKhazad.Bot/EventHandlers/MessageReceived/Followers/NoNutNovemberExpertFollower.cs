@@ -16,7 +16,7 @@ public class NoNutNovemberExpertFollower(
     ILogger<RandomChanceFollowerTriggerStrategy> triggerStrategyLogger,
     ICompletionService completionService
 )
-    : Follower(
+    : StrategyFollower(
         allFollowersOptions.Value.IgnoreBotMentionsInChannelId,
         new AllOfFollowerTriggerStrategy(
             new TargetUserFollowerTriggerStrategy(options.Value.UserId),

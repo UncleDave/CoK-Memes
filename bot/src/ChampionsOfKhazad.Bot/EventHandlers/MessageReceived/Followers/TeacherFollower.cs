@@ -16,7 +16,7 @@ public class TeacherFollower(
     BotContext botContext,
     ILogger<RandomChanceFollowerTriggerStrategy> triggerStrategyLogger
 )
-    : Follower(
+    : StrategyFollower(
         allFollowersOptions.Value.IgnoreBotMentionsInChannelId,
         new AllOfFollowerTriggerStrategy(
             new TargetUserFollowerTriggerStrategy(options.Value.UserId),

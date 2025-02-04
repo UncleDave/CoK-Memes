@@ -12,7 +12,7 @@ public record GermanyBisFollowerOptions
 }
 
 public class GermanyBisFollower(IOptions<AllFollowersOptions> allFollowersOptions, IOptions<GermanyBisFollowerOptions> options, BotContext botContext)
-    : Follower(
+    : StrategyFollower(
         allFollowersOptions.Value.IgnoreBotMentionsInChannelId,
         new AllOfFollowerTriggerStrategy(
             new TargetUserFollowerTriggerStrategy(options.Value.UserId),

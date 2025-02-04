@@ -1,0 +1,48 @@
+name: Build Bot
+
+on:
+  pull_request:
+    paths:
+      - bot/**
+
+jobs:
+  build-solution:
+    name: Build Solution
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8
+      - run: dotnet build bot/ChampionsOfKhazad.Bot.sln
+
+  build-frontend:
+    name: Build Frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: bot/src/ChampionsOfKhazad.Bot.Portal/frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+          cache-dependency-path: bot/src/ChampionsOfKhazad.Bot.Portal/frontend
+      - run: npm ci
+      - run: npm run build
+
+  deploy-dry-run:
+    name: Deploy Dry Run
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy Bot
+        uses: pulumi/actions@v6
+        with:
+          command: preview
+          stack-name: prod
+          work-dir: bot/src/ChampionsOfKhazad.Bot.Infrastructure/
+        env:
+          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+          COMMIT_SHA: ${{ github.sha }}

@@ -95,7 +95,7 @@ memberLore.MapPut(
     }
 );
 
-app.UseStaticFiles();
+app.MapStaticAssets();
 
 if (builder.Environment.IsDevelopment())
     app.UseSpaYarp();

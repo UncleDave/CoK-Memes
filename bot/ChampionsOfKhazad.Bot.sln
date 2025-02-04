@@ -34,6 +34,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "workflows", "workflows", "{95CB2B92-3C10-4A69-A732-EDAED267A19C}"
 	ProjectSection(SolutionItems) = preProject
 		..\.github\workflows\bot-deploy.yml = ..\.github\workflows\bot-deploy.yml
+		..\.github\workflows\bot-build.yml = ..\.github\workflows\bot-build.yml
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChampionsOfKhazad.Bot.Lore", "src\ChampionsOfKhazad.Bot.Lore\ChampionsOfKhazad.Bot.Lore.csproj", "{DB35D2B8-3E87-4E08-B89C-0A7B421BD9F4}"

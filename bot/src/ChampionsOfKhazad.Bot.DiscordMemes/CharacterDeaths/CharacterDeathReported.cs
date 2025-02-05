@@ -1,5 +1,5 @@
 ﻿using MediatR;
 
-namespace ChampionsOfKhazad.Bot.HardcoreStats.CharacterDeaths;
+namespace ChampionsOfKhazad.Bot.DiscordMemes.CharacterDeaths;
 
 public record CharacterDeathReported(CharacterDeath CharacterDeath) : INotification;

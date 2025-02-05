@@ -1,4 +1,4 @@
-﻿namespace ChampionsOfKhazad.Bot.HardcoreStats.CharacterDeaths;
+﻿namespace ChampionsOfKhazad.Bot.DiscordMemes.CharacterDeaths;
 
 public record CharacterDeath(
     ulong UserId,

@@ -35,8 +35,6 @@
         <ProjectReference Include="..\ChampionsOfKhazad.Bot.DiscordMemes.Mongo\ChampionsOfKhazad.Bot.DiscordMemes.Mongo.csproj" />
         <ProjectReference Include="..\ChampionsOfKhazad.Bot.DiscordMemes\ChampionsOfKhazad.Bot.DiscordMemes.csproj" />
         <ProjectReference Include="..\ChampionsOfKhazad.Bot.GenAi\ChampionsOfKhazad.Bot.GenAi.csproj" />
-        <ProjectReference Include="..\ChampionsOfKhazad.Bot.HardcoreStats.Mongo\ChampionsOfKhazad.Bot.HardcoreStats.Mongo.csproj" />
-        <ProjectReference Include="..\ChampionsOfKhazad.Bot.HardcoreStats\ChampionsOfKhazad.Bot.HardcoreStats.csproj" />
         <ProjectReference Include="..\ChampionsOfKhazad.Bot.Lore.Mongo\ChampionsOfKhazad.Bot.Lore.Mongo.csproj"/>
         <ProjectReference Include="..\ChampionsOfKhazad.Bot.Lore\ChampionsOfKhazad.Bot.Lore.csproj"/>
         <ProjectReference Include="..\ChampionsOfKhazad.Bot.RaidHelper\ChampionsOfKhazad.Bot.RaidHelper.csproj"/>

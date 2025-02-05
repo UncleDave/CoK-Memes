@@ -1,7 +1,7 @@
-﻿using ChampionsOfKhazad.Bot.HardcoreStats.CharacterDeaths;
+﻿using ChampionsOfKhazad.Bot.DiscordMemes.CharacterDeaths;
 using MongoDB.Driver;
 
-namespace ChampionsOfKhazad.Bot.HardcoreStats.Mongo;
+namespace ChampionsOfKhazad.Bot.DiscordMemes.Mongo;
 
 internal class MongoCharacterDeathStore(IMongoCollection<CharacterDeath> characterDeathCollection) : IStoreCharacterDeaths
 {

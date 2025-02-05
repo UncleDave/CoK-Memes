@@ -1,5 +1,5 @@
-﻿using ChampionsOfKhazad.Bot.GenAi;
-using ChampionsOfKhazad.Bot.HardcoreStats.CharacterDeaths;
+﻿using ChampionsOfKhazad.Bot.DiscordMemes.CharacterDeaths;
+using ChampionsOfKhazad.Bot.GenAi;
 using MediatR;
 using Microsoft.SemanticKernel.ChatCompletion;
 

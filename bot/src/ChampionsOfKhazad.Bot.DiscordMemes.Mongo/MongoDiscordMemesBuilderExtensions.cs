@@ -1,4 +1,5 @@
-﻿using ChampionsOfKhazad.Bot.DiscordMemes.Mongo;
+﻿using ChampionsOfKhazad.Bot.DiscordMemes.CharacterDeaths;
+using ChampionsOfKhazad.Bot.DiscordMemes.Mongo;
 using ChampionsOfKhazad.Bot.DiscordMemes.StreakBreaks;
 
 // ReSharper disable once CheckNamespace
@@ -11,9 +12,11 @@ public static class MongoDiscordMemesBuilderExtensions
         builder
             .AddMongo()
             .AddCollection<StreakBreak>("streakBreaks")
+            .AddCollection<CharacterDeath>("characterDeaths")
             .Services.AddSingleton<MongoStreakBreakStore>()
             .AddSingleton<IGetStreakBreaks>(sp => sp.GetRequiredService<MongoStreakBreakStore>())
-            .AddSingleton<IStoreStreakBreaks>(sp => sp.GetRequiredService<MongoStreakBreakStore>());
+            .AddSingleton<IStoreStreakBreaks>(sp => sp.GetRequiredService<MongoStreakBreakStore>())
+            .AddSingleton<IStoreCharacterDeaths, MongoCharacterDeathStore>();
 
         return builder;
     }

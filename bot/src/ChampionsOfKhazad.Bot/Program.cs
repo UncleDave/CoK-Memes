@@ -91,8 +91,6 @@ host.Services.AddBot(configuration =>
     })
     .AddMongoPersistence()
     .AddDiscordMemes()
-    .AddMongoPersistence()
-    .AddHardcoreStats()
     .AddMongoPersistence();
 
 host.Services.AddRaidHelperClient(host.Configuration.GetRequiredString("RaidHelper:ApiKey"));

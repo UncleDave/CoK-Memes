@@ -5,7 +5,7 @@ namespace ChampionsOfKhazad.Bot;
 
 public abstract class Follower(ulong ignoreBotMentionsInChannelId, BotContext botContext) : INotificationHandler<MessageReceived>
 {
-    protected abstract bool ShouldTrigger(MessageReceived notification);
+    protected abstract Task<bool> ShouldTrigger(MessageReceived notification);
 
     protected abstract Task<string> GetResponseAsync(MessageReceived notification, CancellationToken cancellationToken = default);
 
@@ -16,7 +16,7 @@ public abstract class Follower(ulong ignoreBotMentionsInChannelId, BotContext bo
         if (
             message.Channel is not ITextChannel textChannel
             || (message.MentionedUserIds.Contains(botContext.BotId) && message.Channel.Id == ignoreBotMentionsInChannelId)
-            || !ShouldTrigger(notification)
+            || !await ShouldTrigger(notification)
         )
             return;
 

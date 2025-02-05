@@ -1,6 +1,6 @@
 ﻿using MediatR;
 
-namespace ChampionsOfKhazad.Bot.DiscordStats.StreakBreaks;
+namespace ChampionsOfKhazad.Bot.DiscordMemes.StreakBreaks;
 
 internal class StreakBrokenHandler(IStoreStreakBreaks streakBreakStore) : INotificationHandler<StreakBroken>
 {

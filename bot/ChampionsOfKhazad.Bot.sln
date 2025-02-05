@@ -43,9 +43,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChampionsOfKhazad.Bot.Lore.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChampionsOfKhazad.Bot.RaidHelper", "src\ChampionsOfKhazad.Bot.RaidHelper\ChampionsOfKhazad.Bot.RaidHelper.csproj", "{CB393522-4E3E-44E0-AE23-FF9B61E15DF1}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChampionsOfKhazad.Bot.DiscordStats", "src\ChampionsOfKhazad.Bot.DiscordStats\ChampionsOfKhazad.Bot.DiscordStats.csproj", "{95D49A9C-FF4D-4367-B21A-0788CF0AF142}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChampionsOfKhazad.Bot.DiscordMemes", "src\ChampionsOfKhazad.Bot.DiscordMemes\ChampionsOfKhazad.Bot.DiscordMemes.csproj", "{95D49A9C-FF4D-4367-B21A-0788CF0AF142}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChampionsOfKhazad.Bot.DiscordStats.Mongo", "src\ChampionsOfKhazad.Bot.DiscordStats.Mongo\ChampionsOfKhazad.Bot.DiscordStats.Mongo.csproj", "{08D893D2-A266-44B2-B215-E7CF42F6B2A6}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChampionsOfKhazad.Bot.DiscordMemes.Mongo", "src\ChampionsOfKhazad.Bot.DiscordMemes.Mongo\ChampionsOfKhazad.Bot.DiscordMemes.Mongo.csproj", "{08D893D2-A266-44B2-B215-E7CF42F6B2A6}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChampionsOfKhazad.Bot.Mongo", "src\ChampionsOfKhazad.Bot.Mongo\ChampionsOfKhazad.Bot.Mongo.csproj", "{75E15DC7-77C0-451A-AEA9-7212CB44228A}"
 EndProject

@@ -1,9 +1,9 @@
-﻿using ChampionsOfKhazad.Bot.DiscordStats.StreakBreaks;
+﻿using ChampionsOfKhazad.Bot.DiscordMemes.StreakBreaks;
 using MongoDB.Driver;
 
-namespace ChampionsOfKhazad.Bot.DiscordStats.Mongo;
+namespace ChampionsOfKhazad.Bot.DiscordMemes.Mongo;
 
-internal class MongoStreakBreakStore(IMongoCollection<StreakBreak> streakBreakCollection) : IStoreStreakBreaks
+internal class MongoStreakBreakStore(IMongoCollection<StreakBreak> streakBreakCollection) : IGetStreakBreaks, IStoreStreakBreaks
 {
     public async Task<uint> GetStreakBreakCountByUserAsync(ulong userId, string emoteName, CancellationToken cancellationToken = default)
     {

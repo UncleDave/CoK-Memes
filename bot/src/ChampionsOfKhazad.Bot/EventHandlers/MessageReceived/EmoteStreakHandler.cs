@@ -1,4 +1,4 @@
-﻿using ChampionsOfKhazad.Bot.DiscordStats.StreakBreaks;
+﻿using ChampionsOfKhazad.Bot.DiscordMemes.StreakBreaks;
 using Discord;
 using MediatR;
 using Microsoft.Extensions.Options;

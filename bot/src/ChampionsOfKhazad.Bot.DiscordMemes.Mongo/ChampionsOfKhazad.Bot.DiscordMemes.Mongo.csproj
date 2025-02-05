@@ -7,7 +7,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\ChampionsOfKhazad.Bot.DiscordStats\ChampionsOfKhazad.Bot.DiscordStats.csproj" />
+      <ProjectReference Include="..\ChampionsOfKhazad.Bot.DiscordMemes\ChampionsOfKhazad.Bot.DiscordMemes.csproj" />
       <ProjectReference Include="..\ChampionsOfKhazad.Bot.Mongo\ChampionsOfKhazad.Bot.Mongo.csproj" />
     </ItemGroup>
 

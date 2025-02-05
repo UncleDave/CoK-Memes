@@ -1,5 +1,5 @@
 ﻿using MediatR;
 
-namespace ChampionsOfKhazad.Bot.DiscordStats.StreakBreaks;
+namespace ChampionsOfKhazad.Bot.DiscordMemes.StreakBreaks;
 
 public record StreakBroken(ulong UserId, string EmoteName, DateTimeOffset Timestamp) : INotification;

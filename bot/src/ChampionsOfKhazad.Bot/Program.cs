@@ -90,7 +90,7 @@ host.Services.AddBot(configuration =>
         configuration.EmbeddingsApiKey = host.Configuration.GetRequiredString("OpenAIServiceOptions:ApiKey");
     })
     .AddMongoPersistence()
-    .AddDiscordStats()
+    .AddDiscordMemes()
     .AddMongoPersistence()
     .AddHardcoreStats()
     .AddMongoPersistence();

@@ -72,13 +72,14 @@ host.Services.AddMediatR(configuration =>
     configuration.Lifetime = ServiceLifetime.Singleton;
 });
 
-var openAiApiKey = host.Configuration.GetRequiredString("OpenAIServiceOptions:ApiKey");
 var mongoConnectionString = host.Configuration.GetRequiredConnectionString("Mongo");
 
 host.Services.AddGenAi<DiscordEmojiHandler>(config =>
 {
-    config.OpenAiApiKey = openAiApiKey;
+    config.OpenAiApiKey = host.Configuration.GetRequiredString("OpenAIServiceOptions:ApiKey");
     config.MongoConnectionString = mongoConnectionString;
+    config.GoogleSearchEngineId = host.Configuration.GetRequiredString("GoogleSearchEngine:Id");
+    config.GoogleSearchEngineApiKey = host.Configuration.GetRequiredString("GoogleSearchEngine:ApiKey");
 });
 
 host.Services.AddBot(configuration =>

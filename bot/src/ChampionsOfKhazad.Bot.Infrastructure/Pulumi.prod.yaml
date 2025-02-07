@@ -26,3 +26,5 @@ config:
     secure: AAABAEVvlGKymDpg9ajOyHtzwhJaGbJVWaQRv4yf0oDsDyXg7lVOeXouyaTatISM9zQs
   ChampionsOfKhazad.Bot.Infrastructure:discordSerilogSinkWebhookToken:
     secure: AAABABjp5O/EwM7MlX9VpR6VOZNxPHo5opEITWYFbzLCAzvSRCdTCum+41xEMxuwiglMH0bR71L4sQySXy5ok8eHGhainmHSmtcaX198tEw3PFBjW60yAnwbyI5caEMl8m/+NA==
+  ChampionsOfKhazad.Bot.Infrastructure:googleSearchEngineApiKey:
+    secure: AAABAHiJE2sYATOQuqqxetxo/lLOcaqQOLj7pE4xmQaibSESfd9k4gHc91qT41Dr8zfzY9kHky+OWAnlmu/6wRj7fQG3F5E=

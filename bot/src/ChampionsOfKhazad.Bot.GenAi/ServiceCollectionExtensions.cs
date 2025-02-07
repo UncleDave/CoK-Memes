@@ -3,8 +3,10 @@ using ChampionsOfKhazad.Bot.GenAi;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Connectors.MongoDB;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
+using Microsoft.SemanticKernel.Data;
 using Microsoft.SemanticKernel.Memory;
 using Microsoft.SemanticKernel.Plugins.Core;
+using Microsoft.SemanticKernel.Plugins.Web.Google;
 using MongoDB.Driver;
 
 // ReSharper disable once CheckNamespace
@@ -25,11 +27,20 @@ public static class ServiceCollectionExtensions
         if (config.MongoConnectionString is null)
             throw new MissingConfigurationValueException("MongoConnectionString");
 
+        if (config.GoogleSearchEngineId is null)
+            throw new MissingConfigurationValueException("GoogleSearchEngineId");
+
+        if (config.GoogleSearchEngineApiKey is null)
+            throw new MissingConfigurationValueException("GoogleSearchEngineApiKey");
+
+        var googleTextSearch = new GoogleTextSearch(config.GoogleSearchEngineId, config.GoogleSearchEngineApiKey);
+
         services
             .AddKernel()
             .AddOpenAIChatCompletion(Constants.DefaultCompletionsModel, config.OpenAiApiKey)
             .Plugins.AddFromType<MathPlugin>()
-            .AddFromType<TimePlugin>();
+            .AddFromType<TimePlugin>()
+            .Add(googleTextSearch.CreateWithGetSearchResults("GoogleSearchPlugin"));
 
         services
             .AddSingleton<ICompletionService, CompletionService>()

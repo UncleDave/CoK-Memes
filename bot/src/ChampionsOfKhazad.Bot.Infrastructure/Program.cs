@@ -108,13 +108,12 @@ return await Pulumi.Deployment.RunAsync(() =>
     const string applicationInsightsConnectionStringSecretName = "application-insights-connection-string";
     const string discordSerilogSinkWebhookIdSecretName = "discord-serilog-sink-webhook-id";
     const string discordSerilogSinkWebhookTokenSecretName = "discord-serilog-sink-webhook-token";
+    const string googleSearchEngineApiKeySecretName = "google-search-engine-api-key";
 
     const string timezone = "Europe/Copenhagen";
     var dotnetEnvironment = config.Require("environment");
     var openAiApiKey = config.RequireSecret("openAiApiKey");
     var mongoConnectionString = config.RequireSecret("mongoConnectionString");
-    var discordSerilogSinkWebhookId = config.RequireSecret("discordSerilogSinkWebhookId");
-    var discordSerilogSinkWebhookToken = config.RequireSecret("discordSerilogSinkWebhookToken");
 
     var containerEnv = new List<EnvironmentVarArgs>
     {
@@ -127,6 +126,7 @@ return await Pulumi.Deployment.RunAsync(() =>
         new() { Name = "ConnectionStrings__ApplicationInsights", SecretRef = applicationInsightsConnectionStringSecretName },
         new() { Name = "DiscordSerilogSink__WebhookId", SecretRef = discordSerilogSinkWebhookIdSecretName },
         new() { Name = "DiscordSerilogSink__WebhookToken", SecretRef = discordSerilogSinkWebhookTokenSecretName },
+        new() { Name = "GoogleSearchEngine__ApiKey", SecretRef = googleSearchEngineApiKeySecretName },
     };
 
     var commitSha = Environment.GetEnvironmentVariable("COMMIT_SHA");
@@ -156,8 +156,13 @@ return await Pulumi.Deployment.RunAsync(() =>
                     new SecretArgs { Name = raidHelperApiKeySecretName, Value = config.RequireSecret("raidHelperApiKey") },
                     new SecretArgs { Name = mongoConnectionStringSecretName, Value = mongoConnectionString },
                     new SecretArgs { Name = applicationInsightsConnectionStringSecretName, Value = applicationInsights.ConnectionString },
-                    new SecretArgs { Name = discordSerilogSinkWebhookIdSecretName, Value = discordSerilogSinkWebhookId },
-                    new SecretArgs { Name = discordSerilogSinkWebhookTokenSecretName, Value = discordSerilogSinkWebhookToken },
+                    new SecretArgs { Name = discordSerilogSinkWebhookIdSecretName, Value = config.RequireSecret("discordSerilogSinkWebhookId") },
+                    new SecretArgs
+                    {
+                        Name = discordSerilogSinkWebhookTokenSecretName,
+                        Value = config.RequireSecret("discordSerilogSinkWebhookToken"),
+                    },
+                    new SecretArgs { Name = googleSearchEngineApiKeySecretName, Value = config.RequireSecret("googleSearchEngineApiKey") },
                 },
             },
             Template = new TemplateArgs

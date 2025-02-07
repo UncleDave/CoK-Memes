@@ -9,7 +9,7 @@ public static class MessageExtensions
 {
     private static readonly Regex OpenAiNameExpression = new("^[a-zA-Z0-9_-]{1,64}$", RegexOptions.Compiled);
 
-    public static async IAsyncEnumerable<IMessage> GetPreviousMessagesAsync(this IMessage message, int batchSize = 20)
+    public static async IAsyncEnumerable<IMessage> GetPreviousMessagesAsync(this IMessage message, ushort batchSize = 20)
     {
         var from = message;
         int length;

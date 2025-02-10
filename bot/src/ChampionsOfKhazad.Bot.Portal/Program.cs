@@ -3,6 +3,7 @@ using Auth0.AspNetCore.Authentication;
 using ChampionsOfKhazad.Bot.Core;
 using ChampionsOfKhazad.Bot.Lore;
 using ChampionsOfKhazad.Bot.Portal;
+using JetBrains.Annotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 
@@ -104,13 +105,18 @@ app.MapFallbackToFile("index.html");
 
 app.Run();
 
-public record UpdateGuildLoreContract(string Content);
+namespace ChampionsOfKhazad.Bot.Portal
+{
+    [method: UsedImplicitly]
+    public record UpdateGuildLoreContract(string Content);
 
-public record UpdateMemberLoreContract(
-    string Pronouns,
-    string Nationality,
-    string MainCharacter,
-    string? Biography,
-    IReadOnlyList<string>? Aliases,
-    IReadOnlyList<string>? Roles
-);
+    [method: UsedImplicitly]
+    public record UpdateMemberLoreContract(
+        string Pronouns,
+        string Nationality,
+        string MainCharacter,
+        string? Biography,
+        IReadOnlyList<string>? Aliases,
+        IReadOnlyList<string>? Roles
+    );
+}

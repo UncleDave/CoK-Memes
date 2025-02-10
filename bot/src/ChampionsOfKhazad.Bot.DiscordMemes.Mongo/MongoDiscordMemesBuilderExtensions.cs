@@ -19,7 +19,7 @@ public static class MongoDiscordMemesBuilderExtensions
                 "wordOfTheDay",
                 collection =>
                 {
-                    collection.CreateUniqueIndex(x => x.Date);
+                    collection.CreateUniqueIndex(x => x.Date, descending: true);
                 }
             )
             .Services.AddSingleton<MongoStreakBreakStore>()

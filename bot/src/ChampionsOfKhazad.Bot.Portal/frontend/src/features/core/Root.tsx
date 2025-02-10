@@ -1,5 +1,5 @@
 import { Container } from "@mui/joy";
-import { Outlet, ScrollRestoration } from "react-router-dom";
+import { Outlet, ScrollRestoration } from "react-router";
 
 const Root = () => (
   <Container maxWidth="md" sx={{ pb: 2 }}>

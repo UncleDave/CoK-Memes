@@ -1,4 +1,4 @@
-import { useLoaderData } from "react-router-dom";
+import { useLoaderData } from "react-router";
 import GuildLoreContract from "./guild-lore-contract.ts";
 import GuildLoreForm from "./GuildLoreForm.tsx";
 import MemberLoreContract, { isMemberLore } from "./member-lore-contract.ts";
@@ -9,7 +9,10 @@ const EditLorePage = () => {
   const lore = useLoaderData() as GuildLoreContract | MemberLoreContract;
 
   return (
-    <Page title={lore.name} crumbs={[{ label: "Lore", to: "/lore" }, { label: lore.name }]}>
+    <Page
+      title={lore.name}
+      crumbs={[{ label: "Lore", to: "/lore" }, { label: lore.name }]}
+    >
       {isMemberLore(lore) ? (
         <MemberLoreForm lore={lore} />
       ) : (

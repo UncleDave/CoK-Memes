@@ -1,4 +1,4 @@
-import { createBrowserRouter, Navigate, redirect } from "react-router-dom";
+import { createBrowserRouter, Navigate, redirect } from "react-router";
 import EditLorePage from "../lore/EditLore.page.tsx";
 import LorePage from "../lore/Lore.page.tsx";
 import api from "./api.ts";

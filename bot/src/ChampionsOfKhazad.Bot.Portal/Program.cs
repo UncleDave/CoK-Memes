@@ -95,10 +95,10 @@ memberLore.MapPut(
     }
 );
 
-app.UseStaticFiles();
-
 if (builder.Environment.IsDevelopment())
     app.UseSpaYarp();
+else
+    app.UseStaticFiles();
 
 app.MapFallbackToFile("index.html");
 

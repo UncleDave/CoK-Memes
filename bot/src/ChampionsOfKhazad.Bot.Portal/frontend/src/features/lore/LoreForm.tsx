@@ -1,6 +1,6 @@
 import { Button, Stack } from "@mui/joy";
 import { PropsWithChildren } from "react";
-import { Form, Link } from "react-router-dom";
+import { Form, Link } from "react-router";
 
 const LoreForm = ({ children }: PropsWithChildren) => (
   <Form method="put">

@@ -15,7 +15,7 @@ public class GermanyBisFollower(IOptions<AllFollowersOptions> allFollowersOption
     : StrategyFollower(
         allFollowersOptions.Value.IgnoreBotMentionsInChannelId,
         new AllOfFollowerTriggerStrategy(
-            new TargetUserFollowerTriggerStrategy(options.Value.UserId),
+            new TargetUserFollowerTriggerStrategy(options.Value.UserId, 198167155219365888),
             new TriggerWordFollowerTriggerStrategy("germany bis"),
             new CooldownFollowerTriggerStrategy("GermanyBis", TimeSpan.FromHours(1))
         ),

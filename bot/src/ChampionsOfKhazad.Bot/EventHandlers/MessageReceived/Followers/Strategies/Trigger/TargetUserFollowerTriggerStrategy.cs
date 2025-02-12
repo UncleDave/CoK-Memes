@@ -1,6 +1,6 @@
 ﻿namespace ChampionsOfKhazad.Bot;
 
-public class TargetUserFollowerTriggerStrategy(ulong userId) : IFollowerTriggerStrategy
+public class TargetUserFollowerTriggerStrategy(params IEnumerable<ulong> userIds) : IFollowerTriggerStrategy
 {
-    public bool ShouldTrigger(MessageReceived notification) => notification.Message.Author.Id == userId;
+    public bool ShouldTrigger(MessageReceived notification) => userIds.Contains(notification.Message.Author.Id);
 }

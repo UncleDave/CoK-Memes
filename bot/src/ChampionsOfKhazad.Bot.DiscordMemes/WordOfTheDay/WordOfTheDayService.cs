@@ -1,4 +1,4 @@
-﻿using Bogus;
+﻿using CrypticWizard.RandomWordGenerator;
 using Microsoft.Extensions.Logging;
 
 namespace ChampionsOfKhazad.Bot.DiscordMemes.WordOfTheDay;
@@ -7,7 +7,7 @@ internal class WordOfTheDayService(IWordOfTheDayStore wordOfTheDayStore, ILogger
     : IGetTheWordOfTheDay,
         IWinTheWordOfTheDay
 {
-    private readonly Randomizer _randomizer = new();
+    private readonly WordGenerator _wordGenerator = new();
     private readonly SemaphoreSlim _lock = new(1, 1);
 
     public async Task<WordOfTheDay> GetWordOfTheDayAsync(CancellationToken cancellationToken = default)
@@ -66,7 +66,7 @@ internal class WordOfTheDayService(IWordOfTheDayStore wordOfTheDayStore, ILogger
 
         do
         {
-            newWordOfTheDay = _randomizer.Word();
+            newWordOfTheDay = _wordGenerator.GetWord();
             // Purge phrases, hyphenated words, and acronyms
         } while (newWordOfTheDay.Contains(' ') || newWordOfTheDay.Contains('-') || newWordOfTheDay == newWordOfTheDay.ToUpperInvariant());
 

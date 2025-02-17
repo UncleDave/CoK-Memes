@@ -139,7 +139,7 @@ public class RaidsSlashCommand(
             TemplateId = EventTemplate.WoWClassicCataclysm,
             Date = date.ToShortDateString(),
             Time = "19:30",
-            Title = $"Firelands: {RandomUtils.PickRandom(RaidNames)}",
+            Title = $"Dragon Soul: {RandomUtils.PickRandom(RaidNames)}",
             Description = RandomUtils.PickRandom(RaidDescriptions),
             AdvancedSettings = new CreateEventRequestAdvancedSettings
             {

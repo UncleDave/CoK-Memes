@@ -1,6 +1,6 @@
 ﻿using Pulumi;
 using Pulumi.AzureNative.App;
-using Pulumi.AzureNative.Insights;
+using Pulumi.AzureNative.ApplicationInsights;
 using Pulumi.AzureNative.OperationalInsights;
 using Pulumi.AzureNative.OperationalInsights.Inputs;
 using Pulumi.AzureNative.Resources;

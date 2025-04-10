@@ -99,7 +99,7 @@ memberLore.MapPut(
 if (builder.Environment.IsDevelopment())
     app.UseSpaYarp();
 else
-    app.UseStaticFiles();
+    app.MapStaticAssets();
 
 app.MapFallbackToFile("index.html");
 

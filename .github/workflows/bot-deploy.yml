@@ -7,6 +7,9 @@ on:
     paths:
       - bot/**
 
+permissions:
+  contents: read
+
 concurrency: deploy
 
 jobs:

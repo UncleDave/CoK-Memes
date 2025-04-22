@@ -7,7 +7,7 @@ public class DiscordEmojiHandler(BotContext botContext) : IEmojiHandler
 {
     private static readonly Regex EmojiExpression = new(@":(?<name>\w+):", RegexOptions.Compiled);
 
-    public IEnumerable<string> GetEmojis() => botContext.Guild.Emotes.Select(e => e.Name);
+    public IEnumerable<string> GetEmojis() => botContext.Guild.Emotes.Select(e => $":{e.Name}:");
 
     public string ProcessMessage(string message)
     {

@@ -25,6 +25,9 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChampionsOfKhazad.Bot.OpenAi.Embeddings", "src\ChampionsOfKhazad.Bot.OpenAi.Embeddings\ChampionsOfKhazad.Bot.OpenAi.Embeddings.csproj", "{B1B71F7D-0188-4719-A211-BCCF03A32DFA}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Repository Items", "Repository Items", "{2B3B333B-BE83-46FC-BB9D-7672F4B8679F}"
+	ProjectSection(SolutionItems) = preProject
+		..\.gitignore = ..\.gitignore
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".github", ".github", "{A4D28AFE-A969-44EA-90F8-158C988FD16D}"
 	ProjectSection(SolutionItems) = preProject

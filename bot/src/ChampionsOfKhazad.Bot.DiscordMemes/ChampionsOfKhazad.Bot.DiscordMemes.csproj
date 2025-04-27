@@ -1,21 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
-    <PropertyGroup>
-        <TargetFramework>net9.0</TargetFramework>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <Nullable>enable</Nullable>
-    </PropertyGroup>
-
-
-    <ItemGroup>
-      <PackageReference Include="CrypticWizard.RandomWordGenerator" Version="0.9.5" />
-      <PackageReference Include="MediatR" Version="12.5.0" />
-      <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.4" />
-    </ItemGroup>
-
-
-    <ItemGroup>
-      <ProjectReference Include="..\ChampionsOfKhazad.Bot.Core\ChampionsOfKhazad.Bot.Core.csproj" />
-    </ItemGroup>
-
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="CrypticWizard.RandomWordGenerator" Version="0.9.5" />
+    <PackageReference Include="MediatR" Version="12.5.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.4" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\ChampionsOfKhazad.Bot.Core\ChampionsOfKhazad.Bot.Core.csproj" />
+  </ItemGroup>
 </Project>

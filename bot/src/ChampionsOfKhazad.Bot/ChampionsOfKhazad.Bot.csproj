@@ -1,42 +1,37 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
-    <PropertyGroup>
-        <OutputType>Exe</OutputType>
-        <TargetFramework>net9.0</TargetFramework>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <Nullable>enable</Nullable>
-        <UserSecretsId>3bc12534-f5a3-4c2a-aae3-3694637d4890</UserSecretsId>
-        <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
-        <NoWarn>SKEXP0001</NoWarn>
-    </PropertyGroup>
-
-    <ItemGroup>
-        <PackageReference Include="AspNetMonsters.ApplicationInsights.AspNetCore" Version="1.1.24" />
-        <PackageReference Include="Discord.Net.Analyzers" Version="3.14.1"/>
-        <PackageReference Include="Discord.Net.WebSocket" Version="3.17.4" />
-        <PackageReference Include="MediatR" Version="12.5.0" />
-        <PackageReference Include="Microsoft.ApplicationInsights.WorkerService" Version="2.23.0" />
-        <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.4" />
-        <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" Version="9.0.4" />
-        <PackageReference Include="Serilog.Extensions.Hosting" Version="9.0.0" />
-        <PackageReference Include="Serilog.Sinks.ApplicationInsights" Version="4.0.0" />
-        <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
-        <PackageReference Include="Serilog.Sinks.Discord.Lite" Version="0.2.0" />
-    </ItemGroup>
-
-    <ItemGroup>
-        <Content Include="appsettings*.json">
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-        </Content>
-    </ItemGroup>
-
-    <ItemGroup>
-        <ProjectReference Include="..\ChampionsOfKhazad.Bot.DiscordMemes.Mongo\ChampionsOfKhazad.Bot.DiscordMemes.Mongo.csproj" />
-        <ProjectReference Include="..\ChampionsOfKhazad.Bot.DiscordMemes\ChampionsOfKhazad.Bot.DiscordMemes.csproj" />
-        <ProjectReference Include="..\ChampionsOfKhazad.Bot.GenAi\ChampionsOfKhazad.Bot.GenAi.csproj" />
-        <ProjectReference Include="..\ChampionsOfKhazad.Bot.Lore.Mongo\ChampionsOfKhazad.Bot.Lore.Mongo.csproj"/>
-        <ProjectReference Include="..\ChampionsOfKhazad.Bot.Lore\ChampionsOfKhazad.Bot.Lore.csproj"/>
-        <ProjectReference Include="..\ChampionsOfKhazad.Bot.RaidHelper\ChampionsOfKhazad.Bot.RaidHelper.csproj"/>
-    </ItemGroup>
-
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <UserSecretsId>3bc12534-f5a3-4c2a-aae3-3694637d4890</UserSecretsId>
+    <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+    <NoWarn>SKEXP0001</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="AspNetMonsters.ApplicationInsights.AspNetCore" Version="1.1.24" />
+    <PackageReference Include="Discord.Net.Analyzers" Version="3.14.1" />
+    <PackageReference Include="Discord.Net.WebSocket" Version="3.17.4" />
+    <PackageReference Include="MediatR" Version="12.5.0" />
+    <PackageReference Include="Microsoft.ApplicationInsights.WorkerService" Version="2.23.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.4" />
+    <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" Version="9.0.4" />
+    <PackageReference Include="Serilog.Extensions.Hosting" Version="9.0.0" />
+    <PackageReference Include="Serilog.Sinks.ApplicationInsights" Version="4.0.0" />
+    <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
+    <PackageReference Include="Serilog.Sinks.Discord.Lite" Version="0.2.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="appsettings*.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\ChampionsOfKhazad.Bot.DiscordMemes.Mongo\ChampionsOfKhazad.Bot.DiscordMemes.Mongo.csproj" />
+    <ProjectReference Include="..\ChampionsOfKhazad.Bot.DiscordMemes\ChampionsOfKhazad.Bot.DiscordMemes.csproj" />
+    <ProjectReference Include="..\ChampionsOfKhazad.Bot.GenAi\ChampionsOfKhazad.Bot.GenAi.csproj" />
+    <ProjectReference Include="..\ChampionsOfKhazad.Bot.Lore.Mongo\ChampionsOfKhazad.Bot.Lore.Mongo.csproj" />
+    <ProjectReference Include="..\ChampionsOfKhazad.Bot.Lore\ChampionsOfKhazad.Bot.Lore.csproj" />
+    <ProjectReference Include="..\ChampionsOfKhazad.Bot.RaidHelper\ChampionsOfKhazad.Bot.RaidHelper.csproj" />
+  </ItemGroup>
 </Project>

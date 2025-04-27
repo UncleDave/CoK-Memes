@@ -1,17 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
-    <PropertyGroup>
-        <TargetFramework>net9.0</TargetFramework>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <Nullable>enable</Nullable>
-    </PropertyGroup>
-
-    <ItemGroup>
-      <PackageReference Include="MongoDB.Driver" Version="3.3.0" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <ProjectReference Include="..\ChampionsOfKhazad.Bot.Core\ChampionsOfKhazad.Bot.Core.csproj" />
-    </ItemGroup>
-
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="MongoDB.Driver" Version="3.3.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\ChampionsOfKhazad.Bot.Core\ChampionsOfKhazad.Bot.Core.csproj" />
+  </ItemGroup>
 </Project>

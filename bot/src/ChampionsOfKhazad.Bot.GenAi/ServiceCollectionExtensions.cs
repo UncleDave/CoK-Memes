@@ -43,18 +43,18 @@ public static class ServiceCollectionExtensions
             .Add(googleTextSearch.CreateWithGetSearchResults("GoogleSearchPlugin"));
 
         services
-            .AddSingleton<ICompletionService, CompletionService>()
-            .AddSingleton<IEmojiHandler, TEmojiHandler>()
-            .AddSingleton<LorekeeperPersonality>()
-            .AddSingleton<SycophantPersonality>()
-            .AddSingleton<ContrarianPersonality>()
-            .AddSingleton<DisappointedTeacherPersonality>()
-            .AddSingleton<CondescendingTeacherPersonality>()
-            .AddSingleton<NoNutNovemberExpertPersonality>()
-            .AddSingleton<RatExpertPersonality>()
-            .AddSingleton<StonerBroPersonality>()
-            .AddSingleton<HarassmentLawyerPersonality>()
-            .AddSingleton<ProHarassmentLawyerPersonality>();
+            .AddScoped<ICompletionService, CompletionService>()
+            .AddScoped<IEmojiHandler, TEmojiHandler>()
+            .AddScoped<LorekeeperPersonality>()
+            .AddScoped<SycophantPersonality>()
+            .AddScoped<ContrarianPersonality>()
+            .AddScoped<DisappointedTeacherPersonality>()
+            .AddScoped<CondescendingTeacherPersonality>()
+            .AddScoped<NoNutNovemberExpertPersonality>()
+            .AddScoped<RatExpertPersonality>()
+            .AddScoped<StonerBroPersonality>()
+            .AddScoped<HarassmentLawyerPersonality>()
+            .AddScoped<ProHarassmentLawyerPersonality>();
 
         return services;
     }

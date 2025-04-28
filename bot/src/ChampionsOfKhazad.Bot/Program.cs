@@ -69,7 +69,6 @@ host.Services.AddMediatR(configuration =>
 {
     configuration.RegisterServicesFromAssemblyContaining<Program>();
     configuration.NotificationPublisherType = typeof(ParallelNonBlockingPublisher);
-    configuration.Lifetime = ServiceLifetime.Singleton;
 });
 
 var mongoConnectionString = host.Configuration.GetRequiredConnectionString("Mongo");
@@ -116,7 +115,7 @@ host.Services.AddOptionsWithEagerValidation<EmoteStreakHandlerOptions>(host.Conf
 
 host.Services.AddHostedService<BotService>()
     .AddSingleton<BotContextProvider>()
-    .AddSingleton<BotContext>(serviceProvider =>
+    .AddScoped<BotContext>(serviceProvider =>
         serviceProvider.GetRequiredService<BotContextProvider>().BotContext ?? throw new InvalidOperationException("BotContext is not available")
     );
 

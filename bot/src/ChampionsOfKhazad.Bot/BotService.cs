@@ -1,6 +1,7 @@
 ﻿using Discord;
 using Discord.WebSocket;
 using MediatR;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -12,22 +13,22 @@ public class BotService : IHostedService
     private readonly DiscordSocketClient _client;
     private readonly ILogger<BotService> _logger;
     private readonly BotOptions _options;
+    private readonly IServiceProvider _serviceProvider;
     private readonly BotContextProvider _botContextProvider;
-    private readonly IPublisher _publisher;
 
     public BotService(
         DiscordSocketClient client,
         ILogger<BotService> logger,
         IOptions<BotOptions> options,
-        BotContextProvider botContextProvider,
-        IPublisher publisher
+        IServiceProvider serviceProvider,
+        BotContextProvider botContextProvider
     )
     {
         _client = client;
         _logger = logger;
         _options = options.Value;
+        _serviceProvider = serviceProvider;
         _botContextProvider = botContextProvider;
-        _publisher = publisher;
 
         _client.Ready += ReadyAsync;
         _client.MessageReceived += MessageReceivedAsync;
@@ -66,20 +67,31 @@ public class BotService : IHostedService
         _logger.LogInformation("Bot started");
     }
 
-    private Task MessageReceivedAsync(SocketMessage message)
+    private async Task MessageReceivedAsync(SocketMessage message)
     {
         if (message is not SocketUserMessage userMessage || message.Author.IsBot)
-            return Task.CompletedTask;
+            return;
 
-        return _publisher.Publish(new MessageReceived(userMessage));
+        await PublishWithScope(new MessageReceived(userMessage));
     }
 
-    private Task ReactionAddedAsync(Cacheable<IUserMessage, ulong> message, Cacheable<IMessageChannel, ulong> channel, SocketReaction reaction) =>
-        _publisher.Publish(new ReactionAdded(reaction));
+    private async Task ReactionAddedAsync(
+        Cacheable<IUserMessage, ulong> message,
+        Cacheable<IMessageChannel, ulong> channel,
+        SocketReaction reaction
+    ) => await PublishWithScope(new ReactionAdded(reaction));
 
-    private Task SlashCommandExecutedAsync(SocketSlashCommand command)
+    private async Task SlashCommandExecutedAsync(SocketSlashCommand command)
     {
         var notification = SlashCommands.All.Single(x => x.Properties.Name.Value == command.CommandName).CreateNotification(command);
-        return _publisher.Publish(notification);
+        await PublishWithScope(notification);
+    }
+
+    private async Task PublishWithScope(INotification notification)
+    {
+        using var messageScope = _serviceProvider.CreateScope();
+        var publisher = messageScope.ServiceProvider.GetRequiredService<IPublisher>();
+
+        await publisher.Publish(notification);
     }
 }

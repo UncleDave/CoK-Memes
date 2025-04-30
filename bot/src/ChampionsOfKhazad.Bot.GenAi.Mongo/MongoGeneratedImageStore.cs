@@ -6,12 +6,11 @@ internal class MongoGeneratedImageStore(IMongoCollection<GeneratedImage> generat
 {
     public async Task<ushort> GetDailyGeneratedImageCountAsync(ulong userId, CancellationToken cancellationToken = default)
     {
-        var result = await generatedImageCollection.CountDocumentsAsync(
-            x => x.UserId == userId && x.Timestamp.Date == DateTime.UtcNow.Date,
-            cancellationToken: cancellationToken
-        );
+        // Done in memory rather than in the database to avoid an issue with DateTimeOffset serialisation.
+        var userGeneratedImages = await generatedImageCollection.Find(x => x.UserId == userId).ToListAsync(cancellationToken);
+        var imagesGeneratedToday = userGeneratedImages.Count(x => x.Timestamp.Date == DateTime.UtcNow.Date);
 
-        return (ushort)result;
+        return (ushort)imagesGeneratedToday;
     }
 
     public Task SaveGeneratedImageAsync(GeneratedImage image) => generatedImageCollection.InsertOneAsync(image);

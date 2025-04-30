@@ -44,8 +44,7 @@ public static class GenAiBotBuilderExtensions
             .Services.AddKernel()
             .AddOpenAIChatCompletion(Constants.DefaultCompletionsModel, config.OpenAiApiKey)
             .AddOpenAITextToImage(config.OpenAiApiKey, modelId: Constants.DefaultImageModel)
-            .Plugins.AddFromType<MathPlugin>()
-            .AddFromType<TimePlugin>()
+            .Plugins.AddFromType<TimePlugin>()
             .AddFromType<ImageGenerationPlugin>()
             .Add(googleTextSearch.CreateWithGetSearchResults("GoogleSearchPlugin"));
 

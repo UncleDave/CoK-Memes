@@ -71,9 +71,12 @@ return await Pulumi.Deployment.RunAsync(() =>
             AccessTier = AccessTier.Cold,
             Sku = new SkuArgs { Name = "Standard_LRS" },
             Kind = Kind.StorageV2,
-            AllowSharedKeyAccess = false,
         }
     );
+
+    var storageAccountKey = ListStorageAccountKeys
+        .Invoke(new ListStorageAccountKeysInvokeArgs { ResourceGroupName = resourceGroup.Name, AccountName = storageAccount.Name })
+        .Apply(x => x.Keys.First().Value);
 
     var environment = new ManagedEnvironment(
         "environment",
@@ -126,6 +129,7 @@ return await Pulumi.Deployment.RunAsync(() =>
     const string discordSerilogSinkWebhookIdSecretName = "discord-serilog-sink-webhook-id";
     const string discordSerilogSinkWebhookTokenSecretName = "discord-serilog-sink-webhook-token";
     const string googleSearchEngineApiKeySecretName = "google-search-engine-api-key";
+    const string storageAccountAccessKeySecretName = "storage-account-access-key";
 
     const string timezone = "Europe/Copenhagen";
     var dotnetEnvironment = config.Require("environment");
@@ -144,6 +148,8 @@ return await Pulumi.Deployment.RunAsync(() =>
         new() { Name = "DiscordSerilogSink__WebhookId", SecretRef = discordSerilogSinkWebhookIdSecretName },
         new() { Name = "DiscordSerilogSink__WebhookToken", SecretRef = discordSerilogSinkWebhookTokenSecretName },
         new() { Name = "GoogleSearchEngine__ApiKey", SecretRef = googleSearchEngineApiKeySecretName },
+        new() { Name = "AzureStorageAccountName", Value = storageAccount.Name },
+        new() { Name = "AzureStorageAccountAccessKey", SecretRef = storageAccountAccessKeySecretName },
     };
 
     var commitSha = Environment.GetEnvironmentVariable("COMMIT_SHA");
@@ -180,6 +186,7 @@ return await Pulumi.Deployment.RunAsync(() =>
                         Value = config.RequireSecret("discordSerilogSinkWebhookToken"),
                     },
                     new SecretArgs { Name = googleSearchEngineApiKeySecretName, Value = config.RequireSecret("googleSearchEngineApiKey") },
+                    new SecretArgs { Name = storageAccountAccessKeySecretName, Value = storageAccountKey },
                 },
             },
             Template = new TemplateArgs

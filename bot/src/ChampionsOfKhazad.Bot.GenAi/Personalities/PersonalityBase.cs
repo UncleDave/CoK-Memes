@@ -38,15 +38,18 @@ internal abstract class PersonalityBase(
         )
     );
 
-    public virtual async Task<string> InvokeAsync(ChatHistory chatHistory, CancellationToken cancellationToken = default) =>
-        await InvokeAsync(chatHistory, new Dictionary<string, object?>(), cancellationToken);
+    public virtual async Task<string> InvokeAsync(ChatHistory chatHistory, ulong userId, CancellationToken cancellationToken = default) =>
+        await InvokeAsync(chatHistory, userId, new Dictionary<string, object?>(), cancellationToken);
 
     public virtual async Task<string> InvokeAsync(
         ChatHistory chatHistory,
+        ulong userId,
         IDictionary<string, object?> arguments,
         CancellationToken cancellationToken = default
     )
     {
+        kernel.SetUserId(userId);
+
         var input = chatHistory.Last();
         var lore = input.Content is not null ? await relatedLoreGetter.GetRelatedLoreAsync(input.Content) : [];
 

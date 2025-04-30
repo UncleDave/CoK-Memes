@@ -71,19 +71,9 @@ host.Services.AddMediatR(configuration =>
     configuration.NotificationPublisherType = typeof(ParallelNonBlockingPublisher);
 });
 
-var mongoConnectionString = host.Configuration.GetRequiredConnectionString("Mongo");
-
-host.Services.AddGenAi<DiscordEmojiHandler>(config =>
-{
-    config.OpenAiApiKey = host.Configuration.GetRequiredString("OpenAIServiceOptions:ApiKey");
-    config.MongoConnectionString = mongoConnectionString;
-    config.GoogleSearchEngineId = host.Configuration.GetRequiredString("GoogleSearchEngine:Id");
-    config.GoogleSearchEngineApiKey = host.Configuration.GetRequiredString("GoogleSearchEngine:ApiKey");
-});
-
 host.Services.AddBot(configuration =>
     {
-        configuration.Persistence.ConnectionString = mongoConnectionString;
+        configuration.Persistence.ConnectionString = host.Configuration.GetRequiredConnectionString("Mongo");
     })
     .AddGuildLore(configuration =>
     {
@@ -91,6 +81,18 @@ host.Services.AddBot(configuration =>
     })
     .AddMongoPersistence()
     .AddDiscordMemes()
+    .AddMongoPersistence()
+    .AddGenAi<DiscordEmojiHandler>(configuration =>
+    {
+        // TODO: Move these to an object
+        configuration.OpenAiApiKey = host.Configuration.GetRequiredString("OpenAIServiceOptions:ApiKey");
+        configuration.GoogleSearchEngineId = host.Configuration.GetRequiredString("GoogleSearchEngine:Id");
+        configuration.GoogleSearchEngineApiKey = host.Configuration.GetRequiredString("GoogleSearchEngine:ApiKey");
+        configuration.AzureStorageAccountName = host.Configuration.GetRequiredString("AzureStorageAccountName");
+        configuration.AzureStorageAccountAccessKey = host.Configuration.GetRequiredString("AzureStorageAccountAccessKey");
+        configuration.ImageGeneration.DailyAllowances =
+            host.Configuration.GetSection("ImageGeneration:DailyAllowances").Get<Dictionary<ulong, short>>() ?? new Dictionary<ulong, short>();
+    })
     .AddMongoPersistence();
 
 host.Services.AddRaidHelperClient(host.Configuration.GetRequiredString("RaidHelper:ApiKey"));

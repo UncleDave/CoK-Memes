@@ -4,6 +4,8 @@ using Pulumi.AzureNative.ApplicationInsights;
 using Pulumi.AzureNative.OperationalInsights;
 using Pulumi.AzureNative.OperationalInsights.Inputs;
 using Pulumi.AzureNative.Resources;
+using Pulumi.AzureNative.Storage;
+using Pulumi.AzureNative.Storage.Inputs;
 using Pulumi.AzureNative.Web;
 using Pulumi.AzureNative.Web.Inputs;
 using Pulumi.Docker;
@@ -16,10 +18,12 @@ using ContainerAppArgs = Pulumi.AzureNative.App.ContainerAppArgs;
 using ContainerArgs = Pulumi.AzureNative.App.Inputs.ContainerArgs;
 using ContainerResourcesArgs = Pulumi.AzureNative.App.Inputs.ContainerResourcesArgs;
 using EnvironmentVarArgs = Pulumi.AzureNative.App.Inputs.EnvironmentVarArgs;
+using Kind = Pulumi.AzureNative.Storage.Kind;
 using LogAnalyticsConfigurationArgs = Pulumi.AzureNative.App.Inputs.LogAnalyticsConfigurationArgs;
 using RegistryCredentialsArgs = Pulumi.AzureNative.App.Inputs.RegistryCredentialsArgs;
 using ScaleArgs = Pulumi.AzureNative.App.Inputs.ScaleArgs;
 using SecretArgs = Pulumi.AzureNative.App.Inputs.SecretArgs;
+using StorageAccountArgs = Pulumi.AzureNative.Storage.StorageAccountArgs;
 using TemplateArgs = Pulumi.AzureNative.App.Inputs.TemplateArgs;
 
 return await Pulumi.Deployment.RunAsync(() =>
@@ -57,6 +61,19 @@ return await Pulumi.Deployment.RunAsync(() =>
     var logAnalyticsSharedKeys = Output
         .Tuple(resourceGroup.Name, logAnalytics.Name)
         .Apply(items => GetSharedKeys.InvokeAsync(new GetSharedKeysArgs { ResourceGroupName = items.Item1, WorkspaceName = items.Item2 }));
+
+    var storageAccount = new StorageAccount(
+        "storage",
+        new StorageAccountArgs
+        {
+            ResourceGroupName = resourceGroup.Name,
+            Location = resourceGroup.Location,
+            AccessTier = AccessTier.Cold,
+            Sku = new SkuArgs { Name = "Standard_LRS" },
+            Kind = Kind.StorageV2,
+            AllowSharedKeyAccess = false,
+        }
+    );
 
     var environment = new ManagedEnvironment(
         "environment",

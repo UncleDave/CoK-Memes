@@ -60,6 +60,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DiscordConsole", "src\Disco
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChampionsOfKhazad.Bot.GenAi", "src\ChampionsOfKhazad.Bot.GenAi\ChampionsOfKhazad.Bot.GenAi.csproj", "{BDA44179-5249-4438-9756-D97705233326}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChampionsOfKhazad.Bot.GenAi.Mongo", "src\ChampionsOfKhazad.Bot.GenAi.Mongo\ChampionsOfKhazad.Bot.GenAi.Mongo.csproj", "{B211D726-7B1A-4D85-B6AF-42BC7CDB6041}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -118,6 +120,10 @@ Global
 		{BDA44179-5249-4438-9756-D97705233326}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BDA44179-5249-4438-9756-D97705233326}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BDA44179-5249-4438-9756-D97705233326}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B211D726-7B1A-4D85-B6AF-42BC7CDB6041}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B211D726-7B1A-4D85-B6AF-42BC7CDB6041}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B211D726-7B1A-4D85-B6AF-42BC7CDB6041}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B211D726-7B1A-4D85-B6AF-42BC7CDB6041}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{250AB7D4-9E29-41B4-8636-BDD934CC20EF} = {AE87495F-C4DE-42DA-8BCB-DF6EC3792ACD}
@@ -136,5 +142,6 @@ Global
 		{A8513057-1CF9-465F-B44C-E9BF73BF614E} = {AE87495F-C4DE-42DA-8BCB-DF6EC3792ACD}
 		{C72DF4ED-46A4-49B6-A566-9A1D707F9029} = {AE87495F-C4DE-42DA-8BCB-DF6EC3792ACD}
 		{BDA44179-5249-4438-9756-D97705233326} = {AE87495F-C4DE-42DA-8BCB-DF6EC3792ACD}
+		{B211D726-7B1A-4D85-B6AF-42BC7CDB6041} = {AE87495F-C4DE-42DA-8BCB-DF6EC3792ACD}
 	EndGlobalSection
 EndGlobal

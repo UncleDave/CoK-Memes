@@ -24,7 +24,7 @@ public class MentionHandler(IOptions<MentionHandlerOptions> options, BotContext 
         using var typing = textChannel.EnterTypingState();
 
         var chatHistory = await message.GetChatHistoryAsync(20, context.BotId, GenAi.Constants.OpenAiFriendlyLorekeeperName, cancellationToken);
-        var response = await completionService.Lorekeeper.InvokeAsync(chatHistory, cancellationToken);
+        var response = await completionService.Lorekeeper.InvokeAsync(chatHistory, notification.Message.Author.Id, cancellationToken);
 
         await message.ReplyAsync(response);
     }

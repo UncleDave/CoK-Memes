@@ -1,5 +1,7 @@
-﻿using ChampionsOfKhazad.Bot.Core;
+﻿using Azure.Storage;
+using ChampionsOfKhazad.Bot.Core;
 using ChampionsOfKhazad.Bot.GenAi;
+using Microsoft.Extensions.Azure;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Connectors.MongoDB;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
@@ -12,9 +14,9 @@ using MongoDB.Driver;
 // ReSharper disable once CheckNamespace
 namespace Microsoft.Extensions.DependencyInjection;
 
-public static class ServiceCollectionExtensions
+public static class GenAiBotBuilderExtensions
 {
-    public static IServiceCollection AddGenAi<TEmojiHandler>(this IServiceCollection services, Action<GenAiConfig> configurator)
+    public static GenAiBuilder AddGenAi<TEmojiHandler>(this BotBuilder builder, Action<GenAiConfig> configurator)
         where TEmojiHandler : class, IEmojiHandler
     {
         var config = new GenAiConfig();
@@ -24,27 +26,42 @@ public static class ServiceCollectionExtensions
         if (config.OpenAiApiKey is null)
             throw new MissingConfigurationValueException("OpenAiApiKey");
 
-        if (config.MongoConnectionString is null)
-            throw new MissingConfigurationValueException("MongoConnectionString");
-
         if (config.GoogleSearchEngineId is null)
             throw new MissingConfigurationValueException("GoogleSearchEngineId");
 
         if (config.GoogleSearchEngineApiKey is null)
             throw new MissingConfigurationValueException("GoogleSearchEngineApiKey");
 
+        if (config.AzureStorageAccountName is null)
+            throw new MissingConfigurationValueException("AzureStorageAccountName");
+
+        if (config.AzureStorageAccountAccessKey is null)
+            throw new MissingConfigurationValueException("AzureStorageAccountAccessKey");
+
         var googleTextSearch = new GoogleTextSearch(config.GoogleSearchEngineId, config.GoogleSearchEngineApiKey);
 
-        services
-            .AddKernel()
+        builder
+            .Services.AddKernel()
             .AddOpenAIChatCompletion(Constants.DefaultCompletionsModel, config.OpenAiApiKey)
+            .AddOpenAITextToImage(config.OpenAiApiKey, modelId: Constants.DefaultImageModel)
             .Plugins.AddFromType<MathPlugin>()
             .AddFromType<TimePlugin>()
+            .AddFromType<ImageGenerationPlugin>()
             .Add(googleTextSearch.CreateWithGetSearchResults("GoogleSearchPlugin"));
 
-        services
-            .AddScoped<ICompletionService, CompletionService>()
+        builder.Services.AddAzureClients(azureBuilder =>
+        {
+            azureBuilder.AddBlobServiceClient(
+                new Uri($"https://{config.AzureStorageAccountName}.blob.core.windows.net"),
+                new StorageSharedKeyCredential(config.AzureStorageAccountName, config.AzureStorageAccountAccessKey)
+            );
+        });
+
+        builder
+            .Services.AddScoped<ICompletionService, CompletionService>()
             .AddScoped<IEmojiHandler, TEmojiHandler>()
+            .AddSingleton(config.ImageGeneration)
+            .AddSingleton<ImageStorageService>()
             .AddScoped<LorekeeperPersonality>()
             .AddScoped<SycophantPersonality>()
             .AddScoped<ContrarianPersonality>()
@@ -56,7 +73,7 @@ public static class ServiceCollectionExtensions
             .AddScoped<HarassmentLawyerPersonality>()
             .AddScoped<ProHarassmentLawyerPersonality>();
 
-        return services;
+        return new GenAiBuilder(builder.Services, builder.BotConfiguration);
     }
 
     private static IKernelBuilderPlugins AddMongoLorekeeperMemoryPlugin(

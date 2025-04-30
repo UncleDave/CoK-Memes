@@ -6,6 +6,8 @@
     <NoWarn>SKEXP0001, SKEXP0020, SKEXP0050, SKEXP0010</NoWarn>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="Azure.Storage.Blobs" Version="12.24.0" />
+    <PackageReference Include="Microsoft.Extensions.Azure" Version="1.11.0" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.4" />
     <PackageReference Include="Microsoft.SemanticKernel" Version="1.47.0" />
     <PackageReference Include="Microsoft.SemanticKernel.Connectors.MongoDB" Version="1.47.0-preview" />

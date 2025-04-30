@@ -71,6 +71,7 @@ return await Pulumi.Deployment.RunAsync(() =>
             AccessTier = AccessTier.Cold,
             Sku = new SkuArgs { Name = "Standard_LRS" },
             Kind = Kind.StorageV2,
+            AllowBlobPublicAccess = true,
         }
     );
 

@@ -16,7 +16,7 @@ public class MentionHandler(IOptions<MentionHandlerOptions> options, BotContext 
 
         if (
             message.Channel is not ITextChannel textChannel
-            || (textChannel.CategoryId != _options.ChannelId && textChannel.Id != _options.ChannelId)
+            || _options.ChannelIds.All(x => x != textChannel.CategoryId && x != textChannel.Id)
             || !message.MentionedUserIds.Contains(context.BotId)
         )
             return;

@@ -39,11 +39,12 @@ public static class GenAiBotBuilderExtensions
             throw new MissingConfigurationValueException("AzureStorageAccountAccessKey");
 
         var googleTextSearch = new GoogleTextSearch(config.GoogleSearchEngineId, config.GoogleSearchEngineApiKey);
+        var imageGenerationHttpClient = new HttpClient { Timeout = TimeSpan.FromMinutes(5) };
 
         builder
             .Services.AddKernel()
             .AddOpenAIChatCompletion(Constants.DefaultCompletionsModel, config.OpenAiApiKey)
-            .AddOpenAITextToImage(config.OpenAiApiKey, modelId: Constants.DefaultImageModel)
+            .AddOpenAITextToImage(config.OpenAiApiKey, modelId: Constants.DefaultImageModel, httpClient: imageGenerationHttpClient)
             .Plugins.AddFromType<TimePlugin>()
             .AddFromType<ImageGenerationPlugin>()
             .Add(googleTextSearch.CreateWithGetSearchResults("GoogleSearchPlugin"));

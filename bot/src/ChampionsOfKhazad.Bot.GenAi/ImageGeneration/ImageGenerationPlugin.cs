@@ -62,7 +62,7 @@ internal class ImageGenerationPlugin(
         CancellationToken cancellationToken
     )
     {
-        var timestamp = DateTime.UtcNow;
+        var timestamp = DateTime.Now;
         var imageResponse = (await textToImageService.GetImageContentsAsync(prompt, kernel: kernel, cancellationToken: cancellationToken)).Single();
         var imageData = imageResponse.Data ?? throw new ApplicationException("Image data is null");
 

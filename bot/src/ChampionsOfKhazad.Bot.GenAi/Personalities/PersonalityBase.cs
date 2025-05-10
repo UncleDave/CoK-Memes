@@ -25,7 +25,7 @@ internal abstract class PersonalityBase(
             string.Join(
                 '\n',
                 systemPrompt,
-                "Limit your replies to 100 words.\n",
+                "Limit your reply to 100 words.\n",
                 "###",
                 "\nThese lore entries may be relevant:\n",
                 "###\n",

@@ -10,10 +10,10 @@ public class CooldownFollowerTriggerStrategy(string key, TimeSpan cooldown) : IF
     {
         var hasPreviouslyTriggered = LastTriggered.TryGetValue(key, out var lastTriggered);
 
-        if (hasPreviouslyTriggered && DateTimeOffset.UtcNow - lastTriggered < cooldown)
+        if (hasPreviouslyTriggered && DateTimeOffset.Now - lastTriggered < cooldown)
             return false;
 
-        LastTriggered[key] = DateTimeOffset.UtcNow;
+        LastTriggered[key] = DateTimeOffset.Now;
         return true;
     }
 }

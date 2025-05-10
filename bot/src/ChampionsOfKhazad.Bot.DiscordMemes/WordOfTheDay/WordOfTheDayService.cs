@@ -12,7 +12,7 @@ internal class WordOfTheDayService(IWordOfTheDayStore wordOfTheDayStore, ILogger
 
     public async Task<WordOfTheDay> GetWordOfTheDayAsync(CancellationToken cancellationToken = default)
     {
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = DateOnly.FromDateTime(DateTime.Now);
 
         try
         {
@@ -37,7 +37,7 @@ internal class WordOfTheDayService(IWordOfTheDayStore wordOfTheDayStore, ILogger
 
     public async Task WinWordOfTheDayAsync(ulong userId)
     {
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = DateOnly.FromDateTime(DateTime.Now);
 
         try
         {

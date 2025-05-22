@@ -1,0 +1,40 @@
+﻿<Solution>
+  <Folder Name="/Repository Items/">
+    <File Path="..\.gitignore" />
+  </Folder>
+  <Folder Name="/Repository Items/.github/">
+    <File Path="..\.github\dependabot.yml" />
+  </Folder>
+  <Folder Name="/Repository Items/.github/workflows/">
+    <File Path="..\.github\workflows\bot-deploy.yml" />
+    <File Path="..\.github\workflows\bot-build.yml" />
+  </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path=".gitignore" />
+    <File Path="README.md" />
+    <File Path="src\bot.Dockerfile.dockerignore" />
+    <File Path="src\bot.Dockerfile" />
+    <File Path=".csharpierrc.json" />
+    <File Path="src\portal.Dockerfile" />
+    <File Path="src\portal.Dockerfile.dockerignore" />
+  </Folder>
+  <Folder Name="/Solution Items/.config/">
+    <File Path=".config\dotnet-tools.json" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/ChampionsOfKhazad.Bot/ChampionsOfKhazad.Bot.csproj" Type="Classic C#" />
+    <Project Path="src\ChampionsOfKhazad.Bot.Core\ChampionsOfKhazad.Bot.Core.csproj" Type="Classic C#" />
+    <Project Path="src\ChampionsOfKhazad.Bot.DiscordMemes.Mongo\ChampionsOfKhazad.Bot.DiscordMemes.Mongo.csproj" Type="Classic C#" />
+    <Project Path="src\ChampionsOfKhazad.Bot.DiscordMemes\ChampionsOfKhazad.Bot.DiscordMemes.csproj" Type="Classic C#" />
+    <Project Path="src\ChampionsOfKhazad.Bot.GenAi.Mongo\ChampionsOfKhazad.Bot.GenAi.Mongo.csproj" Type="Classic C#" />
+    <Project Path="src\ChampionsOfKhazad.Bot.GenAi\ChampionsOfKhazad.Bot.GenAi.csproj" Type="Classic C#" />
+    <Project Path="src\ChampionsOfKhazad.Bot.Infrastructure\ChampionsOfKhazad.Bot.Infrastructure.csproj" Type="Classic C#" />
+    <Project Path="src\ChampionsOfKhazad.Bot.Lore.Mongo\ChampionsOfKhazad.Bot.Lore.Mongo.csproj" Type="Classic C#" />
+    <Project Path="src\ChampionsOfKhazad.Bot.Lore\ChampionsOfKhazad.Bot.Lore.csproj" Type="Classic C#" />
+    <Project Path="src\ChampionsOfKhazad.Bot.Mongo\ChampionsOfKhazad.Bot.Mongo.csproj" Type="Classic C#" />
+    <Project Path="src\ChampionsOfKhazad.Bot.OpenAi.Embeddings\ChampionsOfKhazad.Bot.OpenAi.Embeddings.csproj" Type="Classic C#" />
+    <Project Path="src\ChampionsOfKhazad.Bot.Portal\ChampionsOfKhazad.Bot.Portal.csproj" Type="Classic C#" />
+    <Project Path="src\ChampionsOfKhazad.Bot.RaidHelper\ChampionsOfKhazad.Bot.RaidHelper.csproj" Type="Classic C#" />
+    <Project Path="src\DiscordConsole\DiscordConsole.csproj" Type="Classic C#" />
+  </Folder>
+</Solution>

@@ -13,5 +13,5 @@ public static class Constants
     internal const string DefaultImageFileType = "png";
     internal const short DefaultImageAllowance = 2;
 
-    internal const string KernelDataUserIdKey = "user";
+    internal const string KernelDataMessageContextKey = "message-context";
 }

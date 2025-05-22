@@ -1,4 +1,5 @@
 ﻿using System.Text.RegularExpressions;
+using ChampionsOfKhazad.Bot.GenAi;
 using Discord;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
@@ -99,4 +100,6 @@ public static class MessageExtensions
             return history;
         }
     }
+
+    public static IMessageContext ToMessageContext(this IUserMessage message) => new DiscordMessageContext(message);
 }

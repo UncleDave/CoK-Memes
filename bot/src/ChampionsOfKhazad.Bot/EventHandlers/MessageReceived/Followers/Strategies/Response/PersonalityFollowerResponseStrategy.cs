@@ -7,7 +7,7 @@ public class PersonalityFollowerResponseStrategy(IPersonality personality, ulong
     public async Task<string> GetResponseAsync(MessageReceived notification, CancellationToken cancellationToken = default) =>
         await personality.InvokeAsync(
             await notification.Message.GetChatHistoryAsync(10, botId, "You", cancellationToken),
-            notification.Message.Author.Id,
+            notification.Message.ToMessageContext(),
             cancellationToken
         );
 }

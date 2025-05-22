@@ -4,10 +4,10 @@ namespace ChampionsOfKhazad.Bot.GenAi;
 
 public interface IPersonality
 {
-    Task<string> InvokeAsync(ChatHistory chatHistory, ulong userId, CancellationToken cancellationToken = default);
+    Task<string> InvokeAsync(ChatHistory chatHistory, IMessageContext messageContext, CancellationToken cancellationToken = default);
     Task<string> InvokeAsync(
         ChatHistory chatHistory,
-        ulong userId,
+        IMessageContext messageContext,
         IDictionary<string, object?> arguments,
         CancellationToken cancellationToken = default
     );

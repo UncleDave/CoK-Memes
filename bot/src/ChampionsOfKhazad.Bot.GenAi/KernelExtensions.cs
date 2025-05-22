@@ -4,15 +4,17 @@ namespace ChampionsOfKhazad.Bot.GenAi;
 
 internal static class KernelExtensions
 {
-    public static void SetUserId(this Kernel kernel, ulong userId) => kernel.Data[Constants.KernelDataUserIdKey] = userId;
+    public static void SetMessageContext(this Kernel kernel, IMessageContext messageContext) =>
+        kernel.Data[Constants.KernelDataMessageContextKey] = messageContext;
 
-    public static ulong GetUserId(this Kernel kernel)
+    public static IMessageContext GetMessageContext(this Kernel kernel)
     {
-        if (kernel.Data.TryGetValue(Constants.KernelDataUserIdKey, out var userId))
+        if (kernel.Data.TryGetValue(Constants.KernelDataMessageContextKey, out var messageContext))
         {
-            return userId is ulong uid ? uid : throw new InvalidOperationException("User ID is set in kernel but is the wrong type.");
+            return messageContext as IMessageContext
+                ?? throw new InvalidOperationException("Message context is set in kernel but is the wrong type.");
         }
 
-        throw new InvalidOperationException("User ID not set in the kernel.");
+        throw new InvalidOperationException("Message context not set in the kernel.");
     }
 }

@@ -2,5 +2,5 @@
 
 public interface IGetRelatedLore
 {
-    Task<IReadOnlyList<Lore>> GetRelatedLoreAsync(string text, uint max = 10);
+    Task<IReadOnlyList<Lore>> GetRelatedLoreAsync(string text, ushort max = 10);
 }

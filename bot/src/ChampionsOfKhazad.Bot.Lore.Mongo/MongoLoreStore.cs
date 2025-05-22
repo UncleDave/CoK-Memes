@@ -20,27 +20,27 @@ internal class MongoLoreStore(IMongoCollection<LoreDocument> loreCollection) : I
         return result?.ToModel();
     }
 
-    public Task UpsertLoreAsync(GuildLore lore) =>
+    public Task UpsertLoreAsync(GuildLore lore, IReadOnlyList<float> embedding) =>
         loreCollection.ReplaceOneAsync(
             x => x.Name == lore.Name,
-            new LoreDocument(lore),
+            new LoreDocument(lore, embedding),
             new ReplaceOptions { IsUpsert = true, Collation = Collections.Lore.UniqueIndex.Collation }
         );
 
-    public Task UpsertLoreAsync(MemberLore lore) =>
+    public Task UpsertLoreAsync(MemberLore lore, IReadOnlyList<float> embedding) =>
         loreCollection.ReplaceOneAsync(
             x => x.Name == lore.Name,
-            new LoreDocument(lore),
+            new LoreDocument(lore, embedding),
             new ReplaceOptions { IsUpsert = true, Collation = Collections.Lore.UniqueIndex.Collation }
         );
 
-    public async Task<IReadOnlyList<Lore>> SearchLoreAsync(float[] queryVector, uint max, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<Lore>> SearchLoreAsync(float[] queryVector, ushort max, CancellationToken cancellationToken = default)
     {
         var result = await loreCollection.AggregateAsync(
             new EmptyPipelineDefinition<LoreDocument>().VectorSearch(
                 "embedding",
                 new QueryVector(queryVector),
-                (int)max,
+                max,
                 new VectorSearchOptions<LoreDocument> { IndexName = "vector" }
             ),
             cancellationToken: cancellationToken

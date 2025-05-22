@@ -1,6 +1,6 @@
 ﻿namespace ChampionsOfKhazad.Bot.Lore.Mongo;
 
-internal record LoreDocument(string Name, string Content)
+internal record LoreDocument(string Name, string Content, IReadOnlyList<float> Embedding)
 {
     public string? Pronouns { get; init; }
     public string? Nationality { get; init; }
@@ -9,11 +9,11 @@ internal record LoreDocument(string Name, string Content)
     public IReadOnlyList<string>? Aliases { get; init; }
     public IReadOnlyList<string>? Roles { get; init; }
 
-    public LoreDocument(GuildLore guildLore)
-        : this(guildLore.Name, guildLore.Content) { }
+    public LoreDocument(GuildLore guildLore, IReadOnlyList<float> embedding)
+        : this(guildLore.Name, guildLore.Content, embedding) { }
 
-    public LoreDocument(MemberLore memberLore)
-        : this(memberLore.Name, memberLore.ToString())
+    public LoreDocument(MemberLore memberLore, IReadOnlyList<float> embedding)
+        : this(memberLore.Name, memberLore.ToString(), embedding)
     {
         Pronouns = memberLore.Pronouns;
         Nationality = memberLore.Nationality;
@@ -23,10 +23,8 @@ internal record LoreDocument(string Name, string Content)
         Roles = memberLore.Roles;
     }
 
-    public Lore ToModel()
-    {
-        return MainCharacter is not null
+    public Lore ToModel() =>
+        MainCharacter is not null
             ? new MemberLore(Name, Pronouns!, Nationality!, MainCharacter, Biography) { Aliases = Aliases!, Roles = Roles! }
             : new GuildLore(Name, Content);
-    }
 }

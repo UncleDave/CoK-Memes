@@ -1,5 +1,4 @@
-﻿using ChampionsOfKhazad.Bot.Lore;
-using Microsoft.SemanticKernel;
+﻿using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
 
@@ -51,14 +50,14 @@ internal abstract class PersonalityBase(
         kernel.SetUserId(userId);
 
         var input = chatHistory.Last();
-        var lore = input.Content is not null ? await relatedLoreGetter.GetRelatedLoreAsync(input.Content) : [];
+        var lore = input.Content is not null ? await relatedLoreGetter.GetRelatedLoreAsync(input.Content, cancellationToken: cancellationToken) : [];
 
         var systemPrompt = await _systemPromptTemplate.RenderAsync(
             kernel,
             new KernelArguments(arguments)
             {
                 { "userName", input.AuthorName },
-                { "lore", string.Join("\n---\n\n", lore.Select(x => x.ToString())) },
+                { "lore", string.Join("\n---\n\n", lore) },
                 { "emojis", string.Join(' ', emojiHandler.GetEmojis()) },
             },
             cancellationToken

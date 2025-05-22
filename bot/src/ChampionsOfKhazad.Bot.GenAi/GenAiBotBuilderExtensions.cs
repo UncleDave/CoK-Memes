@@ -3,13 +3,9 @@ using ChampionsOfKhazad.Bot.Core;
 using ChampionsOfKhazad.Bot.GenAi;
 using Microsoft.Extensions.Azure;
 using Microsoft.SemanticKernel;
-using Microsoft.SemanticKernel.Connectors.MongoDB;
-using Microsoft.SemanticKernel.Connectors.OpenAI;
 using Microsoft.SemanticKernel.Data;
-using Microsoft.SemanticKernel.Memory;
 using Microsoft.SemanticKernel.Plugins.Core;
 using Microsoft.SemanticKernel.Plugins.Web.Google;
-using MongoDB.Driver;
 
 // ReSharper disable once CheckNamespace
 namespace Microsoft.Extensions.DependencyInjection;
@@ -74,24 +70,5 @@ public static class GenAiBotBuilderExtensions
             .AddScoped<ProHarassmentLawyerPersonality>();
 
         return new GenAiBuilder(builder.Services, builder.BotConfiguration);
-    }
-
-    private static IKernelBuilderPlugins AddMongoLorekeeperMemoryPlugin(
-        this IKernelBuilderPlugins plugins,
-        string mongoConnectionString,
-        string openAiApiKey
-    )
-    {
-        plugins.Services.AddSingleton<ISemanticTextMemory>(_ =>
-        {
-            var memoryStore = new MongoDBMemoryStore(mongoConnectionString, new MongoUrl(mongoConnectionString).DatabaseName);
-            var embeddingGenerator = new OpenAITextEmbeddingGenerationService(Constants.DefaultEmbeddingModel, openAiApiKey);
-
-            return new SemanticTextMemory(memoryStore, embeddingGenerator);
-        });
-
-        plugins.Services.AddSingleton<LorekeeperMemory>();
-
-        return plugins.AddFromType<LorekeeperMemoryPlugin>();
     }
 }

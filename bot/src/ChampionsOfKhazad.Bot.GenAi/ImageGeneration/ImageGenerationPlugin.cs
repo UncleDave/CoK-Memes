@@ -66,12 +66,10 @@ internal class ImageGenerationPlugin(
         CancellationToken cancellationToken
     )
     {
-        const string confirmationMessage = "Generating your image. This may take a minute.";
-
         await messageContext.Reply(
             remainingAllowance == ushort.MaxValue
-                ? confirmationMessage
-                : $"{confirmationMessage} After your image is generated, your remaining daily allowance will be {remainingAllowance}."
+                ? Constants.ImageGenerationConfirmationMessage
+                : $"{Constants.ImageGenerationConfirmationMessage} After your image is generated, your remaining daily allowance will be {remainingAllowance}."
         );
 
         var userId = messageContext.UserId;

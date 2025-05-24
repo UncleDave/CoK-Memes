@@ -54,6 +54,7 @@ public static class MessageExtensions
     {
         var chatHistory = await message
             .GetPreviousMessagesAsync()
+            .Where(x => x.Author.Id != botId || !x.CleanContent.StartsWith(GenAi.Constants.ImageGenerationConfirmationMessage))
             .Take(count)
             .Reverse()
             .AggregateAsync(new ChatHistory(), ProcessMessage, cancellationToken);

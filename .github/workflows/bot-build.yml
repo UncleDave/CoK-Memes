@@ -17,7 +17,7 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 9
-      - run: dotnet build bot/ChampionsOfKhazad.Bot.sln
+      - run: dotnet build bot/ChampionsOfKhazad.Bot.slnx
 
   build-frontend:
     name: Build Frontend

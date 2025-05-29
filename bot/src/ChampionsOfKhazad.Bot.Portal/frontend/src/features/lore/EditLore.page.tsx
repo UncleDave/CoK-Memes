@@ -3,7 +3,7 @@ import GuildLoreContract from "./guild-lore-contract.ts";
 import GuildLoreForm from "./GuildLoreForm.tsx";
 import MemberLoreContract, { isMemberLore } from "./member-lore-contract.ts";
 import MemberLoreForm from "./MemberLoreForm.tsx";
-import Page from "./Page.tsx";
+import Page from "../core/Page.tsx";
 
 const EditLorePage = () => {
   const lore = useLoaderData() as GuildLoreContract | MemberLoreContract;

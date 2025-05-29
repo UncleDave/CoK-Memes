@@ -1,7 +1,7 @@
 import { css } from "@emotion/react";
 import { Sheet, Typography } from "@mui/joy";
 import { PropsWithChildren } from "react";
-import Breadcrumbs, { Crumb } from "../core/Breadcrumbs.tsx";
+import Breadcrumbs, { Crumb } from "./Breadcrumbs.tsx";
 
 interface PageProps {
   title: string;

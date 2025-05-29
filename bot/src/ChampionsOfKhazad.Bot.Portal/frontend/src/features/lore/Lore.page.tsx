@@ -1,6 +1,6 @@
 import { List, ListItem, ListItemButton, ListItemContent } from "@mui/joy";
 import { Link, useLoaderData } from "react-router";
-import Page from "./Page.tsx";
+import Page from "../core/Page.tsx";
 
 const LorePage = () => {
   const lore = useLoaderData() as Array<{ name: string }>;

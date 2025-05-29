@@ -22,6 +22,7 @@ public static class SlashCommands
         command => new SuggestSlashCommandExecuted(command)
     );
 
+    // Disabled
     public static readonly SlashCommand Rip = new(
         new SlashCommandBuilder()
             .WithName("rip")
@@ -69,7 +70,7 @@ public static class SlashCommands
         command => new SummariseSlashCommandExecuted(command)
     );
 
-    public static readonly SlashCommand[] GuildCommands = [Raids, Rip, Summarise];
+    public static readonly SlashCommand[] GuildCommands = [Raids, Summarise];
 
     public static readonly SlashCommand[] GlobalCommands = [Suggest];
 

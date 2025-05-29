@@ -88,8 +88,8 @@ memberLore.MapPut(
         await loreUpdater.UpdateLoreAsync(
             new MemberLore(name, contract.Pronouns, contract.Nationality, contract.MainCharacter, contract.Biography)
             {
-                Aliases = contract.Aliases ?? Array.Empty<string>(),
-                Roles = contract.Roles ?? Array.Empty<string>(),
+                Aliases = contract.Aliases ?? [],
+                Roles = contract.Roles ?? [],
             }
         );
         return Results.NoContent();

@@ -11,5 +11,5 @@ public class RaidsSlashCommandOptions
     [Required]
     public required IEnumerable<RaidsSlashCommandRaid> Raids { get; init; }
 
-    public IEnumerable<string> Mentions { get; init; } = Array.Empty<string>();
+    public IEnumerable<string> Mentions { get; init; } = [];
 }

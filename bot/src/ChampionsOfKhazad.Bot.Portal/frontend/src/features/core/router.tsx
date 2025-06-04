@@ -3,6 +3,8 @@ import EditLorePage from "../lore/EditLore.page.tsx";
 import LorePage from "../lore/Lore.page.tsx";
 import api from "./api.ts";
 import Root from "./Root.tsx";
+import GeneratedImagesPage from "../generated-images/GeneratedImages.page.tsx";
+import fetchGeneratedImages from "../generated-images/fetch-generated-images.ts";
 
 const router = createBrowserRouter([
   {
@@ -33,6 +35,11 @@ const router = createBrowserRouter([
 
           return redirect("/lore");
         },
+      },
+      {
+        path: "images",
+        element: <GeneratedImagesPage />,
+        loader: () => fetchGeneratedImages(),
       },
     ],
   },

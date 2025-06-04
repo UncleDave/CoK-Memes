@@ -93,7 +93,7 @@ host.Services.AddBot(configuration =>
         configuration.ImageGeneration.DailyAllowances =
             host.Configuration.GetSection("ImageGeneration:DailyAllowances").Get<Dictionary<ulong, short>>() ?? new Dictionary<ulong, short>();
     })
-    .AddMongoPersistence();
+    .AddGenAiMongoPersistence();
 
 host.Services.AddRaidHelperClient(host.Configuration.GetRequiredString("RaidHelper:ApiKey"));
 

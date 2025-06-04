@@ -1,8 +1,11 @@
 using System.Security.Claims;
 using Auth0.AspNetCore.Authentication;
 using ChampionsOfKhazad.Bot.Core;
+using ChampionsOfKhazad.Bot.GenAi;
 using ChampionsOfKhazad.Bot.Lore;
 using ChampionsOfKhazad.Bot.Portal;
+using Discord;
+using Discord.Rest;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
@@ -43,7 +46,19 @@ builder
         configuration.Persistence.ConnectionString = builder.Configuration.GetRequiredConnectionString("Mongo");
     })
     .AddGuildLore()
-    .AddMongoPersistence();
+    .AddMongoPersistence()
+    .AddGenAiMongoPersistence();
+
+builder
+    .Services.AddSingleton<DiscordRestClient>()
+    .AddSingleton(
+        new DiscordClientProviderOptions(
+            builder.Configuration.GetValue<string>("BotToken") ?? throw new MissingConfigurationValueException("BotToken")
+        )
+    )
+    .AddSingleton<DiscordClientProvider>()
+    .AddSingleton(new DiscordUserResolverOptions(builder.Configuration.GetValue<ulong>("GuildId")))
+    .AddSingleton<DiscordUserResolver>();
 
 var app = builder.Build();
 
@@ -93,6 +108,47 @@ memberLore.MapPut(
             }
         );
         return Results.NoContent();
+    }
+);
+
+var generatedImages = apiGroup.MapGroup("generated-images");
+
+generatedImages.MapGet(
+    "",
+    async (
+        IGeneratedImageStore generatedImageStore,
+        DiscordUserResolver discordUserResolver,
+        ClaimsPrincipal claimsPrincipal,
+        CancellationToken cancellationToken,
+        ushort skip = 0,
+        ushort take = 20,
+        bool mine = false,
+        bool sortAscending = false
+    ) =>
+    {
+        var images = await generatedImageStore.GetAsync(
+            skip,
+            take,
+            mine ? claimsPrincipal.GetDiscordUserId() : null,
+            sortAscending,
+            cancellationToken
+        );
+
+        var uniqueUserIds = images.Select(x => x.UserId).Distinct().ToList();
+        var users = await Task.WhenAll(uniqueUserIds.Select(discordUserResolver.GetUserAsync));
+
+        var contracts = images
+            .Select(x =>
+            {
+                var user = users.Single(u => u.Id == x.UserId);
+                var userName = user is IGuildUser guildUser ? guildUser.DisplayName : user.GlobalName ?? user.Username;
+                var userContract = new GeneratedImageUserContract(userName, user.GetDisplayAvatarUrl());
+
+                return new GeneratedImageContract(x.Prompt, userContract, x.Timestamp, x.Uri.ToString());
+            })
+            .ToList();
+
+        return Results.Ok(contracts);
     }
 );
 

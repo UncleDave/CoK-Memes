@@ -5,17 +5,18 @@ import Breadcrumbs, { Crumb } from "./Breadcrumbs.tsx";
 
 interface PageProps {
   title: string;
-  crumbs: Crumb[];
+  crumbs?: Crumb[];
 }
 
 const Page = ({ title, crumbs, children }: PropsWithChildren<PageProps>) => (
   <article>
-    <Breadcrumbs crumbs={crumbs} />
+    {crumbs?.length && <Breadcrumbs crumbs={crumbs} />}
     <Sheet
       color="primary"
       variant="outlined"
       css={css`
         padding: 10px;
+        margin-top: ${crumbs?.length ? "0" : "48px"};
       `}
     >
       <Typography

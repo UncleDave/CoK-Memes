@@ -6,7 +6,6 @@ using ChampionsOfKhazad.Bot.Lore;
 using ChampionsOfKhazad.Bot.Portal;
 using Discord;
 using Discord.Rest;
-using JetBrains.Annotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 
@@ -29,13 +28,27 @@ builder
         options.ResponseType = OpenIdConnectResponseType.Code;
     });
 
-builder.Services.AddAuthorization(options =>
-{
-    options.DefaultPolicy = options.FallbackPolicy = new AuthorizationPolicyBuilder()
-        .RequireAuthenticatedUser()
-        .RequireClaim(ClaimTypes.NameIdentifier, authOptions.AllowedUserIds)
-        .Build();
-});
+builder.Services.AddSingleton(authOptions);
+
+var guildId = builder.Configuration.GetValue<ulong>("GuildId");
+
+// TODO: Access denied page for unauthorized users
+
+var guildPolicy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().AddRequirements(new DiscordGuildRequirement(guildId)).Build();
+var adminPolicy = new AuthorizationPolicyBuilder()
+    .RequireAuthenticatedUser()
+    .RequireClaim(ClaimTypes.NameIdentifier, authOptions.AdminUserIds)
+    .Build();
+
+builder
+    .Services.AddAuthorizationBuilder()
+    .AddDefaultPolicy("default", guildPolicy)
+    .AddFallbackPolicy("fallback", guildPolicy)
+    .AddPolicy("admin", adminPolicy);
+
+builder
+    .Services.AddSingleton<IAuthorizationHandler, DiscordGuildAuthorizationHandler>()
+    .AddSingleton<IAuthorizationHandler, AdminAuthorizationHandler>();
 
 if (builder.Environment.IsDevelopment())
     builder.Services.AddSpaYarp();
@@ -57,7 +70,7 @@ builder
         )
     )
     .AddSingleton<DiscordClientProvider>()
-    .AddSingleton(new DiscordUserResolverOptions(builder.Configuration.GetValue<ulong>("GuildId")))
+    .AddSingleton(new DiscordUserResolverOptions(guildId))
     .AddSingleton<DiscordUserResolver>();
 
 var app = builder.Build();
@@ -66,7 +79,23 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 var apiGroup = app.MapGroup("api");
-var loreGroup = apiGroup.MapGroup("lore");
+
+apiGroup.MapGet(
+    "me",
+    (ClaimsPrincipal claimsPrincipal) =>
+    {
+        var userId = claimsPrincipal.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (userId is null)
+            return Results.Unauthorized();
+
+        IEnumerable<string> roles = authOptions.UserIsAdmin(userId) ? ["Admin"] : [];
+
+        return Results.Ok(new UserContract(roles));
+    }
+);
+
+var loreGroup = apiGroup.MapGroup("lore").RequireAuthorization(adminPolicy);
 
 loreGroup.MapGet(
     "",
@@ -83,7 +112,7 @@ loreGroup.MapGet(
     }
 );
 
-var guildLore = apiGroup.MapGroup("guild-lore");
+var guildLore = apiGroup.MapGroup("guild-lore").RequireAuthorization(adminPolicy);
 
 guildLore.MapPut(
     "{name}",
@@ -94,7 +123,7 @@ guildLore.MapPut(
     }
 );
 
-var memberLore = apiGroup.MapGroup("member-lore");
+var memberLore = apiGroup.MapGroup("member-lore").RequireAuthorization(adminPolicy);
 
 memberLore.MapPut(
     "{name}",
@@ -160,19 +189,3 @@ else
 app.MapFallbackToFile("index.html");
 
 app.Run();
-
-namespace ChampionsOfKhazad.Bot.Portal
-{
-    [method: UsedImplicitly]
-    public record UpdateGuildLoreContract(string Content);
-
-    [method: UsedImplicitly]
-    public record UpdateMemberLoreContract(
-        string Pronouns,
-        string Nationality,
-        string MainCharacter,
-        string? Biography,
-        IReadOnlyList<string>? Aliases,
-        IReadOnlyList<string>? Roles
-    );
-}

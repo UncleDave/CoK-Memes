@@ -13,7 +13,7 @@ const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: <Navigate to="/lore" replace={true} />,
+        element: <Navigate to="/images" replace={true} />,
       },
       {
         path: "lore",

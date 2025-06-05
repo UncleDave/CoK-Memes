@@ -25,4 +25,18 @@ public static class ClaimsPrincipalExtensions
 
         return userId;
     }
+
+    public static bool TryGetDiscordUserId(this ClaimsPrincipal claimsPrincipal, out ulong userId)
+    {
+        try
+        {
+            userId = claimsPrincipal.GetDiscordUserId();
+            return true;
+        }
+        catch (InvalidOperationException)
+        {
+            userId = 0;
+            return false;
+        }
+    }
 }

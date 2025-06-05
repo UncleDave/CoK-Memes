@@ -16,6 +16,7 @@ using ContainerApp = Pulumi.AzureNative.App.ContainerApp;
 using ContainerAppArgs = Pulumi.AzureNative.App.ContainerAppArgs;
 using ContainerArgs = Pulumi.AzureNative.App.Inputs.ContainerArgs;
 using ContainerResourcesArgs = Pulumi.AzureNative.App.Inputs.ContainerResourcesArgs;
+using CustomDomainArgs = Pulumi.AzureNative.App.Inputs.CustomDomainArgs;
 using EnvironmentVarArgs = Pulumi.AzureNative.App.Inputs.EnvironmentVarArgs;
 using Kind = Pulumi.AzureNative.Storage.Kind;
 using LogAnalyticsConfigurationArgs = Pulumi.AzureNative.App.Inputs.LogAnalyticsConfigurationArgs;
@@ -246,6 +247,14 @@ return await Pulumi.Deployment.RunAsync(() =>
                     TargetPort = 8080,
                     Transport = IngressTransportMethod.Http,
                     AllowInsecure = false,
+                    CustomDomains =
+                    [
+                        new CustomDomainArgs
+                        {
+                            Name = "bot.championsofkhazad.com",
+                            CertificateId = "bot.championsofkhazad.com-environm-250605172211",
+                        },
+                    ],
                 },
             },
             Template = new TemplateArgs

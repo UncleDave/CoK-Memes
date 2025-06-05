@@ -1,13 +1,12 @@
 ﻿using Pulumi;
 using Pulumi.AzureNative.App;
+using Pulumi.AzureNative.App.Inputs;
 using Pulumi.AzureNative.ApplicationInsights;
 using Pulumi.AzureNative.OperationalInsights;
 using Pulumi.AzureNative.OperationalInsights.Inputs;
 using Pulumi.AzureNative.Resources;
 using Pulumi.AzureNative.Storage;
 using Pulumi.AzureNative.Storage.Inputs;
-using Pulumi.AzureNative.Web;
-using Pulumi.AzureNative.Web.Inputs;
 using Pulumi.Docker;
 using Pulumi.Docker.Inputs;
 using AppLogsConfigurationArgs = Pulumi.AzureNative.App.Inputs.AppLogsConfigurationArgs;
@@ -131,11 +130,14 @@ return await Pulumi.Deployment.RunAsync(() =>
     const string discordSerilogSinkWebhookTokenSecretName = "discord-serilog-sink-webhook-token";
     const string googleSearchEngineApiKeySecretName = "google-search-engine-api-key";
     const string storageAccountAccessKeySecretName = "storage-account-access-key";
+    const string portalAuthClientSecretName = "portal-auth-client-secret";
 
     const string timezone = "Europe/Copenhagen";
     var dotnetEnvironment = config.Require("environment");
     var openAiApiKey = config.RequireSecret("openAiApiKey");
     var mongoConnectionString = config.RequireSecret("mongoConnectionString");
+    var botToken = config.RequireSecret("botToken");
+    var imageRegistryReadPassword = config.RequireSecret("imageRegistryReadPassword");
 
     var containerEnv = new List<EnvironmentVarArgs>
     {
@@ -158,7 +160,14 @@ return await Pulumi.Deployment.RunAsync(() =>
     if (commitSha is not null)
         containerEnv.Add(new EnvironmentVarArgs { Name = "Bot__CommitSha", Value = commitSha });
 
-    var containerApp = new ContainerApp(
+    var registryCredentials = new RegistryCredentialsArgs
+    {
+        Server = imageRegistryServer,
+        Username = imageRegistryUsername,
+        PasswordSecretRef = imageRegistryReadPasswordSecretName,
+    };
+
+    var botContainerApp = new ContainerApp(
         "bot-app",
         new ContainerAppArgs
         {
@@ -166,16 +175,11 @@ return await Pulumi.Deployment.RunAsync(() =>
             ManagedEnvironmentId = environment.Id,
             Configuration = new ConfigurationArgs
             {
-                Registries = new RegistryCredentialsArgs
-                {
-                    Server = imageRegistryServer,
-                    Username = imageRegistryUsername,
-                    PasswordSecretRef = imageRegistryReadPasswordSecretName,
-                },
+                Registries = registryCredentials,
                 Secrets =
                 {
-                    new SecretArgs { Name = botTokenSecretName, Value = config.RequireSecret("botToken") },
-                    new SecretArgs { Name = imageRegistryReadPasswordSecretName, Value = config.RequireSecret("imageRegistryReadPassword") },
+                    new SecretArgs { Name = botTokenSecretName, Value = botToken },
+                    new SecretArgs { Name = imageRegistryReadPasswordSecretName, Value = imageRegistryReadPassword },
                     new SecretArgs { Name = openAiApiKeySecretName, Value = openAiApiKey },
                     new SecretArgs { Name = raidHelperApiKeySecretName, Value = config.RequireSecret("raidHelperApiKey") },
                     new SecretArgs { Name = mongoConnectionStringSecretName, Value = mongoConnectionString },
@@ -204,17 +208,6 @@ return await Pulumi.Deployment.RunAsync(() =>
         }
     );
 
-    var portalAppServicePlan = new AppServicePlan(
-        "portal-app-service-plan",
-        new AppServicePlanArgs
-        {
-            ResourceGroupName = resourceGroup.Name,
-            Kind = "Linux",
-            Reserved = true,
-            Sku = new SkuDescriptionArgs { Name = "F1", Tier = "Free" },
-        }
-    );
-
     var portalImage = new Image(
         "portal-image",
         new ImageArgs
@@ -230,38 +223,51 @@ return await Pulumi.Deployment.RunAsync(() =>
         }
     );
 
-    var portalAppSettings = new List<NameValuePairArgs>
-    {
-        new() { Name = "APPLICATIONINSIGHTS_CONNECTION_STRING", Value = applicationInsights.ConnectionString },
-        new() { Name = "ApplicationInsightsAgent_EXTENSION_VERSION", Value = "~2" },
-        new() { Name = "XDT_MicrosoftApplicationInsights_Mode", Value = "default" },
-        new() { Name = "TZ", Value = timezone },
-        new() { Name = "DOTNET_ENVIRONMENT", Value = dotnetEnvironment },
-        new() { Name = "OpenAIServiceOptions__ApiKey", Value = openAiApiKey },
-        new() { Name = "ConnectionStrings__Mongo", Value = mongoConnectionString },
-        new() { Name = "Auth__ClientSecret", Value = config.RequireSecret("portalAuthClientSecret") },
-        new() { Name = "WEBSITES_PORT", Value = "8080" },
-        new() { Name = "ASPNETCORE_FORWARDEDHEADERS_ENABLED", Value = "true" },
-    };
-
-    if (commitSha is not null)
-        portalAppSettings.Add(new NameValuePairArgs { Name = "CommitSha", Value = commitSha });
-
-    var portalWebApp = new WebApp(
+    var portalContainerApp = new ContainerApp(
         "portal-app",
-        new WebAppArgs
+        new ContainerAppArgs
         {
-            Name = "cok-bot",
             ResourceGroupName = resourceGroup.Name,
-            ServerFarmId = portalAppServicePlan.Id,
-            SiteConfig = new SiteConfigArgs
+            ManagedEnvironmentId = environment.Id,
+            Configuration = new ConfigurationArgs
             {
-                LinuxFxVersion = portalImage.RepoDigest.Apply(x => $"DOCKER|{x}"),
-                AppSettings = portalAppSettings,
-                FtpsState = FtpsState.Disabled,
+                Registries = registryCredentials,
+                Secrets =
+                {
+                    new SecretArgs { Name = botTokenSecretName, Value = botToken },
+                    new SecretArgs { Name = imageRegistryReadPasswordSecretName, Value = imageRegistryReadPassword },
+                    new SecretArgs { Name = mongoConnectionStringSecretName, Value = mongoConnectionString },
+                    new SecretArgs { Name = openAiApiKeySecretName, Value = openAiApiKey },
+                    new SecretArgs { Name = portalAuthClientSecretName, Value = config.RequireSecret("portalAuthClientSecret") },
+                },
+                Ingress = new IngressArgs
+                {
+                    External = true,
+                    TargetPort = 8080,
+                    Transport = IngressTransportMethod.Http,
+                    AllowInsecure = false,
+                },
             },
-            HttpsOnly = true,
-        },
-        new CustomResourceOptions { Parent = portalAppServicePlan }
+            Template = new TemplateArgs
+            {
+                Containers = new ContainerArgs
+                {
+                    Name = "portal",
+                    Image = portalImage.RepoDigest,
+                    Env =
+                    [
+                        new EnvironmentVarArgs { Name = "TZ", Value = timezone },
+                        new EnvironmentVarArgs { Name = "DOTNET_ENVIRONMENT", Value = dotnetEnvironment },
+                        new EnvironmentVarArgs { Name = "OpenAIServiceOptions__ApiKey", SecretRef = openAiApiKeySecretName },
+                        new EnvironmentVarArgs { Name = "ConnectionStrings__Mongo", SecretRef = mongoConnectionStringSecretName },
+                        new EnvironmentVarArgs { Name = "Auth__ClientSecret", SecretRef = portalAuthClientSecretName },
+                        new EnvironmentVarArgs { Name = "ASPNETCORE_FORWARDEDHEADERS_ENABLED", Value = "true" },
+                        new EnvironmentVarArgs { Name = "BotToken", SecretRef = botTokenSecretName },
+                    ],
+                    Resources = new ContainerResourcesArgs { Cpu = .25, Memory = "0.5Gi" },
+                },
+                Scale = new ScaleArgs { MinReplicas = 1, MaxReplicas = 1 },
+            },
+        }
     );
 });

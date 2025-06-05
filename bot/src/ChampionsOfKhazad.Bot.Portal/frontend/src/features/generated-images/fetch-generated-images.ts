@@ -28,7 +28,8 @@ const fetchGeneratedImages = async (
   const contracts = await res.json();
 
   return (contracts as GeneratedImageContract[]).map<GeneratedImage>((x) => ({
-    src: x.uri,
+    // TODO: Remove this when the backend is updated to return the filename
+    filename: x.uri.split("/").pop() || "",
     user: x.user,
     timestamp: new Date(x.timestamp),
     prompt: x.prompt,

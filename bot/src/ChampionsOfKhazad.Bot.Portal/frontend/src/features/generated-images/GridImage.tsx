@@ -9,7 +9,6 @@ const Container = styled("a")`
 `;
 
 const Image = styled("img")`
-  width: 100%;
   min-height: 140px;
 `;
 
@@ -51,11 +50,14 @@ const promptOverlayStyles: SxProps = {
   transitionTimingFunction: "ease-out",
 };
 
+const imageRoot = "https://images.championsofkhazad.com";
+
 interface GridImageProps {
   image: GeneratedImage;
+  width: number;
 }
 
-const GridImage = ({ image }: GridImageProps) => {
+const GridImage = ({ image, width }: GridImageProps) => {
   const [showPrompt, setShowPrompt] = useState(false);
 
   const onPointerEnter = useCallback(() => {
@@ -66,9 +68,11 @@ const GridImage = ({ image }: GridImageProps) => {
     setShowPrompt(false);
   }, []);
 
+  const imageSrc = `${imageRoot}/generated-images/${image.filename}`;
+
   return (
     <Container
-      href={image.src}
+      href={imageSrc}
       target="_blank"
       onPointerEnter={onPointerEnter}
       onPointerLeave={onPointerLeave}
@@ -76,7 +80,23 @@ const GridImage = ({ image }: GridImageProps) => {
         overflow: "hidden",
       }}
     >
-      <Image src={image.src} alt={image.prompt} />
+      <Image
+        src={imageSrc}
+        srcSet={`
+          ${imageRoot}/cdn-cgi/image/fit=scale-down,width=240/generated-images/${image.filename}  240w,
+          ${imageRoot}/cdn-cgi/image/fit=scale-down,width=320/generated-images/${image.filename}  320w,
+          ${imageRoot}/cdn-cgi/image/fit=scale-down,width=480/generated-images/${image.filename}  480w,
+          ${imageRoot}/cdn-cgi/image/fit=scale-down,width=640/generated-images/${image.filename}  640w,
+          ${imageRoot}/cdn-cgi/image/fit=scale-down,width=800/generated-images/${image.filename}  800w,
+          ${imageRoot}/cdn-cgi/image/fit=scale-down,width=960/generated-images/${image.filename}  960w,
+          ${imageRoot}/cdn-cgi/image/fit=scale-down,width=1024/generated-images/${image.filename} 1024w,
+          ${imageRoot}/cdn-cgi/image/fit=scale-down,width=1280/generated-images/${image.filename} 1280w,
+          ${imageRoot}/cdn-cgi/image/fit=scale-down,width=1440/generated-images/${image.filename} 1440w,
+          ${imageRoot}/cdn-cgi/image/fit=scale-down,width=1536/generated-images/${image.filename} 1536w
+        `}
+        alt={image.prompt}
+        width={width}
+      />
       <Footer>
         <FooterContent>
           <UserContainer>

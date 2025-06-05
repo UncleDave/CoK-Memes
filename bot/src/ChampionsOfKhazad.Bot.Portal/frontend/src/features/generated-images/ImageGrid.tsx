@@ -8,8 +8,8 @@ interface ImageGridItemProps {
   width: number;
 }
 
-const ImageGridItem = ({ data }: ImageGridItemProps) => (
-  <GridImage image={data} />
+const ImageGridItem = ({ data, width }: ImageGridItemProps) => (
+  <GridImage image={data} width={width} />
 );
 
 interface ImageGridProps {

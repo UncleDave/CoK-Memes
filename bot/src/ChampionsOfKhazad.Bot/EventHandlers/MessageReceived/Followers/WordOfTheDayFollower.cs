@@ -1,4 +1,5 @@
-﻿using ChampionsOfKhazad.Bot.DiscordMemes.WordOfTheDay;
+﻿using System.Text.RegularExpressions;
+using ChampionsOfKhazad.Bot.DiscordMemes.WordOfTheDay;
 
 namespace ChampionsOfKhazad.Bot;
 
@@ -16,7 +17,8 @@ public class WordOfTheDayFollower(BotContext botContext, IGetTheWordOfTheDay wor
 
         var message = notification.Message.CleanContent.ToLowerInvariant();
 
-        if (!message.Split(' ').Contains(_wordOfTheDay.Word))
+        // Use regex to match the word as a whole word, ignoring punctuation
+        if (!Regex.IsMatch(message, $@"\b{Regex.Escape(_wordOfTheDay.Word.ToLowerInvariant())}\b"))
             return false;
 
         await wordOfTheDayWinner.WinWordOfTheDayAsync(notification.Message.Author.Id);

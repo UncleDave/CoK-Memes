@@ -85,14 +85,7 @@ const GridImage = ({ image, width }: GridImageProps) => {
         srcSet={`
           ${imageRoot}/cdn-cgi/image/fit=scale-down,width=240/generated-images/${image.filename}  240w,
           ${imageRoot}/cdn-cgi/image/fit=scale-down,width=320/generated-images/${image.filename}  320w,
-          ${imageRoot}/cdn-cgi/image/fit=scale-down,width=480/generated-images/${image.filename}  480w,
-          ${imageRoot}/cdn-cgi/image/fit=scale-down,width=640/generated-images/${image.filename}  640w,
-          ${imageRoot}/cdn-cgi/image/fit=scale-down,width=800/generated-images/${image.filename}  800w,
-          ${imageRoot}/cdn-cgi/image/fit=scale-down,width=960/generated-images/${image.filename}  960w,
-          ${imageRoot}/cdn-cgi/image/fit=scale-down,width=1024/generated-images/${image.filename} 1024w,
-          ${imageRoot}/cdn-cgi/image/fit=scale-down,width=1280/generated-images/${image.filename} 1280w,
-          ${imageRoot}/cdn-cgi/image/fit=scale-down,width=1440/generated-images/${image.filename} 1440w,
-          ${imageRoot}/cdn-cgi/image/fit=scale-down,width=1536/generated-images/${image.filename} 1536w
+          ${imageRoot}/cdn-cgi/image/fit=scale-down,width=480/generated-images/${image.filename}  480w
         `}
         alt={image.prompt}
         width={width}

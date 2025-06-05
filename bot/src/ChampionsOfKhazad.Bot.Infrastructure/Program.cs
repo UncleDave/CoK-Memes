@@ -252,7 +252,16 @@ return await Pulumi.Deployment.RunAsync(() =>
                         new CustomDomainArgs
                         {
                             Name = "bot.championsofkhazad.com",
-                            CertificateId = "bot.championsofkhazad.com-environm-250605172211",
+                            CertificateId = GetCertificate
+                                .Invoke(
+                                    new GetCertificateInvokeArgs
+                                    {
+                                        ResourceGroupName = resourceGroup.Name,
+                                        EnvironmentName = environment.Name,
+                                        CertificateName = "bot.championsofkhazad.com-environm-250605172211",
+                                    }
+                                )
+                                .Apply(x => x.Id),
                         },
                     ],
                 },

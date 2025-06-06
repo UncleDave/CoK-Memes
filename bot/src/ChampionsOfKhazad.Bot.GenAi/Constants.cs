@@ -11,6 +11,8 @@ public static class Constants
     internal const string DefaultEmbeddingModel = "text-embedding-3-small";
 
     internal const string GeneratedImagesBlobContainerName = "generated-images";
+    public const string GeneratedImagesBaseUrl = $"https://images.championsofkhazad.com/{GeneratedImagesBlobContainerName}";
+
     internal const string DefaultImageFileType = "png";
     internal const short DefaultImageAllowance = 2;
 

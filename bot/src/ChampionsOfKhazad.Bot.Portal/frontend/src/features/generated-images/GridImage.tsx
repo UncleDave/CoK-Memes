@@ -50,8 +50,6 @@ const promptOverlayStyles: SxProps = {
   transitionTimingFunction: "ease-out",
 };
 
-const imageRoot = "https://images.championsofkhazad.com";
-
 interface GridImageProps {
   image: GeneratedImage;
   width: number;
@@ -68,11 +66,9 @@ const GridImage = ({ image, width }: GridImageProps) => {
     setShowPrompt(false);
   }, []);
 
-  const imageSrc = `${imageRoot}/generated-images/${image.filename}`;
-
   return (
     <Container
-      href={imageSrc}
+      href={image.url}
       target="_blank"
       onPointerEnter={onPointerEnter}
       onPointerLeave={onPointerLeave}
@@ -81,12 +77,8 @@ const GridImage = ({ image, width }: GridImageProps) => {
       }}
     >
       <Image
-        src={imageSrc}
-        srcSet={`
-          ${imageRoot}/cdn-cgi/image/fit=scale-down,width=240/generated-images/${image.filename}  240w,
-          ${imageRoot}/cdn-cgi/image/fit=scale-down,width=320/generated-images/${image.filename}  320w,
-          ${imageRoot}/cdn-cgi/image/fit=scale-down,width=480/generated-images/${image.filename}  480w
-        `}
+        src={image.url}
+        srcSet={image.srcSet}
         alt={image.prompt}
         width={width}
       />

@@ -7,5 +7,5 @@ export default interface GeneratedImageContract {
   prompt: string;
   user: GeneratedImageUserContract;
   timestamp: string;
-  uri: string;
+  filename: string;
 }

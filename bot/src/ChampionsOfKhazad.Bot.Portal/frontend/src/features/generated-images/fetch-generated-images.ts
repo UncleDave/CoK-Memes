@@ -25,15 +25,9 @@ const fetchGeneratedImages = async (
     throw new Error("Failed to load images");
   }
 
-  const contracts = await res.json();
+  const contracts: GeneratedImageContract[] = await res.json();
 
-  return (contracts as GeneratedImageContract[]).map<GeneratedImage>((x) => ({
-    // TODO: Remove this when the backend is updated to return the filename
-    filename: x.uri.split("/").pop() || "",
-    user: x.user,
-    timestamp: new Date(x.timestamp),
-    prompt: x.prompt,
-  }));
+  return contracts.map<GeneratedImage>((x) => new GeneratedImage(x));
 };
 
 export default fetchGeneratedImages;

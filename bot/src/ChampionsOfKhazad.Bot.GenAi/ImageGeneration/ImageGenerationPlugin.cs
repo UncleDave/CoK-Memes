@@ -76,12 +76,14 @@ internal class ImageGenerationPlugin(
         var timestamp = DateTime.Now;
         var imageResponse = (await textToImageService.GetImageContentsAsync(prompt, kernel: kernel, cancellationToken: cancellationToken)).Single();
         var imageData = imageResponse.Data ?? throw new ApplicationException("Image data is null");
+        var imageName = $"{userId}-{timestamp:s}.{Constants.DefaultImageFileType}";
 
-        var imageUri = await imageStorageService.UploadImageAsync($"{userId}-{timestamp:s}.{Constants.DefaultImageFileType}", imageData);
-        var generatedImage = new GeneratedImage(prompt, userId, timestamp, imageUri);
+        await imageStorageService.UploadImageAsync(imageName, imageData);
+
+        var generatedImage = new GeneratedImage(prompt, userId, timestamp, imageName);
 
         await generatedImageStore.SaveGeneratedImageAsync(generatedImage);
 
-        return new GenerateImageResult(remainingAllowance, imageUri);
+        return new GenerateImageResult(remainingAllowance, $"{Constants.GeneratedImagesBaseUrl}/{imageName}");
     }
 }

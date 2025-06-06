@@ -173,7 +173,7 @@ generatedImages.MapGet(
                 var userName = user is IGuildUser guildUser ? guildUser.DisplayName : user.GlobalName ?? user.Username;
                 var userContract = new GeneratedImageUserContract(userName, user.GetDisplayAvatarUrl());
 
-                return new GeneratedImageContract(x.Prompt, userContract, x.Timestamp, x.Uri.ToString());
+                return new GeneratedImageContract(x.Prompt, userContract, x.Timestamp, x.Filename);
             })
             .ToList();
 

@@ -84,6 +84,6 @@ internal class ImageGenerationPlugin(
 
         await generatedImageStore.SaveGeneratedImageAsync(generatedImage);
 
-        return new GenerateImageResult(remainingAllowance, $"{Constants.GeneratedImagesBaseUrl}/{imageName}");
+        return new GenerateImageResult(remainingAllowance, new Uri($"{Constants.GeneratedImagesBaseUrl}/{imageName}"));
     }
 }

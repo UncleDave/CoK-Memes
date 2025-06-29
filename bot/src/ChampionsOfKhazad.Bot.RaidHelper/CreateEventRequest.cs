@@ -18,11 +18,10 @@ public class CreateEventRequestAdvancedSettings
 public class CreateEventRequest
 {
     public required string LeaderId { get; init; }
-    public EventTemplate? TemplateId { get; set; }
+    public string? TemplateId { get; set; }
     public string? Date { get; set; }
     public string? Time { get; set; }
     public string? Title { get; set; }
     public string? Description { get; set; }
-    public ulong? Schedule { get; set; }
     public CreateEventRequestAdvancedSettings? AdvancedSettings { get; set; }
 }

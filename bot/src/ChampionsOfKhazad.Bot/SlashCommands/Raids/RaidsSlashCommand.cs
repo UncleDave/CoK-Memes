@@ -136,10 +136,10 @@ public class RaidsSlashCommand(
         var request = new CreateEventRequest
         {
             LeaderId = userId.ToString(),
-            TemplateId = EventTemplate.WoWClassicCataclysm,
+            TemplateId = "wowmop",
             Date = date.ToShortDateString(),
             Time = "19:30",
-            Title = $"Dragon Soul: {RandomUtils.PickRandom(RaidNames)}",
+            Title = $"Pre-Patch Dragon Soul: {RandomUtils.PickRandom(RaidNames)}",
             Description = RandomUtils.PickRandom(RaidDescriptions),
             AdvancedSettings = new CreateEventRequestAdvancedSettings
             {

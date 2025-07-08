@@ -59,6 +59,11 @@ public class RaidsSlashCommand(
         "No fucking QUESTS",
         "Ample Bench Edition",
         "Live From Snurch!",
+        "The Return of Huks",
+        "The Return of Finky",
+        "The Quest For The Magic Wrist",
+        "PØLSE!",
+        "Tariff Edition",
     ];
 
     private static readonly string[] RaidDescriptions =
@@ -88,6 +93,8 @@ public class RaidsSlashCommand(
         "The one where we finally get to the bottom of the mystery of the missing glizzy.",
         "The one where everyone hits the correct target.",
         "The one where Sel sings us a song.",
+        "The one where we all agree to not talk about the raid afterwards.",
+        "The one where Viktor resets the boss.",
     ];
 
     public async Task Handle(RaidsSlashCommandExecuted notification, CancellationToken cancellationToken)
@@ -139,7 +146,7 @@ public class RaidsSlashCommand(
             TemplateId = "wowmop",
             Date = date.ToShortDateString(),
             Time = "19:30",
-            Title = $"Pre-Patch Dragon Soul: {RandomUtils.PickRandom(RaidNames)}",
+            Title = $"Mogu'shan Vaults: {RandomUtils.PickRandom(RaidNames)}",
             Description = RandomUtils.PickRandom(RaidDescriptions),
             AdvancedSettings = new CreateEventRequestAdvancedSettings
             {

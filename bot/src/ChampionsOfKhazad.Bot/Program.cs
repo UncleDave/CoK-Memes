@@ -1,11 +1,9 @@
 ﻿using System.Globalization;
-using AspNetMonsters.ApplicationInsights.AspNetCore;
 using ChampionsOfKhazad.Bot;
 using ChampionsOfKhazad.Bot.Core;
 using ChampionsOfKhazad.Bot.RaidHelper;
 using Discord;
 using Discord.WebSocket;
-using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -29,21 +27,9 @@ LoggerConfiguration ConfigureLogger(LoggerConfiguration loggerConfiguration, IHo
             restrictedToMinimumLevel: LogEventLevel.Error
         );
 
-Log.Logger = ConfigureLogger(new LoggerConfiguration(), host.Environment).CreateBootstrapLogger();
+Log.Logger = ConfigureLogger(new LoggerConfiguration(), host.Environment).CreateLogger();
 
-host.Services.AddApplicationInsightsTelemetryWorkerService(options =>
-    {
-        options.ConnectionString = host.Configuration.GetConnectionString("ApplicationInsights");
-    })
-    .AddCloudRoleNameInitializer("Bot");
-
-host.Services.AddSerilog(
-    (provider, configuration) =>
-    {
-        ConfigureLogger(configuration, host.Environment)
-            .WriteTo.ApplicationInsights(provider.GetRequiredService<TelemetryConfiguration>(), TelemetryConverter.Traces);
-    }
-);
+host.Services.AddSerilog();
 
 host.Services.AddOptionsWithEagerValidation<BotOptions>(host.Configuration.GetSection(BotOptions.Key));
 

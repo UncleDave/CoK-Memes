@@ -1,15 +1,11 @@
 ﻿using Pulumi;
 using Pulumi.AzureNative.App;
 using Pulumi.AzureNative.App.Inputs;
-using Pulumi.AzureNative.ApplicationInsights;
-using Pulumi.AzureNative.OperationalInsights;
-using Pulumi.AzureNative.OperationalInsights.Inputs;
 using Pulumi.AzureNative.Resources;
 using Pulumi.AzureNative.Storage;
 using Pulumi.AzureNative.Storage.Inputs;
 using Pulumi.Docker;
 using Pulumi.Docker.Inputs;
-using AppLogsConfigurationArgs = Pulumi.AzureNative.App.Inputs.AppLogsConfigurationArgs;
 using Config = Pulumi.Config;
 using ConfigurationArgs = Pulumi.AzureNative.App.Inputs.ConfigurationArgs;
 using ContainerApp = Pulumi.AzureNative.App.ContainerApp;
@@ -19,7 +15,6 @@ using ContainerResourcesArgs = Pulumi.AzureNative.App.Inputs.ContainerResourcesA
 using CustomDomainArgs = Pulumi.AzureNative.App.Inputs.CustomDomainArgs;
 using EnvironmentVarArgs = Pulumi.AzureNative.App.Inputs.EnvironmentVarArgs;
 using Kind = Pulumi.AzureNative.Storage.Kind;
-using LogAnalyticsConfigurationArgs = Pulumi.AzureNative.App.Inputs.LogAnalyticsConfigurationArgs;
 using RegistryCredentialsArgs = Pulumi.AzureNative.App.Inputs.RegistryCredentialsArgs;
 using ScaleArgs = Pulumi.AzureNative.App.Inputs.ScaleArgs;
 using SecretArgs = Pulumi.AzureNative.App.Inputs.SecretArgs;
@@ -37,31 +32,6 @@ return await Pulumi.Deployment.RunAsync(() =>
         new CustomResourceOptions { ImportId = $"/subscriptions/{providerConfig.Require("subscriptionId")}/resourceGroups/cok-memes", Protect = true }
     );
 
-    var logAnalytics = new Workspace(
-        "log-analytics",
-        new WorkspaceArgs
-        {
-            ResourceGroupName = resourceGroup.Name,
-            Sku = new WorkspaceSkuArgs { Name = WorkspaceSkuNameEnum.PerGB2018 },
-            RetentionInDays = 30,
-        }
-    );
-
-    var applicationInsights = new Component(
-        "application-insights",
-        new ComponentArgs
-        {
-            ApplicationType = ApplicationType.Other,
-            Kind = "other",
-            ResourceGroupName = resourceGroup.Name,
-            WorkspaceResourceId = logAnalytics.Id,
-        }
-    );
-
-    var logAnalyticsSharedKeys = Output
-        .Tuple(resourceGroup.Name, logAnalytics.Name)
-        .Apply(items => GetSharedKeys.InvokeAsync(new GetSharedKeysArgs { ResourceGroupName = items.Item1, WorkspaceName = items.Item2 }));
-
     var storageAccount = new StorageAccount(
         "storage",
         new StorageAccountArgs
@@ -72,29 +42,15 @@ return await Pulumi.Deployment.RunAsync(() =>
             Sku = new SkuArgs { Name = "Standard_LRS" },
             Kind = Kind.StorageV2,
             AllowBlobPublicAccess = true,
-        }
+        },
+        new CustomResourceOptions { Protect = true }
     );
 
     var storageAccountKey = ListStorageAccountKeys
         .Invoke(new ListStorageAccountKeysInvokeArgs { ResourceGroupName = resourceGroup.Name, AccountName = storageAccount.Name })
         .Apply(x => x.Keys.First().Value);
 
-    var environment = new ManagedEnvironment(
-        "environment",
-        new ManagedEnvironmentArgs
-        {
-            ResourceGroupName = resourceGroup.Name,
-            AppLogsConfiguration = new AppLogsConfigurationArgs
-            {
-                Destination = "log-analytics",
-                LogAnalyticsConfiguration = new LogAnalyticsConfigurationArgs
-                {
-                    CustomerId = logAnalytics.CustomerId,
-                    SharedKey = logAnalyticsSharedKeys.Apply(r => r.PrimarySharedKey!),
-                },
-            },
-        }
-    );
+    var managedEnvironment = new ManagedEnvironment("environment", new ManagedEnvironmentArgs { ResourceGroupName = resourceGroup.Name });
 
     const string imageRegistryServer = "docker.io";
     var imageRegistryUsername = config.Require("imageRegistryUsername");
@@ -126,7 +82,6 @@ return await Pulumi.Deployment.RunAsync(() =>
     const string openAiApiKeySecretName = "open-ai-api-key";
     const string raidHelperApiKeySecretName = "raid-helper-api-key";
     const string mongoConnectionStringSecretName = "mongo-connection-string";
-    const string applicationInsightsConnectionStringSecretName = "application-insights-connection-string";
     const string discordSerilogSinkWebhookIdSecretName = "discord-serilog-sink-webhook-id";
     const string discordSerilogSinkWebhookTokenSecretName = "discord-serilog-sink-webhook-token";
     const string googleSearchEngineApiKeySecretName = "google-search-engine-api-key";
@@ -148,7 +103,6 @@ return await Pulumi.Deployment.RunAsync(() =>
         new() { Name = "OpenAIServiceOptions__ApiKey", SecretRef = openAiApiKeySecretName },
         new() { Name = "RaidHelper__ApiKey", SecretRef = raidHelperApiKeySecretName },
         new() { Name = "ConnectionStrings__Mongo", SecretRef = mongoConnectionStringSecretName },
-        new() { Name = "ConnectionStrings__ApplicationInsights", SecretRef = applicationInsightsConnectionStringSecretName },
         new() { Name = "DiscordSerilogSink__WebhookId", SecretRef = discordSerilogSinkWebhookIdSecretName },
         new() { Name = "DiscordSerilogSink__WebhookToken", SecretRef = discordSerilogSinkWebhookTokenSecretName },
         new() { Name = "GoogleSearchEngine__ApiKey", SecretRef = googleSearchEngineApiKeySecretName },
@@ -173,7 +127,7 @@ return await Pulumi.Deployment.RunAsync(() =>
         new ContainerAppArgs
         {
             ResourceGroupName = resourceGroup.Name,
-            ManagedEnvironmentId = environment.Id,
+            ManagedEnvironmentId = managedEnvironment.Id,
             Configuration = new ConfigurationArgs
             {
                 Registries = registryCredentials,
@@ -184,7 +138,6 @@ return await Pulumi.Deployment.RunAsync(() =>
                     new SecretArgs { Name = openAiApiKeySecretName, Value = openAiApiKey },
                     new SecretArgs { Name = raidHelperApiKeySecretName, Value = config.RequireSecret("raidHelperApiKey") },
                     new SecretArgs { Name = mongoConnectionStringSecretName, Value = mongoConnectionString },
-                    new SecretArgs { Name = applicationInsightsConnectionStringSecretName, Value = applicationInsights.ConnectionString },
                     new SecretArgs { Name = discordSerilogSinkWebhookIdSecretName, Value = config.RequireSecret("discordSerilogSinkWebhookId") },
                     new SecretArgs
                     {
@@ -229,7 +182,7 @@ return await Pulumi.Deployment.RunAsync(() =>
         new ContainerAppArgs
         {
             ResourceGroupName = resourceGroup.Name,
-            ManagedEnvironmentId = environment.Id,
+            ManagedEnvironmentId = managedEnvironment.Id,
             Configuration = new ConfigurationArgs
             {
                 Registries = registryCredentials,
@@ -257,7 +210,7 @@ return await Pulumi.Deployment.RunAsync(() =>
                                     new GetManagedCertificateInvokeArgs
                                     {
                                         ResourceGroupName = resourceGroup.Name,
-                                        EnvironmentName = environment.Name,
+                                        EnvironmentName = managedEnvironment.Name,
                                         ManagedCertificateName = "bot.championsofkhazad.com-environm-250605172211",
                                     }
                                 )

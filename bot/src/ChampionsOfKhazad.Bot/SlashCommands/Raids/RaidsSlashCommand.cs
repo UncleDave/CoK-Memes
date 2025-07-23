@@ -64,6 +64,9 @@ public class RaidsSlashCommand(
         "The Quest For The Magic Wrist",
         "PØLSE!",
         "Tariff Edition",
+        "Brought to you by Raid: Shadow Legends",
+        "Brought to you by the letter 'R'",
+        "Sponsored by NordVPN",
     ];
 
     private static readonly string[] RaidDescriptions =

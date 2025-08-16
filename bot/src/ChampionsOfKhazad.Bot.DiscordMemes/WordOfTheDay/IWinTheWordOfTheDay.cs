@@ -2,5 +2,5 @@
 
 public interface IWinTheWordOfTheDay
 {
-    Task WinWordOfTheDayAsync(ulong userId);
+    Task<ushort> WinWordOfTheDayAsync(ulong userId);
 }

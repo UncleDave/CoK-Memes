@@ -1,5 +1,6 @@
 ﻿using System.Text.RegularExpressions;
 using ChampionsOfKhazad.Bot.DiscordMemes.WordOfTheDay;
+using Humanizer;
 
 namespace ChampionsOfKhazad.Bot;
 
@@ -7,6 +8,7 @@ public class WordOfTheDayFollower(BotContext botContext, IGetTheWordOfTheDay wor
     : Follower(0, botContext)
 {
     private WordOfTheDay? _wordOfTheDay;
+    private ushort? _winCount;
 
     protected override async Task<bool> ShouldTrigger(MessageReceived notification)
     {
@@ -21,10 +23,12 @@ public class WordOfTheDayFollower(BotContext botContext, IGetTheWordOfTheDay wor
         if (!Regex.IsMatch(message, $@"\b{Regex.Escape(_wordOfTheDay.Word.ToLowerInvariant())}\b"))
             return false;
 
-        await wordOfTheDayWinner.WinWordOfTheDayAsync(notification.Message.Author.Id);
+        _winCount = await wordOfTheDayWinner.WinWordOfTheDayAsync(notification.Message.Author.Id);
         return true;
     }
 
     protected override Task<string> GetResponseAsync(MessageReceived notification, CancellationToken cancellationToken = default) =>
-        Task.FromResult($"Congratulations, {notification.Message.Author.Mention}! You found the word of the day! The word was \"{_wordOfTheDay}\".");
+        Task.FromResult(
+            $"Congratulations, {notification.Message.Author.Mention}! You found the word of the day! The word was \"{_wordOfTheDay}\". This is the {_winCount!.Value.ToString().Ordinalize()} time you have guessed the word of the day."
+        );
 }

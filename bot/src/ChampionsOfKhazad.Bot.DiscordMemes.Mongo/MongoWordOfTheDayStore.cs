@@ -8,6 +8,9 @@ internal class MongoWordOfTheDayStore(IMongoCollection<WordOfTheDay.WordOfTheDay
     public async Task<WordOfTheDay.WordOfTheDay?> GetWordOfTheDayAsync(DateOnly date, CancellationToken cancellationToken = default) =>
         await wordOfTheDayCollection.Find(x => x.Date == date).SingleOrDefaultAsync(cancellationToken);
 
+    public async Task<ushort> GetWinCountAsync(ulong userId, CancellationToken cancellationToken = default) =>
+        (ushort)await wordOfTheDayCollection.Find(x => x.WinnerId == userId).CountDocumentsAsync(cancellationToken);
+
     public Task UpsertWordOfTheDayAsync(WordOfTheDay.WordOfTheDay wordOfTheDay) =>
         wordOfTheDayCollection.ReplaceOneAsync(x => x.Date == wordOfTheDay.Date, wordOfTheDay, new ReplaceOptions { IsUpsert = true });
 }

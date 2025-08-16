@@ -35,7 +35,7 @@ internal class WordOfTheDayService(IWordOfTheDayStore wordOfTheDayStore, ILogger
         }
     }
 
-    public async Task WinWordOfTheDayAsync(ulong userId)
+    public async Task<ushort> WinWordOfTheDayAsync(ulong userId)
     {
         var today = DateOnly.FromDateTime(DateTime.Now);
 
@@ -53,6 +53,8 @@ internal class WordOfTheDayService(IWordOfTheDayStore wordOfTheDayStore, ILogger
 
             var wonWordOfTheDay = wordOfTheDay with { WinnerId = userId };
             await wordOfTheDayStore.UpsertWordOfTheDayAsync(wonWordOfTheDay);
+
+            return await wordOfTheDayStore.GetWinCountAsync(userId);
         }
         finally
         {

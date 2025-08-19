@@ -2,22 +2,24 @@
 
 Champions of Khazad is a Discord bot application with a web portal, built with .NET 9, Node.js/TypeScript frontend, and deployed to Azure Container Apps. The repository contains both the main Discord bot and a simple static website.
 
+**Development environment is automatically configured** via `.github/workflows/copilot-setup-steps.yml` with all required dependencies pre-installed.
+
 Always reference these instructions first and fallback to search or bash commands only when you encounter unexpected information that does not match the info here.
 
 ## Working Effectively
 
-### Bootstrap and Build the Repository
-- Install .NET 9 SDK (required):
-  ```bash
-  wget https://dot.net/v1/dotnet-install.sh -O dotnet-install.sh && chmod +x dotnet-install.sh && ./dotnet-install.sh --channel 9.0
-  export PATH="$HOME/.dotnet:$PATH"
-  ```
-- Verify .NET version: `dotnet --version` (should show 9.x)
-- Install Node.js 24 (frontend uses Vite with React/TypeScript)
+### Environment Setup
+The development environment is **automatically configured** via `.github/workflows/copilot-setup-steps.yml`, which pre-installs:
+- .NET 9 SDK
+- Node.js 24 with npm caching
+- .NET tools (CSharpier formatter)
+- Frontend dependencies
+
+### Build Commands
+After environment setup is complete, you can build the project:
 - Navigate to bot directory: `cd bot`
-- Restore .NET tools: `dotnet tool restore` (installs CSharpier formatter)
 - **NEVER CANCEL**: Build .NET solution: `dotnet build ChampionsOfKhazad.Bot.slnx` -- takes 35 seconds. Set timeout to 120+ seconds.
-- **NEVER CANCEL**: Build frontend: `cd src/ChampionsOfKhazad.Bot.Portal/frontend && npm ci && npm run build` -- npm install takes 15 seconds, build takes 15 seconds. Set timeout to 300+ seconds total.
+- **NEVER CANCEL**: Build frontend: `cd src/ChampionsOfKhazad.Bot.Portal/frontend && npm run build` -- takes 15 seconds. Set timeout to 300+ seconds total.
 
 ### Development Workflow
 - **Frontend Development**: 
@@ -68,8 +70,7 @@ Always reference these instructions first and fallback to search or bash command
 
 ### Key Build Commands and Timings
 - **NEVER CANCEL**: `dotnet build ChampionsOfKhazad.Bot.slnx` -- 35 seconds, set timeout 120+ seconds
-- **NEVER CANCEL**: Frontend `npm ci` -- 15 seconds, set timeout 300+ seconds  
-- **NEVER CANCEL**: Frontend `npm run build` -- 15 seconds, set timeout 300+ seconds
+- **NEVER CANCEL**: Frontend `npm run build` -- 15 seconds, set timeout 300+ seconds (dependencies pre-installed)
 - C# formatting check: `dotnet csharpier check .` -- 1 second
 - Frontend linting: `npm run lint` -- 2 seconds
 
@@ -104,8 +105,8 @@ Always reference these instructions first and fallback to search or bash command
 
 ### Common Issues and Solutions
 - **C# formatting errors**: Run `dotnet csharpier format .` to auto-fix
-- **Frontend build fails**: Ensure Node.js 22+ is installed, run `npm ci` to reinstall dependencies  
-- **Missing .NET 9**: Install using the wget command above and export PATH
+- **Frontend build fails**: Dependencies are pre-installed via setup workflow, but you can run `npm ci` to reinstall if needed
+- **Missing .NET 9**: Automatically installed via copilot-setup-steps.yml workflow
 - **Timeout on builds**: Use adequate timeouts (120s+ for .NET, 300s+ for npm operations)
 - **Docker context issues**: Docker commands should be run from `bot/src/` directory
 

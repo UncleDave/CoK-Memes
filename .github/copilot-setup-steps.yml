@@ -1,0 +1,28 @@
+# GitHub Copilot setup steps for Champions of Khazad Discord Bot
+# This file configures the development environment for Copilot coding agents
+# before the firewall is enabled, avoiding blocked domains like aka.ms
+
+steps:
+  # Set up .NET 9 SDK (required for bot and portal backend)
+  - uses: actions/setup-dotnet@v4
+    with:
+      dotnet-version: 9
+
+  # Set up Node.js 24 (required for frontend build with Vite/React/TypeScript)
+  - uses: actions/setup-node@v4
+    with:
+      node-version: 24
+      cache: 'npm'
+      cache-dependency-path: bot/src/ChampionsOfKhazad.Bot.Portal/frontend
+
+  # Restore .NET tools (installs CSharpier formatter)
+  - name: Restore .NET tools
+    run: |
+      cd bot
+      dotnet tool restore
+
+  # Install frontend dependencies
+  - name: Install frontend dependencies
+    run: |
+      cd bot/src/ChampionsOfKhazad.Bot.Portal/frontend
+      npm ci

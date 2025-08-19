@@ -13,7 +13,7 @@ Always reference these instructions first and fallback to search or bash command
   export PATH="$HOME/.dotnet:$PATH"
   ```
 - Verify .NET version: `dotnet --version` (should show 9.x)
-- Install Node.js 22+ (frontend uses Vite with React/TypeScript)
+- Install Node.js 24 (frontend uses Vite with React/TypeScript)
 - Navigate to bot directory: `cd bot`
 - Restore .NET tools: `dotnet tool restore` (installs CSharpier formatter)
 - **NEVER CANCEL**: Build .NET solution: `dotnet build ChampionsOfKhazad.Bot.slnx` -- takes 35 seconds. Set timeout to 120+ seconds.

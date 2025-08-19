@@ -75,7 +75,7 @@ Always reference these instructions first and fallback to search or bash command
 
 ### Project Dependencies and Technologies
 - **.NET 9**: Main runtime for bot and portal backend
-- **Node.js 22**: Required for frontend build (uses Vite)
+- **Node.js 24+**: Required for frontend build (uses Vite)
 - **React 19**: Frontend UI framework
 - **TypeScript**: Frontend language
 - **Discord.Net**: Discord API library

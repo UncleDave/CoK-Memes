@@ -19,7 +19,7 @@ The development environment is **automatically configured** via `.github/workflo
 After environment setup is complete, you can build the project:
 - Navigate to bot directory: `cd bot`
 - **NEVER CANCEL**: Build .NET solution: `dotnet build ChampionsOfKhazad.Bot.slnx` -- takes 35 seconds. Set timeout to 120+ seconds.
-- **NEVER CANCEL**: Build frontend: `cd src/ChampionsOfKhazad.Bot.Portal/frontend && npm run build` -- takes 15 seconds. Set timeout to 300+ seconds total.
+- **NEVER CANCEL**: Build frontend: `cd src/ChampionsOfKhazad.Bot.Portal/frontend && npm run build` -- takes 15 seconds. Set timeout to 60+ seconds total.
 
 ### Development Workflow
 - **Frontend Development**: 

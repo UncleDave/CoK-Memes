@@ -74,7 +74,12 @@ internal class ImageGenerationPlugin(
 
         var userId = messageContext.UserId;
         var timestamp = DateTime.Now;
-        var imageResponse = (await textToImageService.GetImageContentsAsync(prompt, kernel: kernel, cancellationToken: cancellationToken)).Single();
+        
+        // Create a timeout-scoped cancellation token to ensure the operation respects the 5-minute timeout
+        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeoutCts.CancelAfter(TimeSpan.FromMinutes(5));
+        
+        var imageResponse = (await textToImageService.GetImageContentsAsync(prompt, kernel: kernel, cancellationToken: timeoutCts.Token)).Single();
         var imageData = imageResponse.Data ?? throw new ApplicationException("Image data is null");
         var imageName = $"{userId}-{timestamp:s}.{Constants.DefaultImageFileType}";
 

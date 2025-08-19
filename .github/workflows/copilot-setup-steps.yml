@@ -1,0 +1,71 @@
+name: "Copilot Setup Steps"
+
+# Automatically run the setup steps when they are changed to allow for easy validation, and
+# allow manual testing through the repository's "Actions" tab
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
+  pull_request:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
+
+jobs:
+  # The job MUST be called `copilot-setup-steps` or it will not be picked up by Copilot.
+  copilot-setup-steps:
+    runs-on: ubuntu-latest
+
+    # Set the permissions to the lowest permissions possible needed for your steps.
+    # Copilot will be given its own token for its operations.
+    permissions:
+      # If you want to clone the repository as part of your setup steps, for example to install dependencies, you'll need the `contents: read` permission. If you don't clone the repository in your setup steps, Copilot will do this for you automatically after the steps complete.
+      contents: read
+
+    # You can define any steps you want, and they will run before the agent starts.
+    # If you do not check out your code, Copilot will do this for you.
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 9
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+          cache-dependency-path: "bot/src/ChampionsOfKhazad.Bot.Portal/frontend/package-lock.json"
+
+      - name: Restore .NET tools
+        run: |
+          cd bot
+          dotnet tool restore
+          cd ..
+
+      - name: Install frontend dependencies
+        run: |
+          cd bot/src/ChampionsOfKhazad.Bot.Portal/frontend
+          npm ci
+          cd ../../../..
+
+      - name: Validate environment
+        run: |
+          echo "Validating Champions of Khazad development environment..."
+          
+          # Check .NET build capability
+          echo "Testing .NET build capability..."
+          cd bot
+          dotnet build ChampionsOfKhazad.Bot.slnx --verbosity quiet --nologo
+          cd ..
+          
+          # Check frontend build capability
+          echo "Testing frontend build capability..."
+          cd bot/src/ChampionsOfKhazad.Bot.Portal/frontend
+          npm run build --silent
+          cd ../../../..
+          
+          echo "Environment validation complete!"

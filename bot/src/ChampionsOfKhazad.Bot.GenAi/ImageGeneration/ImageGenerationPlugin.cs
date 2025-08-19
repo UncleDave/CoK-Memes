@@ -75,20 +75,31 @@ internal class ImageGenerationPlugin(
         var userId = messageContext.UserId;
         var timestamp = DateTime.Now;
         
-        // Create a timeout-scoped cancellation token to ensure the operation respects the 5-minute timeout
-        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        timeoutCts.CancelAfter(TimeSpan.FromMinutes(5));
-        
-        var imageResponse = (await textToImageService.GetImageContentsAsync(prompt, kernel: kernel, cancellationToken: timeoutCts.Token)).Single();
-        var imageData = imageResponse.Data ?? throw new ApplicationException("Image data is null");
-        var imageName = $"{userId}-{timestamp:s}.{Constants.DefaultImageFileType}";
+        var startTime = DateTime.UtcNow;
+        try
+        {
+            var imageResponse = (await textToImageService.GetImageContentsAsync(prompt, kernel: kernel, cancellationToken: cancellationToken)).Single();
+            var elapsed = DateTime.UtcNow - startTime;
+            
+            // Log successful completion time for monitoring timeout effectiveness
+            Console.WriteLine($"Image generation completed successfully in {elapsed.TotalSeconds:F1} seconds for user {userId}");
+            
+            var imageData = imageResponse.Data ?? throw new ApplicationException("Image data is null");
+            var imageName = $"{userId}-{timestamp:s}.{Constants.DefaultImageFileType}";
 
-        await imageStorageService.UploadImageAsync(imageName, imageData);
+            await imageStorageService.UploadImageAsync(imageName, imageData);
 
-        var generatedImage = new GeneratedImage(prompt, userId, timestamp, imageName);
+            var generatedImage = new GeneratedImage(prompt, userId, timestamp, imageName);
 
-        await generatedImageStore.SaveGeneratedImageAsync(generatedImage);
+            await generatedImageStore.SaveGeneratedImageAsync(generatedImage);
 
-        return new GenerateImageResult(remainingAllowance, new Uri($"{Constants.GeneratedImagesBaseUrl}/{imageName}"));
+            return new GenerateImageResult(remainingAllowance, new Uri($"{Constants.GeneratedImagesBaseUrl}/{imageName}"));
+        }
+        catch (Exception ex)
+        {
+            var elapsed = DateTime.UtcNow - startTime;
+            Console.WriteLine($"Image generation failed after {elapsed.TotalSeconds:F1} seconds for user {userId}: {ex.GetType().Name}: {ex.Message}");
+            throw;
+        }
     }
 }

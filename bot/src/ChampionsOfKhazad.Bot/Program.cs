@@ -11,7 +11,10 @@ using Serilog;
 using Serilog.Events;
 using Serilog.Sinks.Discord;
 
-CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("en-GB");
+var culture = CultureInfo.GetCultureInfo("en-GB");
+
+CultureInfo.CurrentCulture = culture;
+CultureInfo.CurrentUICulture = culture;
 
 var host = Host.CreateApplicationBuilder(args);
 

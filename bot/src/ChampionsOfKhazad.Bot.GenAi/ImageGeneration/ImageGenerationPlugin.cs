@@ -11,7 +11,8 @@ internal class ImageGenerationPlugin(
     GenAiImageGenerationConfig config,
     IGeneratedImageStore generatedImageStore,
     ITextToImageService textToImageService,
-    ImageStorageService imageStorageService
+    ImageStorageService imageStorageService,
+    IMessageContext messageContext
 )
 {
     private static readonly ConcurrentDictionary<ulong, bool> UsersGeneratingImages = [];
@@ -25,7 +26,6 @@ internal class ImageGenerationPlugin(
         CancellationToken cancellationToken
     )
     {
-        var messageContext = kernel.GetMessageContext();
         var userId = messageContext.UserId;
         var userAllowance = config.DailyAllowances.GetValueOrDefault(userId, Constants.DefaultImageAllowance);
 
@@ -34,7 +34,7 @@ internal class ImageGenerationPlugin(
             case 0:
                 return new GenerateImageResult(0, "User is not allowed to generate images.");
             case -1:
-                return await GenerateImageAsync(prompt, messageContext, ushort.MaxValue, kernel, cancellationToken);
+                return await GenerateImageAsync(prompt, ushort.MaxValue, kernel, cancellationToken);
         }
 
         var generatedImageCount = await generatedImageStore.GetDailyGeneratedImageCountAsync(userId, cancellationToken);
@@ -50,7 +50,7 @@ internal class ImageGenerationPlugin(
             if (!UsersGeneratingImages.TryAdd(userId, true))
                 return new GenerateImageResult(newRemainingAllowance, "User is already generating an image.");
 
-            return await GenerateImageAsync(prompt, messageContext, newRemainingAllowance, kernel, cancellationToken);
+            return await GenerateImageAsync(prompt, newRemainingAllowance, kernel, cancellationToken);
         }
         finally
         {
@@ -60,7 +60,6 @@ internal class ImageGenerationPlugin(
 
     private async Task<GenerateImageResult> GenerateImageAsync(
         string prompt,
-        IMessageContext messageContext,
         ushort remainingAllowance,
         Kernel kernel,
         CancellationToken cancellationToken

@@ -149,7 +149,7 @@ public class RaidsSlashCommand(
             TemplateId = "wowmop",
             Date = date.ToShortDateString(),
             Time = "19:30",
-            Title = $"Mogu'shan Vaults: {RandomUtils.PickRandom(RaidNames)}",
+            Title = $"Tier 14: {RandomUtils.PickRandom(RaidNames)}",
             Description = RandomUtils.PickRandom(RaidDescriptions),
             AdvancedSettings = new CreateEventRequestAdvancedSettings
             {

@@ -15,7 +15,6 @@ public class SplitPersonalityFollowerResponseStrategy(
             .PickRandom(personalities)
             .InvokeAsync(
                 await notification.Message.GetChatHistoryAsync(10, botId, "You", cancellationToken),
-                notification.Message.ToMessageContext(),
                 arguments ?? DefaultArguments,
                 cancellationToken
             );

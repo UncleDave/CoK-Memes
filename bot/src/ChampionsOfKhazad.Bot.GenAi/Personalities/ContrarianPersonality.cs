@@ -8,7 +8,8 @@ internal class ContrarianPersonality(
     Kernel kernel,
     IGetRelatedLore relatedLoreGetter,
     IEmojiHandler emojiHandler,
-    IChatCompletionService chatCompletionService
+    IChatCompletionService chatCompletionService,
+    IMessageContext messageContext
 )
     : PersonalityBase(
         string.Join(
@@ -19,5 +20,6 @@ internal class ContrarianPersonality(
         kernel,
         relatedLoreGetter,
         emojiHandler,
-        chatCompletionService
+        chatCompletionService,
+        messageContext
     );

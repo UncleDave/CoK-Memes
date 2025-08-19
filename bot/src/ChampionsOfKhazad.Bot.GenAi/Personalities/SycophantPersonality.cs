@@ -8,7 +8,8 @@ internal class SycophantPersonality(
     Kernel kernel,
     IGetRelatedLore relatedLoreGetter,
     IEmojiHandler emojiHandler,
-    IChatCompletionService chatCompletionService
+    IChatCompletionService chatCompletionService,
+    IMessageContext messageContext
 )
     : PersonalityBase(
         string.Join(
@@ -19,5 +20,6 @@ internal class SycophantPersonality(
         kernel,
         relatedLoreGetter,
         emojiHandler,
-        chatCompletionService
+        chatCompletionService,
+        messageContext
     );

@@ -10,7 +10,8 @@ internal abstract class PersonalityBase(
     Kernel kernel,
     IGetRelatedLore relatedLoreGetter,
     IEmojiHandler emojiHandler,
-    IChatCompletionService chatCompletionService
+    IChatCompletionService chatCompletionService,
+    IMessageContext messageContext
 ) : IPersonality
 {
     protected static readonly OpenAIPromptExecutionSettings DefaultPromptSettings = new()
@@ -40,19 +41,15 @@ internal abstract class PersonalityBase(
 
     public virtual async Task<string> InvokeAsync(
         ChatHistory chatHistory,
-        IMessageContext messageContext,
         CancellationToken cancellationToken = default
-    ) => await InvokeAsync(chatHistory, messageContext, new Dictionary<string, object?>(), cancellationToken);
+    ) => await InvokeAsync(chatHistory, new Dictionary<string, object?>(), cancellationToken);
 
     public virtual async Task<string> InvokeAsync(
         ChatHistory chatHistory,
-        IMessageContext messageContext,
         IDictionary<string, object?> arguments,
         CancellationToken cancellationToken = default
     )
     {
-        kernel.SetMessageContext(messageContext);
-
         var input = chatHistory.Last();
         var lore = input.Content is not null ? await relatedLoreGetter.GetRelatedLoreAsync(input.Content) : [];
 

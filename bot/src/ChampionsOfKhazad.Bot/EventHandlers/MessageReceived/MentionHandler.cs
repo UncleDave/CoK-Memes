@@ -5,7 +5,7 @@ using Microsoft.Extensions.Options;
 
 namespace ChampionsOfKhazad.Bot;
 
-public class MentionHandler(IOptions<MentionHandlerOptions> options, BotContext context, ICompletionService completionService)
+public class MentionHandler(IOptions<MentionHandlerOptions> options, BotContext context, ICompletionService completionService, IMessageContext messageContext)
     : INotificationHandler<MessageReceived>
 {
     private readonly MentionHandlerOptions _options = options.Value;
@@ -24,7 +24,7 @@ public class MentionHandler(IOptions<MentionHandlerOptions> options, BotContext 
         using var typing = textChannel.EnterTypingState();
 
         var chatHistory = await message.GetChatHistoryAsync(20, context.BotId, GenAi.Constants.OpenAiFriendlyLorekeeperName, cancellationToken);
-        var response = await completionService.Lorekeeper.InvokeAsync(chatHistory, notification.Message.ToMessageContext(), cancellationToken);
+        var response = await completionService.Lorekeeper.InvokeAsync(chatHistory, cancellationToken);
 
         await message.ReplyAsync(response);
     }

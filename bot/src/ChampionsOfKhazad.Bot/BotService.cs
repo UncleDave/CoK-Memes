@@ -89,9 +89,7 @@ public class BotService : IHostedService
 
     private async Task PublishWithScope(INotification notification)
     {
-        // We don't dispose of the scope here because the INotificationPublisher is non-blocking, and it may be disposed too early.
-        // Unsure if this will cause a memory leak
-        var messageScope = _serviceProvider.CreateScope();
+        using var messageScope = _serviceProvider.CreateScope();
         var publisher = messageScope.ServiceProvider.GetRequiredService<IPublisher>();
 
         await publisher.Publish(notification);

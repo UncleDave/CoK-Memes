@@ -109,6 +109,10 @@ host.Services.AddHostedService<BotService>()
     .AddSingleton<BotContextProvider>()
     .AddScoped<BotContext>(serviceProvider =>
         serviceProvider.GetRequiredService<BotContextProvider>().BotContext ?? throw new InvalidOperationException("BotContext is not available")
+    )
+    .AddScoped<MessageContextProvider>()
+    .AddScoped<IMessageContext>(serviceProvider =>
+        serviceProvider.GetRequiredService<MessageContextProvider>().MessageContext ?? throw new InvalidOperationException("MessageContext is not available")
     );
 
 host.Build().Run();

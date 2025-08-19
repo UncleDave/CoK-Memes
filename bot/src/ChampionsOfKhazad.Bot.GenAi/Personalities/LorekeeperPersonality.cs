@@ -8,7 +8,8 @@ internal class LorekeeperPersonality(
     Kernel kernel,
     IGetRelatedLore relatedLoreGetter,
     IEmojiHandler emojiHandler,
-    IChatCompletionService chatCompletionService
+    IChatCompletionService chatCompletionService,
+    IMessageContext messageContext
 )
     : PersonalityBase(
         string.Join(
@@ -25,5 +26,6 @@ internal class LorekeeperPersonality(
         kernel,
         relatedLoreGetter,
         emojiHandler,
-        chatCompletionService
+        chatCompletionService,
+        messageContext
     );

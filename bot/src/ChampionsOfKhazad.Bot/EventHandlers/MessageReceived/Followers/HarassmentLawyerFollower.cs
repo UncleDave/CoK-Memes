@@ -30,8 +30,13 @@ public class HarassmentLawyerFollower(
             new RandomChanceFollowerTriggerStrategy(options.Value.Chance, triggerStrategyLogger),
             new MentionFollowerTriggerStrategy(options.Value.ClientUserId)
         ),
-        new SplitPersonalityFollowerResponseStrategy(
-            [completionService.HarassmentLawyer, completionService.ProHarassmentLawyer],
+        // new SplitPersonalityFollowerResponseStrategy(
+        //     [completionService.HarassmentLawyer, completionService.ProHarassmentLawyer],
+        //     botContext.BotId,
+        //     new Dictionary<string, object?> { ["clientName"] = options.Value.ClientUserName }
+        // ),
+        new PersonalityFollowerResponseStrategy(
+            completionService.HarassmentLawyer,
             botContext.BotId,
             new Dictionary<string, object?> { ["clientName"] = options.Value.ClientUserName }
         ),

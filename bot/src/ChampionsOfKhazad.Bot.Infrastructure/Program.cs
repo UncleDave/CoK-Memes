@@ -211,7 +211,7 @@ return await Pulumi.Deployment.RunAsync(() =>
                                     {
                                         ResourceGroupName = resourceGroup.Name,
                                         EnvironmentName = managedEnvironment.Name,
-                                        ManagedCertificateName = "bot.championsofkhazad.com-environm-250605172211",
+                                        ManagedCertificateName = "bot.championsofkhazad.com-environm-250829224145",
                                     }
                                 )
                                 .Apply(x => x.Id),

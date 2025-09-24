@@ -2,6 +2,7 @@
 using ChampionsOfKhazad.Bot.Core;
 using ChampionsOfKhazad.Bot.GenAi;
 using Microsoft.Extensions.Azure;
+using Microsoft.Extensions.Http.Resilience;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Data;
 using Microsoft.SemanticKernel.Plugins.Core;
@@ -35,15 +36,24 @@ public static class GenAiBotBuilderExtensions
             throw new MissingConfigurationValueException("AzureStorageAccountAccessKey");
 
         var googleTextSearch = new GoogleTextSearch(config.GoogleSearchEngineId, config.GoogleSearchEngineApiKey);
-        var imageGenerationHttpClient = new HttpClient { Timeout = TimeSpan.FromMinutes(5) };
 
         builder
             .Services.AddKernel()
             .AddOpenAIChatCompletion(Constants.DefaultCompletionsModel, config.OpenAiApiKey)
-            .AddOpenAITextToImage(config.OpenAiApiKey, modelId: Constants.DefaultImageModel, httpClient: imageGenerationHttpClient)
+            .AddOpenAITextToImage(config.OpenAiApiKey, modelId: Constants.DefaultImageModel)
             .Plugins.AddFromType<TimePlugin>()
             .AddFromType<ImageGenerationPlugin>()
             .Add(googleTextSearch.CreateWithGetSearchResults("GoogleSearchPlugin"));
+
+        // Configure HTTP client defaults with proper timeout for image generation
+        builder.Services.ConfigureHttpClientDefaults(c =>
+        {
+            // Use a standard resiliency policy with 5-minute timeout for image generation
+            c.AddStandardResilienceHandler().Configure(o =>
+            {
+                o.TotalRequestTimeout.Timeout = TimeSpan.FromMinutes(5);
+            });
+        });
 
         builder.Services.AddAzureClients(azureBuilder =>
         {

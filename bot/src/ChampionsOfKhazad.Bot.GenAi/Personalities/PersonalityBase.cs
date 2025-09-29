@@ -24,16 +24,27 @@ internal abstract class PersonalityBase(
         new PromptTemplateConfig(
             string.Join(
                 '\n',
+                "## ROLE AND CONTEXT",
                 systemPrompt,
-                "Limit your reply to 100 words.\n",
-                "###",
-                "\nThese lore entries may be relevant:\n",
-                "###\n",
+                "",
+                "## AUTHOR INFORMATION",
+                "You are responding to a Discord message from: {{$userName}}",
+                "The author's identity and context are crucial for your response.",
+                "",
+                "## AVAILABLE RESOURCES",
+                "### Relevant Lore Entries:",
                 "{{$lore}}",
-                "###\n",
-                "Standard unicode emojis and these guild emojis are available for use:\n",
-                "###\n",
-                "{{$emojis}}"
+                "",
+                "### Available Emojis:",
+                "Standard unicode emojis and these guild emojis are available for use:",
+                "{{$emojis}}",
+                "",
+                "## RESPONSE GUIDELINES",
+                "- Keep your response concise and under 100 words",
+                "- Stay in character consistently",
+                "- Reference the author ({{$userName}}) appropriately based on your role",
+                "- Use emojis naturally when they enhance your message",
+                "- Make your response engaging and contextually appropriate for Discord"
             )
         )
     );

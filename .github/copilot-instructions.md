@@ -6,6 +6,16 @@ Champions of Khazad is a Discord bot application with a web portal, built with .
 
 Always reference these instructions first and fallback to search or bash commands only when you encounter unexpected information that does not match the info here.
 
+## Quick Start
+
+After environment setup completes:
+1. **Build .NET**: `cd bot && dotnet build ChampionsOfKhazad.Bot.slnx` (set timeout 120+ seconds)
+2. **Build Frontend**: `cd bot/src/ChampionsOfKhazad.Bot.Portal/frontend && npm run build`
+3. **Check C# Formatting**: `cd bot && dotnet csharpier check .`
+4. **Run Frontend Dev Server**: `cd bot/src/ChampionsOfKhazad.Bot.Portal/frontend && npm run dev`
+
+**Note**: This project does not have automated tests. Validation is done through builds and linting.
+
 ## Working Effectively
 
 ### Environment Setup
@@ -33,6 +43,11 @@ After environment setup is complete, you can build the project:
 - **C# Auto-fix**: `dotnet csharpier format .` (in bot directory) - auto-formats code
 - **Frontend Code**: `npm run lint` (in frontend directory) - runs ESLint and Prettier check, takes 2 seconds
 - **ALWAYS** run linting before committing or CI will fail (.github/workflows/bot-build.yml)
+
+### Testing
+- **No automated tests**: This project does not have unit or integration tests
+- **Manual validation**: Changes are validated through builds, linting, and manual testing
+- **Frontend validation**: Use `npm run dev` to manually test UI changes in the browser
 
 ## Validation
 - **Always manually validate .NET builds** by running `dotnet build ChampionsOfKhazad.Bot.slnx` after making C# changes

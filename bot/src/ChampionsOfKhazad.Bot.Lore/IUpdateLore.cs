@@ -1,4 +1,6 @@
-﻿namespace ChampionsOfKhazad.Bot.Lore;
+﻿using ChampionsOfKhazad.Bot.GenAi;
+
+namespace ChampionsOfKhazad.Bot.Lore;
 
 public interface IUpdateLore
 {

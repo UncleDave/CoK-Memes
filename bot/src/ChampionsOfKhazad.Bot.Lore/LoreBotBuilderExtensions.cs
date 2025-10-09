@@ -1,4 +1,5 @@
-﻿using ChampionsOfKhazad.Bot.Lore;
+﻿using ChampionsOfKhazad.Bot.GenAi;
+using ChampionsOfKhazad.Bot.Lore;
 using ChampionsOfKhazad.Bot.OpenAi.Embeddings;
 
 // ReSharper disable once CheckNamespace

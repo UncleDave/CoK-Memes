@@ -1,4 +1,4 @@
-﻿namespace ChampionsOfKhazad.Bot.Lore;
+﻿namespace ChampionsOfKhazad.Bot.GenAi;
 
 public record GuildLore(string Name, string Content) : Lore(Name)
 {

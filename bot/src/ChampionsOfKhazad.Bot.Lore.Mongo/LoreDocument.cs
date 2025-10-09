@@ -1,4 +1,6 @@
-﻿namespace ChampionsOfKhazad.Bot.Lore.Mongo;
+﻿using ChampionsOfKhazad.Bot.GenAi;
+
+namespace ChampionsOfKhazad.Bot.Lore.Mongo;
 
 internal record LoreDocument(string Name, string Content)
 {
@@ -23,7 +25,7 @@ internal record LoreDocument(string Name, string Content)
         Roles = memberLore.Roles;
     }
 
-    public Lore ToModel()
+    public GenAi.Lore ToModel()
     {
         return MainCharacter is not null
             ? new MemberLore(Name, Pronouns!, Nationality!, MainCharacter, Biography) { Aliases = Aliases!, Roles = Roles! }

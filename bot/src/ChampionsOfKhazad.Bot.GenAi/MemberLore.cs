@@ -1,6 +1,6 @@
 ﻿using System.Text;
 
-namespace ChampionsOfKhazad.Bot.Lore;
+namespace ChampionsOfKhazad.Bot.GenAi;
 
 public record MemberLore(string Name, string Pronouns, string Nationality, string MainCharacter, string? Biography) : Lore(Name)
 {

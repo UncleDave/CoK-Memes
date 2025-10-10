@@ -1,10 +1,10 @@
 ﻿using ChampionsOfKhazad.Bot.Core;
 using ChampionsOfKhazad.Bot.Lore.Abstractions;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.SemanticKernel.Embeddings;
 using MongoDB.Driver;
 
 // Build host
@@ -29,7 +29,7 @@ var app = host.Build();
 
 // Get services
 var logger = app.Services.GetRequiredService<ILogger<Program>>();
-var embeddingsService = app.Services.GetRequiredService<ITextEmbeddingGenerationService>();
+var embeddingsService = app.Services.GetRequiredService<IEmbeddingGenerator<string, Embedding<float>>>();
 var mongoConnectionString = host.Configuration.GetRequiredConnectionString("Mongo");
 
 // Connect to MongoDB
@@ -64,8 +64,8 @@ foreach (var document in allDocuments)
     try
     {
         // Generate embedding
-        var embeddingVector = await embeddingsService.GenerateEmbeddingAsync(content);
-        var embedding = embeddingVector.ToArray();
+        var embeddingResult = await embeddingsService.GenerateAsync(content);
+        var embedding = embeddingResult.Vector.ToArray();
 
         // Update document with embedding
         var filter = MongoDB.Driver.Builders<MongoDB.Bson.BsonDocument>.Filter.Eq("_id", document["_id"]);

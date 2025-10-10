@@ -18,10 +18,7 @@ var openAiApiKey = configuration["OpenAi:ApiKey"] ?? throw new InvalidOperationE
 // Build service collection
 var services = new ServiceCollection();
 
-services.AddKernel()
-#pragma warning disable SKEXP0001
-.AddOpenAITextEmbeddingGeneration("text-embedding-3-large", openAiApiKey);
-#pragma warning restore SKEXP0001
+services.AddKernel().AddOpenAITextEmbeddingGeneration("text-embedding-3-small", openAiApiKey);
 
 services.AddScoped<IEmbeddingsService, EmbeddingsService>();
 

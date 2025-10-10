@@ -6,11 +6,8 @@ namespace Microsoft.Extensions.DependencyInjection;
 
 public static class LoreBotBuilderExtensions
 {
-    public static GuildLoreBuilder AddGuildLore(this BotBuilder builder, Action<GuildLoreConfiguration>? configureGuildLore = null)
+    public static GuildLoreBuilder AddGuildLore(this BotBuilder builder)
     {
-        var options = new GuildLoreConfiguration { EmbeddingsApiKey = string.Empty };
-        configureGuildLore?.Invoke(options);
-
         builder
             .Services.AddSingleton<LoreService>()
             .AddSingleton<IGetLore>(sp => sp.GetRequiredService<LoreService>())

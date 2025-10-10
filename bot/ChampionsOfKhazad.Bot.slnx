@@ -27,6 +27,7 @@
     <Project Path="src\ChampionsOfKhazad.Bot.Core\ChampionsOfKhazad.Bot.Core.csproj" Type="C#" />
     <Project Path="src\ChampionsOfKhazad.Bot.DiscordMemes.Mongo\ChampionsOfKhazad.Bot.DiscordMemes.Mongo.csproj" Type="C#" />
     <Project Path="src\ChampionsOfKhazad.Bot.DiscordMemes\ChampionsOfKhazad.Bot.DiscordMemes.csproj" Type="C#" />
+    <Project Path="src\ChampionsOfKhazad.Bot.GenAi.Embeddings\ChampionsOfKhazad.Bot.GenAi.Embeddings.csproj" Type="C#" />
     <Project Path="src\ChampionsOfKhazad.Bot.GenAi.Mongo\ChampionsOfKhazad.Bot.GenAi.Mongo.csproj" Type="C#" />
     <Project Path="src\ChampionsOfKhazad.Bot.GenAi\ChampionsOfKhazad.Bot.GenAi.csproj" Type="C#" />
     <Project Path="src\ChampionsOfKhazad.Bot.Infrastructure\ChampionsOfKhazad.Bot.Infrastructure.csproj" Type="C#" />

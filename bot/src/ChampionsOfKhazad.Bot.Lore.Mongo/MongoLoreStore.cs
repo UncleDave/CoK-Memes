@@ -1,9 +1,10 @@
 ﻿using ChampionsOfKhazad.Bot.Lore.Abstractions;
+using Microsoft.SemanticKernel.Embeddings;
 using MongoDB.Driver;
 
 namespace ChampionsOfKhazad.Bot.Lore.Mongo;
 
-internal class MongoLoreStore(IMongoCollection<LoreDocument> loreCollection, IEmbeddingsService embeddingsService) : IStoreLore
+internal class MongoLoreStore(IMongoCollection<LoreDocument> loreCollection, ITextEmbeddingGenerationService embeddingsService) : IStoreLore
 {
     public async Task<IReadOnlyList<ILore>> ReadLoreAsync(CancellationToken cancellationToken = default)
     {
@@ -23,8 +24,8 @@ internal class MongoLoreStore(IMongoCollection<LoreDocument> loreCollection, IEm
 
     public async Task UpsertLoreAsync(IGuildLore lore)
     {
-        var embedding = await embeddingsService.CreateEmbeddingAsync(lore.Content);
-        var document = new LoreDocument(lore) { Embedding = embedding };
+        var embeddingVector = await embeddingsService.GenerateEmbeddingAsync(lore.Content);
+        var document = new LoreDocument(lore) { Embedding = embeddingVector.ToArray() };
 
         await loreCollection.ReplaceOneAsync(
             x => x.Name == lore.Name,
@@ -36,8 +37,8 @@ internal class MongoLoreStore(IMongoCollection<LoreDocument> loreCollection, IEm
     public async Task UpsertLoreAsync(IMemberLore lore)
     {
         var content = lore.ToString() ?? string.Empty;
-        var embedding = await embeddingsService.CreateEmbeddingAsync(content);
-        var document = new LoreDocument(lore) { Embedding = embedding };
+        var embeddingVector = await embeddingsService.GenerateEmbeddingAsync(content);
+        var document = new LoreDocument(lore) { Embedding = embeddingVector.ToArray() };
 
         await loreCollection.ReplaceOneAsync(
             x => x.Name == lore.Name,

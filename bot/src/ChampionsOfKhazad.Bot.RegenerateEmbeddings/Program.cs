@@ -1,10 +1,10 @@
 ﻿using ChampionsOfKhazad.Bot.Core;
-using ChampionsOfKhazad.Bot.GenAi;
 using ChampionsOfKhazad.Bot.Lore.Abstractions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.SemanticKernel.Embeddings;
 using MongoDB.Driver;
 
 // Build host
@@ -17,25 +17,19 @@ host.Services.AddBot(configuration =>
     {
         configuration.Persistence.ConnectionString = host.Configuration.GetRequiredConnectionString("Mongo");
     })
-    .AddGuildLore(configuration =>
-    {
-        configuration.EmbeddingsApiKey = host.Configuration.GetRequiredString("OpenAIServiceOptions:ApiKey");
-    })
-    .AddMongoPersistence()
-    .AddGenAi<NullEmojiHandler>(configuration =>
+    .AddEmbeddings(configuration =>
     {
         configuration.OpenAiApiKey = host.Configuration.GetRequiredString("OpenAIServiceOptions:ApiKey");
-        configuration.GoogleSearchEngineId = host.Configuration["GoogleSearchEngine:Id"] ?? "dummy";
-        configuration.GoogleSearchEngineApiKey = host.Configuration["GoogleSearchEngine:ApiKey"] ?? "dummy";
-        configuration.AzureStorageAccountName = host.Configuration["AzureStorageAccountName"] ?? "dummy";
-        configuration.AzureStorageAccountAccessKey = host.Configuration["AzureStorageAccountAccessKey"] ?? "dummy";
-    });
+        configuration.Model = "text-embedding-3-small";
+    })
+    .AddGuildLore()
+    .AddMongoPersistence();
 
 var app = host.Build();
 
 // Get services
 var logger = app.Services.GetRequiredService<ILogger<Program>>();
-var embeddingsService = app.Services.GetRequiredService<IEmbeddingsService>();
+var embeddingsService = app.Services.GetRequiredService<ITextEmbeddingGenerationService>();
 var mongoConnectionString = host.Configuration.GetRequiredConnectionString("Mongo");
 
 // Connect to MongoDB
@@ -70,7 +64,8 @@ foreach (var document in allDocuments)
     try
     {
         // Generate embedding
-        var embedding = await embeddingsService.CreateEmbeddingAsync(content);
+        var embeddingVector = await embeddingsService.GenerateEmbeddingAsync(content);
+        var embedding = embeddingVector.ToArray();
 
         // Update document with embedding
         var filter = MongoDB.Driver.Builders<MongoDB.Bson.BsonDocument>.Filter.Eq("_id", document["_id"]);
@@ -97,11 +92,3 @@ foreach (var document in allDocuments)
 }
 
 logger.LogInformation("Completed! Processed {Processed} documents, updated {Updated} embeddings.", processed, updated);
-
-// Null emoji handler for the console app
-file class NullEmojiHandler : IEmojiHandler
-{
-    public Task<string> GetEmojiAsync(string name) => Task.FromResult(name);
-    public IEnumerable<string> GetEmojis() => [];
-    public string ProcessMessage(string message) => message;
-}

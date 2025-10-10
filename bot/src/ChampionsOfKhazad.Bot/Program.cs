@@ -64,10 +64,12 @@ host.Services.AddBot(configuration =>
     {
         configuration.Persistence.ConnectionString = host.Configuration.GetRequiredConnectionString("Mongo");
     })
-    .AddGuildLore(configuration =>
+    .AddEmbeddings(configuration =>
     {
-        configuration.EmbeddingsApiKey = host.Configuration.GetRequiredString("OpenAIServiceOptions:ApiKey");
+        configuration.OpenAiApiKey = host.Configuration.GetRequiredString("OpenAIServiceOptions:ApiKey");
+        configuration.Model = "text-embedding-3-small";
     })
+    .AddGuildLore()
     .AddMongoPersistence()
     .AddDiscordMemes()
     .AddMongoPersistence()

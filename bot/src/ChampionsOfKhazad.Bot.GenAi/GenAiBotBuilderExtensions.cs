@@ -1,7 +1,6 @@
 ﻿using Azure.Storage;
 using ChampionsOfKhazad.Bot.Core;
 using ChampionsOfKhazad.Bot.GenAi;
-using ChampionsOfKhazad.Bot.GenAi.Embeddings;
 using ChampionsOfKhazad.Bot.Lore.Abstractions;
 using Microsoft.Extensions.Azure;
 using Microsoft.SemanticKernel;
@@ -43,7 +42,6 @@ public static class GenAiBotBuilderExtensions
             .Services.AddKernel()
             .AddOpenAIChatCompletion(Constants.DefaultCompletionsModel, config.OpenAiApiKey)
             .AddOpenAITextToImage(config.OpenAiApiKey, modelId: Constants.DefaultImageModel, httpClient: imageGenerationHttpClient)
-            .AddOpenAITextEmbeddingGeneration(Constants.DefaultEmbeddingModel, config.OpenAiApiKey)
             .Plugins.AddFromType<TimePlugin>()
             .AddFromType<ImageGenerationPlugin>()
             .Add(googleTextSearch.CreateWithGetSearchResults("GoogleSearchPlugin"));
@@ -70,8 +68,7 @@ public static class GenAiBotBuilderExtensions
             .AddScoped<RatExpertPersonality>()
             .AddScoped<StonerBroPersonality>()
             .AddScoped<HarassmentLawyerPersonality>()
-            .AddScoped<ProHarassmentLawyerPersonality>()
-            .AddScoped<IEmbeddingsService, EmbeddingsService>();
+            .AddScoped<ProHarassmentLawyerPersonality>();
 
         return new GenAiBuilder(builder.Services, builder.BotConfiguration);
     }

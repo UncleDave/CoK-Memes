@@ -22,6 +22,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\ChampionsOfKhazad.Bot\ChampionsOfKhazad.Bot.csproj" />
+    <ProjectReference Include="..\ChampionsOfKhazad.Bot.GenAi.Embeddings\ChampionsOfKhazad.Bot.GenAi.Embeddings.csproj" />
     <ProjectReference Include="..\ChampionsOfKhazad.Bot.Lore.Mongo\ChampionsOfKhazad.Bot.Lore.Mongo.csproj" />
   </ItemGroup>
 </Project>

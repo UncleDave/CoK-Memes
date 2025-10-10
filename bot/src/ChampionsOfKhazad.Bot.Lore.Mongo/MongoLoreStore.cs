@@ -1,17 +1,18 @@
-﻿using MongoDB.Driver;
+﻿using ChampionsOfKhazad.Bot.Lore.Abstractions;
+using MongoDB.Driver;
 
 namespace ChampionsOfKhazad.Bot.Lore.Mongo;
 
 internal class MongoLoreStore(IMongoCollection<LoreDocument> loreCollection) : IStoreLore
 {
-    public async Task<IReadOnlyList<Lore>> ReadLoreAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<ILore>> ReadLoreAsync(CancellationToken cancellationToken = default)
     {
         var result = await loreCollection.Find(FilterDefinition<LoreDocument>.Empty).ToListAsync(cancellationToken);
 
         return result.Select(x => x.ToModel()).ToList();
     }
 
-    public async Task<Lore?> ReadLoreAsync(string name, CancellationToken cancellationToken = default)
+    public async Task<ILore?> ReadLoreAsync(string name, CancellationToken cancellationToken = default)
     {
         var result = await loreCollection
             .Find(x => x.Name == name, new FindOptions { Collation = Collections.Lore.UniqueIndex.Collation })
@@ -20,21 +21,21 @@ internal class MongoLoreStore(IMongoCollection<LoreDocument> loreCollection) : I
         return result?.ToModel();
     }
 
-    public Task UpsertLoreAsync(GuildLore lore) =>
+    public Task UpsertLoreAsync(IGuildLore lore) =>
         loreCollection.ReplaceOneAsync(
             x => x.Name == lore.Name,
             new LoreDocument(lore),
             new ReplaceOptions { IsUpsert = true, Collation = Collections.Lore.UniqueIndex.Collation }
         );
 
-    public Task UpsertLoreAsync(MemberLore lore) =>
+    public Task UpsertLoreAsync(IMemberLore lore) =>
         loreCollection.ReplaceOneAsync(
             x => x.Name == lore.Name,
             new LoreDocument(lore),
             new ReplaceOptions { IsUpsert = true, Collation = Collections.Lore.UniqueIndex.Collation }
         );
 
-    public async Task<IReadOnlyList<Lore>> SearchLoreAsync(float[] queryVector, uint max, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<ILore>> SearchLoreAsync(float[] queryVector, uint max, CancellationToken cancellationToken = default)
     {
         var result = await loreCollection.AggregateAsync(
             new EmptyPipelineDefinition<LoreDocument>().VectorSearch(

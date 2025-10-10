@@ -28,11 +28,7 @@ internal record LoreDocument(string Name, string Content)
     public ILore ToModel()
     {
         return MainCharacter is not null
-            ? new global::ChampionsOfKhazad.Bot.Lore.MemberLore(Name, Pronouns!, Nationality!, MainCharacter, Biography)
-            {
-                Aliases = Aliases!,
-                Roles = Roles!,
-            }
-            : new global::ChampionsOfKhazad.Bot.Lore.GuildLore(Name, Content);
+            ? new MemberLore(Name, Pronouns!, Nationality!, MainCharacter, Biography) { Aliases = Aliases!, Roles = Roles! }
+            : new GuildLore(Name, Content);
     }
 }

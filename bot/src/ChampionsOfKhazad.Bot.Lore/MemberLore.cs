@@ -1,8 +1,9 @@
 using System.Text;
+using ChampionsOfKhazad.Bot.Lore.Abstractions;
 
-namespace ChampionsOfKhazad.Bot.Lore.Abstractions;
+namespace ChampionsOfKhazad.Bot.Lore;
 
-public record MemberLore(string Name, string Pronouns, string Nationality, string MainCharacter, string? Biography) : Lore(Name)
+public record MemberLore(string Name, string Pronouns, string Nationality, string MainCharacter, string? Biography) : Lore(Name), IMemberLore
 {
     public IReadOnlyList<string> Aliases { get; init; } = [];
     public IReadOnlyList<string> Roles { get; init; } = [];

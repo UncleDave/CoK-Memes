@@ -11,11 +11,11 @@ internal record LoreDocument(string Name, string Content)
     public IReadOnlyList<string>? Aliases { get; init; }
     public IReadOnlyList<string>? Roles { get; init; }
 
-    public LoreDocument(GuildLore guildLore)
+    public LoreDocument(IGuildLore guildLore)
         : this(guildLore.Name, guildLore.Content) { }
 
-    public LoreDocument(MemberLore memberLore)
-        : this(memberLore.Name, memberLore.ToString())
+    public LoreDocument(IMemberLore memberLore)
+        : this(memberLore.Name, memberLore.ToString() ?? string.Empty)
     {
         Pronouns = memberLore.Pronouns;
         Nationality = memberLore.Nationality;
@@ -25,10 +25,14 @@ internal record LoreDocument(string Name, string Content)
         Roles = memberLore.Roles;
     }
 
-    public Abstractions.Lore ToModel()
+    public ILore ToModel()
     {
         return MainCharacter is not null
-            ? new MemberLore(Name, Pronouns!, Nationality!, MainCharacter, Biography) { Aliases = Aliases!, Roles = Roles! }
-            : new GuildLore(Name, Content);
+            ? new global::ChampionsOfKhazad.Bot.Lore.MemberLore(Name, Pronouns!, Nationality!, MainCharacter, Biography)
+            {
+                Aliases = Aliases!,
+                Roles = Roles!,
+            }
+            : new global::ChampionsOfKhazad.Bot.Lore.GuildLore(Name, Content);
     }
 }

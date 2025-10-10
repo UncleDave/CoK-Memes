@@ -1,3 +1,6 @@
 namespace ChampionsOfKhazad.Bot.Lore.Abstractions;
 
-public abstract record Lore(string Name);
+public interface ILore
+{
+    string Name { get; }
+}

@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace ChampionsOfKhazad.Bot.Lore.Abstractions;
+namespace ChampionsOfKhazad.Bot.Lore;
 
 public static class StringBuilderExtensions
 {

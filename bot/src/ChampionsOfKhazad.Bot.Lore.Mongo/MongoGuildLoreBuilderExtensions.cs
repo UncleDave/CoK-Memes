@@ -1,4 +1,5 @@
 ﻿using ChampionsOfKhazad.Bot.Lore;
+using ChampionsOfKhazad.Bot.Lore.Abstractions;
 using ChampionsOfKhazad.Bot.Lore.Mongo;
 using ChampionsOfKhazad.Bot.Mongo;
 

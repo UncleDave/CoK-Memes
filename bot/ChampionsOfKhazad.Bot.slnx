@@ -33,9 +33,9 @@
     <Project Path="src\ChampionsOfKhazad.Bot.Lore.Mongo\ChampionsOfKhazad.Bot.Lore.Mongo.csproj" Type="C#" />
     <Project Path="src\ChampionsOfKhazad.Bot.Lore\ChampionsOfKhazad.Bot.Lore.csproj" Type="C#" />
     <Project Path="src\ChampionsOfKhazad.Bot.Mongo\ChampionsOfKhazad.Bot.Mongo.csproj" Type="C#" />
-    <Project Path="src\ChampionsOfKhazad.Bot.OpenAi.Embeddings\ChampionsOfKhazad.Bot.OpenAi.Embeddings.csproj" Type="C#" />
     <Project Path="src\ChampionsOfKhazad.Bot.Portal\ChampionsOfKhazad.Bot.Portal.csproj" Type="C#" />
     <Project Path="src\ChampionsOfKhazad.Bot.RaidHelper\ChampionsOfKhazad.Bot.RaidHelper.csproj" Type="C#" />
+    <Project Path="src\ChampionsOfKhazad.Bot.RegenerateEmbeddings\ChampionsOfKhazad.Bot.RegenerateEmbeddings.csproj" Type="C#" />
     <Project Path="src\DiscordConsole\DiscordConsole.csproj" Type="C#" />
   </Folder>
 </Solution>

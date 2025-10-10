@@ -1,9 +1,10 @@
-﻿using ChampionsOfKhazad.Bot.Lore.Abstractions;
+﻿using ChampionsOfKhazad.Bot.GenAi.Embeddings;
+using ChampionsOfKhazad.Bot.Lore.Abstractions;
 using MongoDB.Driver;
 
 namespace ChampionsOfKhazad.Bot.Lore.Mongo;
 
-internal class MongoLoreStore(IMongoCollection<LoreDocument> loreCollection) : IStoreLore
+internal class MongoLoreStore(IMongoCollection<LoreDocument> loreCollection, IEmbeddingsService? embeddingsService) : IStoreLore
 {
     public async Task<IReadOnlyList<ILore>> ReadLoreAsync(CancellationToken cancellationToken = default)
     {
@@ -21,19 +22,40 @@ internal class MongoLoreStore(IMongoCollection<LoreDocument> loreCollection) : I
         return result?.ToModel();
     }
 
-    public Task UpsertLoreAsync(IGuildLore lore) =>
-        loreCollection.ReplaceOneAsync(
-            x => x.Name == lore.Name,
-            new LoreDocument(lore),
-            new ReplaceOptions { IsUpsert = true, Collation = Collections.Lore.UniqueIndex.Collation }
-        );
+    public async Task UpsertLoreAsync(IGuildLore lore)
+    {
+        var document = new LoreDocument(lore);
 
-    public Task UpsertLoreAsync(IMemberLore lore) =>
-        loreCollection.ReplaceOneAsync(
+        if (embeddingsService is not null)
+        {
+            var embedding = await embeddingsService.CreateEmbeddingAsync(lore.Content);
+            document = document with { Embedding = embedding };
+        }
+
+        await loreCollection.ReplaceOneAsync(
             x => x.Name == lore.Name,
-            new LoreDocument(lore),
+            document,
             new ReplaceOptions { IsUpsert = true, Collation = Collections.Lore.UniqueIndex.Collation }
         );
+    }
+
+    public async Task UpsertLoreAsync(IMemberLore lore)
+    {
+        var content = lore.ToString() ?? string.Empty;
+        var document = new LoreDocument(lore);
+
+        if (embeddingsService is not null)
+        {
+            var embedding = await embeddingsService.CreateEmbeddingAsync(content);
+            document = document with { Embedding = embedding };
+        }
+
+        await loreCollection.ReplaceOneAsync(
+            x => x.Name == lore.Name,
+            document,
+            new ReplaceOptions { IsUpsert = true, Collation = Collections.Lore.UniqueIndex.Collation }
+        );
+    }
 
     public async Task<IReadOnlyList<ILore>> SearchLoreAsync(float[] queryVector, uint max, CancellationToken cancellationToken = default)
     {

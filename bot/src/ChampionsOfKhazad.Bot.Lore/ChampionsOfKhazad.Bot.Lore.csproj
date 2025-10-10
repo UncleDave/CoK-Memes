@@ -6,7 +6,7 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\ChampionsOfKhazad.Bot.Core\ChampionsOfKhazad.Bot.Core.csproj" />
+    <ProjectReference Include="..\ChampionsOfKhazad.Bot.GenAi\ChampionsOfKhazad.Bot.GenAi.csproj" />
     <ProjectReference Include="..\ChampionsOfKhazad.Bot.Lore.Abstractions\ChampionsOfKhazad.Bot.Lore.Abstractions.csproj" />
-    <ProjectReference Include="..\ChampionsOfKhazad.Bot.OpenAi.Embeddings\ChampionsOfKhazad.Bot.OpenAi.Embeddings.csproj" />
   </ItemGroup>
 </Project>

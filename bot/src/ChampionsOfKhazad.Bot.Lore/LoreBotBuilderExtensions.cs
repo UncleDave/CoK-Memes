@@ -1,6 +1,6 @@
-﻿using ChampionsOfKhazad.Bot.Lore;
+﻿using ChampionsOfKhazad.Bot.GenAi.Embeddings;
+using ChampionsOfKhazad.Bot.Lore;
 using ChampionsOfKhazad.Bot.Lore.Abstractions;
-using ChampionsOfKhazad.Bot.OpenAi.Embeddings;
 
 // ReSharper disable once CheckNamespace
 namespace Microsoft.Extensions.DependencyInjection;
@@ -20,7 +20,7 @@ public static class LoreBotBuilderExtensions
 
         if (options.EmbeddingsApiKey is not null)
         {
-            builder.Services.AddEmbeddingsService(options.EmbeddingsApiKey).AddSingleton<IGetRelatedLore, RelatedLoreService>();
+            builder.Services.AddSingleton<IGetRelatedLore, RelatedLoreService>();
         }
         else
         {

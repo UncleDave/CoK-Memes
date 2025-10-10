@@ -1,8 +1,9 @@
+using ChampionsOfKhazad.Bot.Lore.Abstractions;
 using Microsoft.SemanticKernel.Embeddings;
 
 namespace ChampionsOfKhazad.Bot.GenAi.Embeddings;
 
-public class EmbeddingsService(ITextEmbeddingGenerationService textEmbeddingService) : IEmbeddingsService
+internal class EmbeddingsService(ITextEmbeddingGenerationService textEmbeddingService) : IEmbeddingsService
 {
     public async Task<float[]> CreateEmbeddingAsync(string input, CancellationToken cancellationToken = default)
     {

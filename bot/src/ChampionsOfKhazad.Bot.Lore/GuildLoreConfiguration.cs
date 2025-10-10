@@ -2,5 +2,5 @@
 
 public class GuildLoreConfiguration
 {
-    public string? EmbeddingsApiKey { get; set; }
+    public required string EmbeddingsApiKey { get; set; }
 }

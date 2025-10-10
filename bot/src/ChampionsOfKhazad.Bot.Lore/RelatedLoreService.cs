@@ -1,5 +1,4 @@
-﻿using ChampionsOfKhazad.Bot.GenAi.Embeddings;
-using ChampionsOfKhazad.Bot.Lore.Abstractions;
+﻿using ChampionsOfKhazad.Bot.Lore.Abstractions;
 
 namespace ChampionsOfKhazad.Bot.Lore;
 

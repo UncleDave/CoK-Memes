@@ -1,4 +1,4 @@
-namespace ChampionsOfKhazad.Bot.GenAi.Embeddings;
+namespace ChampionsOfKhazad.Bot.Lore.Abstractions;
 
 public interface IEmbeddingsService
 {

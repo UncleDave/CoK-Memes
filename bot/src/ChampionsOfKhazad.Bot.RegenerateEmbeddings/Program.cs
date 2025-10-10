@@ -1,43 +1,54 @@
-﻿using ChampionsOfKhazad.Bot.GenAi.Embeddings;
+﻿using ChampionsOfKhazad.Bot.Core;
+using ChampionsOfKhazad.Bot.GenAi;
+using ChampionsOfKhazad.Bot.Lore.Abstractions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.SemanticKernel;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
 
-// Build configuration
-var configuration = new ConfigurationBuilder()
-    .AddJsonFile("appsettings.json", optional: true)
-    .AddJsonFile("appsettings.Development.json", optional: true)
-    .AddEnvironmentVariables()
-    .Build();
+// Build host
+var host = Host.CreateApplicationBuilder(args);
 
-// Get configuration values
-var mongoConnectionString = configuration.GetConnectionString("Mongo") ?? throw new InvalidOperationException("Mongo connection string not found");
-var openAiApiKey = configuration["OpenAi:ApiKey"] ?? throw new InvalidOperationException("OpenAI API key not found");
+host.Configuration.AddUserSecrets<Program>();
 
-// Build service collection
-var services = new ServiceCollection();
+// Build bot with proper extensions
+host.Services.AddBot(configuration =>
+    {
+        configuration.Persistence.ConnectionString = host.Configuration.GetRequiredConnectionString("Mongo");
+    })
+    .AddGuildLore(configuration =>
+    {
+        configuration.EmbeddingsApiKey = host.Configuration.GetRequiredString("OpenAIServiceOptions:ApiKey");
+    })
+    .AddMongoPersistence()
+    .AddGenAi<NullEmojiHandler>(configuration =>
+    {
+        configuration.OpenAiApiKey = host.Configuration.GetRequiredString("OpenAIServiceOptions:ApiKey");
+        configuration.GoogleSearchEngineId = host.Configuration["GoogleSearchEngine:Id"] ?? "dummy";
+        configuration.GoogleSearchEngineApiKey = host.Configuration["GoogleSearchEngine:ApiKey"] ?? "dummy";
+        configuration.AzureStorageAccountName = host.Configuration["AzureStorageAccountName"] ?? "dummy";
+        configuration.AzureStorageAccountAccessKey = host.Configuration["AzureStorageAccountAccessKey"] ?? "dummy";
+    });
 
-services.AddKernel().AddOpenAITextEmbeddingGeneration("text-embedding-3-small", openAiApiKey);
+var app = host.Build();
 
-services.AddScoped<IEmbeddingsService, EmbeddingsService>();
-
-var serviceProvider = services.BuildServiceProvider();
+// Get services
+var logger = app.Services.GetRequiredService<ILogger<Program>>();
+var embeddingsService = app.Services.GetRequiredService<IEmbeddingsService>();
+var mongoConnectionString = host.Configuration.GetRequiredConnectionString("Mongo");
 
 // Connect to MongoDB
 var mongoClient = new MongoClient(mongoConnectionString);
 var database = mongoClient.GetDatabase(MongoUrl.Create(mongoConnectionString).DatabaseName ?? "cok");
 var loreCollection = database.GetCollection<MongoDB.Bson.BsonDocument>("lore");
 
-// Get embeddings service
-var embeddingsService = serviceProvider.GetRequiredService<IEmbeddingsService>();
-
-Console.WriteLine("Starting embeddings regeneration...");
-Console.WriteLine($"Connected to database: {database.DatabaseNamespace.DatabaseName}");
+logger.LogInformation("Starting embeddings regeneration...");
+logger.LogInformation("Connected to database: {DatabaseName}", database.DatabaseNamespace.DatabaseName);
 
 // Get all lore documents
 var allDocuments = await loreCollection.Find(MongoDB.Driver.FilterDefinition<MongoDB.Bson.BsonDocument>.Empty).ToListAsync();
-Console.WriteLine($"Found {allDocuments.Count} documents to process");
+logger.LogInformation("Found {Count} documents to process", allDocuments.Count);
 
 int processed = 0;
 int updated = 0;
@@ -50,11 +61,11 @@ foreach (var document in allDocuments)
 
     if (string.IsNullOrWhiteSpace(content))
     {
-        Console.WriteLine($"[{processed}/{allDocuments.Count}] Skipping '{name}' - empty content");
+        logger.LogWarning("[{Processed}/{Total}] Skipping '{Name}' - empty content", processed, allDocuments.Count, name);
         continue;
     }
 
-    Console.WriteLine($"[{processed}/{allDocuments.Count}] Processing '{name}'...");
+    logger.LogInformation("[{Processed}/{Total}] Processing '{Name}'...", processed, allDocuments.Count, name);
 
     try
     {
@@ -71,13 +82,26 @@ foreach (var document in allDocuments)
         await loreCollection.UpdateOneAsync(filter, update);
         updated++;
 
-        Console.WriteLine($"[{processed}/{allDocuments.Count}] ✓ Updated '{name}' (embedding size: {embedding.Length})");
+        logger.LogInformation(
+            "[{Processed}/{Total}] ✓ Updated '{Name}' (embedding size: {Size})",
+            processed,
+            allDocuments.Count,
+            name,
+            embedding.Length
+        );
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"[{processed}/{allDocuments.Count}] ✗ Error processing '{name}': {ex.Message}");
+        logger.LogError(ex, "[{Processed}/{Total}] ✗ Error processing '{Name}'", processed, allDocuments.Count, name);
     }
 }
 
-Console.WriteLine();
-Console.WriteLine($"Completed! Processed {processed} documents, updated {updated} embeddings.");
+logger.LogInformation("Completed! Processed {Processed} documents, updated {Updated} embeddings.", processed, updated);
+
+// Null emoji handler for the console app
+file class NullEmojiHandler : IEmojiHandler
+{
+    public Task<string> GetEmojiAsync(string name) => Task.FromResult(name);
+    public IEnumerable<string> GetEmojis() => [];
+    public string ProcessMessage(string message) => message;
+}

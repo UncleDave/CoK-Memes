@@ -1,4 +1,4 @@
-﻿using ChampionsOfKhazad.Bot.GenAi;
+﻿using ChampionsOfKhazad.Bot.Lore.Abstractions;
 
 namespace ChampionsOfKhazad.Bot.Lore.Mongo;
 
@@ -25,7 +25,7 @@ internal record LoreDocument(string Name, string Content)
         Roles = memberLore.Roles;
     }
 
-    public GenAi.Lore ToModel()
+    public Abstractions.Lore ToModel()
     {
         return MainCharacter is not null
             ? new MemberLore(Name, Pronouns!, Nationality!, MainCharacter, Biography) { Aliases = Aliases!, Roles = Roles! }

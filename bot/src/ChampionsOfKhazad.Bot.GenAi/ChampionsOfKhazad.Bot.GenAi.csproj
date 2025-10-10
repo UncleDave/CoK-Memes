@@ -16,5 +16,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\ChampionsOfKhazad.Bot.Core\ChampionsOfKhazad.Bot.Core.csproj" />
+    <ProjectReference Include="..\ChampionsOfKhazad.Bot.Lore.Abstractions\ChampionsOfKhazad.Bot.Lore.Abstractions.csproj" />
   </ItemGroup>
 </Project>

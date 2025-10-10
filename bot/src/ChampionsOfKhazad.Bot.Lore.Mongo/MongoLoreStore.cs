@@ -1,18 +1,18 @@
-﻿using ChampionsOfKhazad.Bot.GenAi;
+﻿using ChampionsOfKhazad.Bot.Lore.Abstractions;
 using MongoDB.Driver;
 
 namespace ChampionsOfKhazad.Bot.Lore.Mongo;
 
 internal class MongoLoreStore(IMongoCollection<LoreDocument> loreCollection) : IStoreLore
 {
-    public async Task<IReadOnlyList<GenAi.Lore>> ReadLoreAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<Abstractions.Lore>> ReadLoreAsync(CancellationToken cancellationToken = default)
     {
         var result = await loreCollection.Find(FilterDefinition<LoreDocument>.Empty).ToListAsync(cancellationToken);
 
         return result.Select(x => x.ToModel()).ToList();
     }
 
-    public async Task<GenAi.Lore?> ReadLoreAsync(string name, CancellationToken cancellationToken = default)
+    public async Task<Abstractions.Lore?> ReadLoreAsync(string name, CancellationToken cancellationToken = default)
     {
         var result = await loreCollection
             .Find(x => x.Name == name, new FindOptions { Collation = Collections.Lore.UniqueIndex.Collation })
@@ -35,7 +35,7 @@ internal class MongoLoreStore(IMongoCollection<LoreDocument> loreCollection) : I
             new ReplaceOptions { IsUpsert = true, Collation = Collections.Lore.UniqueIndex.Collation }
         );
 
-    public async Task<IReadOnlyList<GenAi.Lore>> SearchLoreAsync(float[] queryVector, uint max, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<Abstractions.Lore>> SearchLoreAsync(float[] queryVector, uint max, CancellationToken cancellationToken = default)
     {
         var result = await loreCollection.AggregateAsync(
             new EmptyPipelineDefinition<LoreDocument>().VectorSearch(

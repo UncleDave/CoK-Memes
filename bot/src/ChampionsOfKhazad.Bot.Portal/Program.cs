@@ -3,6 +3,7 @@ using Auth0.AspNetCore.Authentication;
 using ChampionsOfKhazad.Bot.Core;
 using ChampionsOfKhazad.Bot.GenAi;
 using ChampionsOfKhazad.Bot.Lore;
+using ChampionsOfKhazad.Bot.Lore.Abstractions;
 using ChampionsOfKhazad.Bot.Portal;
 using Discord;
 using Discord.Rest;

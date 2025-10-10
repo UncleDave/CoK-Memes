@@ -1,4 +1,5 @@
-﻿using Microsoft.SemanticKernel;
+﻿using ChampionsOfKhazad.Bot.Lore.Abstractions;
+using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 
 namespace ChampionsOfKhazad.Bot.GenAi;

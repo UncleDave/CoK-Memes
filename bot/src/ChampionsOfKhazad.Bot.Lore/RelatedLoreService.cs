@@ -1,11 +1,11 @@
-﻿using ChampionsOfKhazad.Bot.GenAi;
+﻿using ChampionsOfKhazad.Bot.Lore.Abstractions;
 using ChampionsOfKhazad.Bot.OpenAi.Embeddings;
 
 namespace ChampionsOfKhazad.Bot.Lore;
 
 internal class RelatedLoreService(IStoreLore loreStore, EmbeddingsService embeddingsService) : IGetRelatedLore
 {
-    public async Task<IReadOnlyList<GenAi.Lore>> GetRelatedLoreAsync(string text, uint max = 10)
+    public async Task<IReadOnlyList<Abstractions.Lore>> GetRelatedLoreAsync(string text, uint max = 10)
     {
         var embedding = await embeddingsService.CreateEmbeddingAsync(text);
 

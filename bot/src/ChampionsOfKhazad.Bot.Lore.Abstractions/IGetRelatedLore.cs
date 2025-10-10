@@ -1,4 +1,4 @@
-﻿namespace ChampionsOfKhazad.Bot.GenAi;
+namespace ChampionsOfKhazad.Bot.Lore.Abstractions;
 
 public interface IGetRelatedLore
 {

@@ -1,6 +1,6 @@
-﻿using System.Text;
+using System.Text;
 
-namespace ChampionsOfKhazad.Bot.GenAi;
+namespace ChampionsOfKhazad.Bot.Lore.Abstractions;
 
 public static class StringBuilderExtensions
 {

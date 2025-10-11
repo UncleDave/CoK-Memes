@@ -67,7 +67,6 @@ host.Services.AddBot(configuration =>
     .AddEmbeddings(configuration =>
     {
         configuration.OpenAiApiKey = host.Configuration.GetRequiredString("OpenAIServiceOptions:ApiKey");
-        configuration.Model = "text-embedding-3-small";
     })
     .AddGuildLore()
     .AddMongoPersistence()

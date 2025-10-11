@@ -1,7 +1,6 @@
 ﻿using Azure.Storage;
 using ChampionsOfKhazad.Bot.Core;
 using ChampionsOfKhazad.Bot.GenAi;
-using ChampionsOfKhazad.Bot.Lore.Abstractions;
 using Microsoft.Extensions.Azure;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Data;

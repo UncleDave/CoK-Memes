@@ -10,6 +10,7 @@ internal record LoreDocument(string Name, string Content)
     public string? Biography { get; init; }
     public IReadOnlyList<string>? Aliases { get; init; }
     public IReadOnlyList<string>? Roles { get; init; }
+    public float[]? Embedding { get; init; }
 
     public LoreDocument(IGuildLore guildLore)
         : this(guildLore.Name, guildLore.Content) { }
@@ -25,10 +26,8 @@ internal record LoreDocument(string Name, string Content)
         Roles = memberLore.Roles;
     }
 
-    public ILore ToModel()
-    {
-        return MainCharacter is not null
+    public ILore ToModel() =>
+        MainCharacter is not null
             ? new MemberLore(Name, Pronouns!, Nationality!, MainCharacter, Biography) { Aliases = Aliases!, Roles = Roles! }
             : new GuildLore(Name, Content);
-    }
 }

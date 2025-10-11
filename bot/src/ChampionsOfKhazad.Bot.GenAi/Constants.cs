@@ -8,7 +8,6 @@ public static class Constants
 
     internal const string DefaultCompletionsModel = "gpt-4.1";
     internal const string DefaultImageModel = "gpt-image-1";
-    internal const string DefaultEmbeddingModel = "text-embedding-3-small";
 
     internal const string GeneratedImagesBlobContainerName = "generated-images";
     public const string GeneratedImagesBaseUrl = $"https://images.championsofkhazad.com/{GeneratedImagesBlobContainerName}";

@@ -27,13 +27,14 @@
     <Project Path="src\ChampionsOfKhazad.Bot.Core\ChampionsOfKhazad.Bot.Core.csproj" Type="C#" />
     <Project Path="src\ChampionsOfKhazad.Bot.DiscordMemes.Mongo\ChampionsOfKhazad.Bot.DiscordMemes.Mongo.csproj" Type="C#" />
     <Project Path="src\ChampionsOfKhazad.Bot.DiscordMemes\ChampionsOfKhazad.Bot.DiscordMemes.csproj" Type="C#" />
+    <Project Path="src\ChampionsOfKhazad.Bot.EmbeddingsRegenerator\ChampionsOfKhazad.Bot.EmbeddingsRegenerator.csproj" Type="C#" />
+    <Project Path="src\ChampionsOfKhazad.Bot.GenAi.Embeddings\ChampionsOfKhazad.Bot.GenAi.Embeddings.csproj" Type="C#" />
     <Project Path="src\ChampionsOfKhazad.Bot.GenAi.Mongo\ChampionsOfKhazad.Bot.GenAi.Mongo.csproj" Type="C#" />
     <Project Path="src\ChampionsOfKhazad.Bot.GenAi\ChampionsOfKhazad.Bot.GenAi.csproj" Type="C#" />
     <Project Path="src\ChampionsOfKhazad.Bot.Infrastructure\ChampionsOfKhazad.Bot.Infrastructure.csproj" Type="C#" />
     <Project Path="src\ChampionsOfKhazad.Bot.Lore.Mongo\ChampionsOfKhazad.Bot.Lore.Mongo.csproj" Type="C#" />
     <Project Path="src\ChampionsOfKhazad.Bot.Lore\ChampionsOfKhazad.Bot.Lore.csproj" Type="C#" />
     <Project Path="src\ChampionsOfKhazad.Bot.Mongo\ChampionsOfKhazad.Bot.Mongo.csproj" Type="C#" />
-    <Project Path="src\ChampionsOfKhazad.Bot.OpenAi.Embeddings\ChampionsOfKhazad.Bot.OpenAi.Embeddings.csproj" Type="C#" />
     <Project Path="src\ChampionsOfKhazad.Bot.Portal\ChampionsOfKhazad.Bot.Portal.csproj" Type="C#" />
     <Project Path="src\ChampionsOfKhazad.Bot.RaidHelper\ChampionsOfKhazad.Bot.RaidHelper.csproj" Type="C#" />
     <Project Path="src\DiscordConsole\DiscordConsole.csproj" Type="C#" />

@@ -1,31 +1,19 @@
 ﻿using ChampionsOfKhazad.Bot.Lore;
 using ChampionsOfKhazad.Bot.Lore.Abstractions;
-using ChampionsOfKhazad.Bot.OpenAi.Embeddings;
 
 // ReSharper disable once CheckNamespace
 namespace Microsoft.Extensions.DependencyInjection;
 
 public static class LoreBotBuilderExtensions
 {
-    public static GuildLoreBuilder AddGuildLore(this BotBuilder builder, Action<GuildLoreConfiguration>? configureGuildLore = null)
+    public static GuildLoreBuilder AddGuildLore(this BotBuilder builder)
     {
-        var options = new GuildLoreConfiguration();
-        configureGuildLore?.Invoke(options);
-
         builder
             .Services.AddSingleton<LoreService>()
             .AddSingleton<IGetLore>(sp => sp.GetRequiredService<LoreService>())
             .AddSingleton<ICreateLore>(sp => sp.GetRequiredService<LoreService>())
-            .AddSingleton<IUpdateLore>(sp => sp.GetRequiredService<LoreService>());
-
-        if (options.EmbeddingsApiKey is not null)
-        {
-            builder.Services.AddEmbeddingsService(options.EmbeddingsApiKey).AddSingleton<IGetRelatedLore, RelatedLoreService>();
-        }
-        else
-        {
-            builder.Services.AddSingleton<IGetRelatedLore, NoopRelatedLoreService>();
-        }
+            .AddSingleton<IUpdateLore>(sp => sp.GetRequiredService<LoreService>())
+            .AddSingleton<IGetRelatedLore, RelatedLoreService>();
 
         return new GuildLoreBuilder(builder.Services, builder.BotConfiguration);
     }

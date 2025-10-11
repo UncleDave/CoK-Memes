@@ -30,4 +30,19 @@ internal class MongoGeneratedImageStore(IMongoCollection<GeneratedImage> generat
     }
 
     public Task SaveGeneratedImageAsync(GeneratedImage image) => generatedImageCollection.InsertOneAsync(image);
+
+    public async Task<IReadOnlyCollection<GeneratedImage>> SearchAsync(
+        string searchText,
+        ushort take = 4,
+        ulong? userId = null,
+        CancellationToken cancellationToken = default
+    )
+    {
+        var textFilter = Builders<GeneratedImage>.Filter.Text(searchText);
+        var filter = userId is not null
+            ? Builders<GeneratedImage>.Filter.And(textFilter, Builders<GeneratedImage>.Filter.Eq(x => x.UserId, userId.Value))
+            : textFilter;
+
+        return await generatedImageCollection.Find(filter).Limit(take).ToListAsync(cancellationToken);
+    }
 }

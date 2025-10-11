@@ -20,7 +20,7 @@ const searchGeneratedImages = async (
   const res = await fetch(url, { signal: abortSignal });
 
   if (!res.ok) {
-    throw new Error("Failed to search images");
+    throw new Error(`Failed to search images: ${res.status} ${res.statusText}`);
   }
 
   const contracts: GeneratedImageContract[] = await res.json();

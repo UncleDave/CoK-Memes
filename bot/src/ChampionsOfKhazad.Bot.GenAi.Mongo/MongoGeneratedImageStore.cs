@@ -42,7 +42,8 @@ internal class MongoGeneratedImageStore(IMongoCollection<GeneratedImage> generat
         var filter = userId is not null
             ? Builders<GeneratedImage>.Filter.And(textFilter, Builders<GeneratedImage>.Filter.Eq(x => x.UserId, userId.Value))
             : textFilter;
+        var sort = Builders<GeneratedImage>.Sort.MetaTextScore("score");
 
-        return await generatedImageCollection.Find(filter).Limit(take).ToListAsync(cancellationToken);
+        return await generatedImageCollection.Find(filter).Sort(sort).Limit(take).ToListAsync(cancellationToken);
     }
 }

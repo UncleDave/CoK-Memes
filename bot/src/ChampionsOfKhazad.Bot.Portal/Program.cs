@@ -150,54 +150,29 @@ generatedImages.MapGet(
         DiscordUserResolver discordUserResolver,
         ClaimsPrincipal claimsPrincipal,
         CancellationToken cancellationToken,
+        string? query = null,
         ushort skip = 0,
         ushort take = 20,
         bool mine = false,
         bool sortAscending = false
     ) =>
     {
-        var images = await generatedImageStore.GetAsync(
-            skip,
-            take,
-            mine ? claimsPrincipal.GetDiscordUserId() : null,
-            sortAscending,
-            cancellationToken
-        );
+        IReadOnlyCollection<GeneratedImage> images;
 
-        var uniqueUserIds = images.Select(x => x.UserId).Distinct().ToList();
-        var users = await Task.WhenAll(uniqueUserIds.Select(discordUserResolver.GetUserAsync));
-
-        var contracts = images
-            .Select(x =>
-            {
-                var user = users.Single(u => u.Id == x.UserId);
-                var userName = user is IGuildUser guildUser ? guildUser.DisplayName : user.GlobalName ?? user.Username;
-                var userContract = new GeneratedImageUserContract(userName, user.GetDisplayAvatarUrl());
-
-                return new GeneratedImageContract(x.Prompt, userContract, x.Timestamp, x.Filename);
-            })
-            .ToList();
-
-        return Results.Ok(contracts);
-    }
-);
-
-generatedImages.MapGet(
-    "search",
-    async (
-        IGeneratedImageStore generatedImageStore,
-        DiscordUserResolver discordUserResolver,
-        ClaimsPrincipal claimsPrincipal,
-        CancellationToken cancellationToken,
-        string? query = null,
-        ushort take = 4,
-        bool mine = false
-    ) =>
-    {
-        if (string.IsNullOrWhiteSpace(query))
-            return Results.BadRequest("Search query is required.");
-
-        var images = await generatedImageStore.SearchAsync(query, take, mine ? claimsPrincipal.GetDiscordUserId() : null, cancellationToken);
+        if (!string.IsNullOrWhiteSpace(query))
+        {
+            images = await generatedImageStore.SearchAsync(query, take, mine ? claimsPrincipal.GetDiscordUserId() : null, cancellationToken);
+        }
+        else
+        {
+            images = await generatedImageStore.GetAsync(
+                skip,
+                take,
+                mine ? claimsPrincipal.GetDiscordUserId() : null,
+                sortAscending,
+                cancellationToken
+            );
+        }
 
         var uniqueUserIds = images.Select(x => x.UserId).Distinct().ToList();
         var users = await Task.WhenAll(uniqueUserIds.Select(discordUserResolver.GetUserAsync));

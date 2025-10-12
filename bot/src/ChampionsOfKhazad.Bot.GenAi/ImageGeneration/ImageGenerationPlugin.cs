@@ -72,7 +72,7 @@ internal class ImageGenerationPlugin(
         var messageContext = kernel.GetMessageContext();
         var userId = onlyMine ? messageContext.UserId : (ulong?)null;
 
-        var images = await generatedImageStore.SearchAsync(searchText, take, userId, cancellationToken);
+        var images = await generatedImageStore.GetAsync(take: take, userId: userId, searchText: searchText, cancellationToken: cancellationToken);
 
         if (images.Count == 0)
             return "No images found matching the search query.";

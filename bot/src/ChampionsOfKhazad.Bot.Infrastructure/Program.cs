@@ -229,7 +229,7 @@ return await Pulumi.Deployment.RunAsync(() =>
                     [
                         new EnvironmentVarArgs { Name = "TZ", Value = timezone },
                         new EnvironmentVarArgs { Name = "DOTNET_ENVIRONMENT", Value = dotnetEnvironment },
-                        new EnvironmentVarArgs { Name = "OpenAIServiceOptions__ApiKey", SecretRef = openAiApiKeySecretName },
+                        new EnvironmentVarArgs { Name = "OpenAi__ApiKey", SecretRef = openAiApiKeySecretName },
                         new EnvironmentVarArgs { Name = "ConnectionStrings__Mongo", SecretRef = mongoConnectionStringSecretName },
                         new EnvironmentVarArgs { Name = "Auth__ClientSecret", SecretRef = portalAuthClientSecretName },
                         new EnvironmentVarArgs { Name = "ASPNETCORE_FORWARDEDHEADERS_ENABLED", Value = "true" },

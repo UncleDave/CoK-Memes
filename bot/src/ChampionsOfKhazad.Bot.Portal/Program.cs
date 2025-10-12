@@ -59,6 +59,10 @@ builder
     {
         configuration.Persistence.ConnectionString = builder.Configuration.GetRequiredConnectionString("Mongo");
     })
+    .AddEmbeddings(configuration =>
+    {
+        configuration.OpenAiApiKey = builder.Configuration.GetRequiredString("OpenAi:ApiKey");
+    })
     .AddGuildLore()
     .AddMongoPersistence()
     .AddGenAiMongoPersistence();
@@ -157,22 +161,14 @@ generatedImages.MapGet(
         bool sortAscending = false
     ) =>
     {
-        IReadOnlyCollection<GeneratedImage> images;
-
-        if (!string.IsNullOrWhiteSpace(query))
-        {
-            images = await generatedImageStore.SearchAsync(query, take, mine ? claimsPrincipal.GetDiscordUserId() : null, cancellationToken);
-        }
-        else
-        {
-            images = await generatedImageStore.GetAsync(
-                skip,
-                take,
-                mine ? claimsPrincipal.GetDiscordUserId() : null,
-                sortAscending,
-                cancellationToken
-            );
-        }
+        var images = await generatedImageStore.GetAsync(
+            skip,
+            take,
+            mine ? claimsPrincipal.GetDiscordUserId() : null,
+            sortAscending,
+            query,
+            cancellationToken
+        );
 
         var uniqueUserIds = images.Select(x => x.UserId).Distinct().ToList();
         var users = await Task.WhenAll(uniqueUserIds.Select(discordUserResolver.GetUserAsync));

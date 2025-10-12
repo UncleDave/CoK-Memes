@@ -9,13 +9,28 @@ internal class MongoGeneratedImageStore(IMongoCollection<GeneratedImage> generat
         ushort take = 20,
         ulong? userId = null,
         bool sortAscending = false,
+        string? searchText = null,
         CancellationToken cancellationToken = default
     )
     {
-        var filter = userId is not null ? Builders<GeneratedImage>.Filter.Eq(x => x.UserId, userId.Value) : FilterDefinition<GeneratedImage>.Empty;
-        var sort = sortAscending
-            ? Builders<GeneratedImage>.Sort.Ascending(x => x.Timestamp)
-            : Builders<GeneratedImage>.Sort.Descending(x => x.Timestamp);
+        FilterDefinition<GeneratedImage> filter;
+        SortDefinition<GeneratedImage> sort;
+
+        if (!string.IsNullOrWhiteSpace(searchText))
+        {
+            var textFilter = Builders<GeneratedImage>.Filter.Text(searchText);
+            filter = userId is not null
+                ? Builders<GeneratedImage>.Filter.And(textFilter, Builders<GeneratedImage>.Filter.Eq(x => x.UserId, userId.Value))
+                : textFilter;
+            sort = Builders<GeneratedImage>.Sort.MetaTextScore("score");
+        }
+        else
+        {
+            filter = userId is not null ? Builders<GeneratedImage>.Filter.Eq(x => x.UserId, userId.Value) : FilterDefinition<GeneratedImage>.Empty;
+            sort = sortAscending
+                ? Builders<GeneratedImage>.Sort.Ascending(x => x.Timestamp)
+                : Builders<GeneratedImage>.Sort.Descending(x => x.Timestamp);
+        }
 
         return await generatedImageCollection.Find(filter).Skip(skip).Limit(take).Sort(sort).ToListAsync(cancellationToken);
     }
@@ -30,20 +45,4 @@ internal class MongoGeneratedImageStore(IMongoCollection<GeneratedImage> generat
     }
 
     public Task SaveGeneratedImageAsync(GeneratedImage image) => generatedImageCollection.InsertOneAsync(image);
-
-    public async Task<IReadOnlyCollection<GeneratedImage>> SearchAsync(
-        string searchText,
-        ushort take = 4,
-        ulong? userId = null,
-        CancellationToken cancellationToken = default
-    )
-    {
-        var textFilter = Builders<GeneratedImage>.Filter.Text(searchText);
-        var filter = userId is not null
-            ? Builders<GeneratedImage>.Filter.And(textFilter, Builders<GeneratedImage>.Filter.Eq(x => x.UserId, userId.Value))
-            : textFilter;
-        var sort = Builders<GeneratedImage>.Sort.MetaTextScore("score");
-
-        return await generatedImageCollection.Find(filter).Sort(sort).Limit(take).ToListAsync(cancellationToken);
-    }
 }

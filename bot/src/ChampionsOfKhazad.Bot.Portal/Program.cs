@@ -150,19 +150,29 @@ generatedImages.MapGet(
         DiscordUserResolver discordUserResolver,
         ClaimsPrincipal claimsPrincipal,
         CancellationToken cancellationToken,
+        string? query = null,
         ushort skip = 0,
         ushort take = 20,
         bool mine = false,
         bool sortAscending = false
     ) =>
     {
-        var images = await generatedImageStore.GetAsync(
-            skip,
-            take,
-            mine ? claimsPrincipal.GetDiscordUserId() : null,
-            sortAscending,
-            cancellationToken
-        );
+        IReadOnlyCollection<GeneratedImage> images;
+
+        if (!string.IsNullOrWhiteSpace(query))
+        {
+            images = await generatedImageStore.SearchAsync(query, take, mine ? claimsPrincipal.GetDiscordUserId() : null, cancellationToken);
+        }
+        else
+        {
+            images = await generatedImageStore.GetAsync(
+                skip,
+                take,
+                mine ? claimsPrincipal.GetDiscordUserId() : null,
+                sortAscending,
+                cancellationToken
+            );
+        }
 
         var uniqueUserIds = images.Select(x => x.UserId).Distinct().ToList();
         var users = await Task.WhenAll(uniqueUserIds.Select(discordUserResolver.GetUserAsync));

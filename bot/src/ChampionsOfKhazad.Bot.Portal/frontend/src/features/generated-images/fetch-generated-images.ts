@@ -8,6 +8,7 @@ const fetchGeneratedImages = async (
   take?: number,
   mine?: boolean,
   sortAscending?: boolean,
+  query?: string,
   abortSignal?: AbortSignal,
 ): Promise<GeneratedImage[]> => {
   const params = new URLSearchParams();
@@ -16,13 +17,14 @@ const fetchGeneratedImages = async (
   if (take !== undefined) params.append("take", take.toString());
   if (mine) params.append("mine", "true");
   if (sortAscending) params.append("sortAscending", "true");
+  if (query) params.append("query", query);
 
   const url = params.size ? `${path}?${params.toString()}` : path;
 
   const res = await fetch(url, { signal: abortSignal });
 
   if (!res.ok) {
-    throw new Error("Failed to load images");
+    throw new Error(`Failed to load images: ${res.status} ${res.statusText}`);
   }
 
   const contracts: GeneratedImageContract[] = await res.json();

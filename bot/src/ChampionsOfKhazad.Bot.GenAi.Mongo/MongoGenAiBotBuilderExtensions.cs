@@ -21,6 +21,7 @@ public static class MongoGenAiBotBuilderExtensions
                         new CreateIndexModel<GeneratedImage>(Builders<GeneratedImage>.IndexKeys.Ascending(x => x.Timestamp))
                     );
                     collection.CreateUniqueIndex(x => x.Filename);
+                    collection.Indexes.CreateOne(new CreateIndexModel<GeneratedImage>(Builders<GeneratedImage>.IndexKeys.Text(x => x.Prompt)));
                 }
             )
             .Services.AddSingleton<IGeneratedImageStore, MongoGeneratedImageStore>();

@@ -32,3 +32,6 @@ updates:
         patterns:
           - vite
           - "@vitejs/*"
+      microsoft-extensions:
+        patterns:
+          - Microsoft.Extensions.*

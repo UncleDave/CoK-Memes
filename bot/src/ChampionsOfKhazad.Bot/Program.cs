@@ -58,6 +58,7 @@ host.Services.AddMediatR(configuration =>
 {
     configuration.RegisterServicesFromAssemblyContaining<Program>();
     configuration.NotificationPublisherType = typeof(ParallelNonBlockingPublisher);
+    configuration.LicenseKey = host.Configuration.GetRequiredString("MediatR:LicenseKey");
 });
 
 host.Services.AddBot(configuration =>

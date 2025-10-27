@@ -87,6 +87,7 @@ return await Pulumi.Deployment.RunAsync(() =>
     const string googleSearchEngineApiKeySecretName = "google-search-engine-api-key";
     const string storageAccountAccessKeySecretName = "storage-account-access-key";
     const string portalAuthClientSecretName = "portal-auth-client-secret";
+    const string mediatrLicenseKeySecretName = "mediatr-license-key";
 
     const string timezone = "Europe/Copenhagen";
     var dotnetEnvironment = config.Require("environment");
@@ -108,6 +109,7 @@ return await Pulumi.Deployment.RunAsync(() =>
         new() { Name = "GoogleSearchEngine__ApiKey", SecretRef = googleSearchEngineApiKeySecretName },
         new() { Name = "AzureStorageAccountName", Value = storageAccount.Name },
         new() { Name = "AzureStorageAccountAccessKey", SecretRef = storageAccountAccessKeySecretName },
+        new() { Name = "MediatR__LicenseKey", SecretRef = mediatrLicenseKeySecretName },
     };
 
     var commitSha = Environment.GetEnvironmentVariable("COMMIT_SHA");
@@ -146,6 +148,7 @@ return await Pulumi.Deployment.RunAsync(() =>
                     },
                     new SecretArgs { Name = googleSearchEngineApiKeySecretName, Value = config.RequireSecret("googleSearchEngineApiKey") },
                     new SecretArgs { Name = storageAccountAccessKeySecretName, Value = storageAccountKey },
+                    new SecretArgs { Name = mediatrLicenseKeySecretName, Value = config.RequireSecret("mediatrLicenseKey") },
                 },
             },
             Template = new TemplateArgs

@@ -71,7 +71,7 @@ internal abstract class PersonalityBase(
             kernel,
             new KernelArguments(arguments)
             {
-                { "userName", input.AuthorName },
+                { "userName", messageContext.UserName },
                 { "lore", string.Join("\n---\n\n", lore.Select(x => x.ToString())) },
                 { "emojis", string.Join(' ', emojiHandler.GetEmojis()) },
             },

@@ -25,7 +25,7 @@ internal class NoNutNovemberExpertPersonality(
             "Your response should:",
             "- Cite your German-influenced research using appropriately long German condition names",
             "- Warn {{$userName}} about the dangers of participating in NNN with academic authority",
-            "- Reference that it's currently {{time.month}} and discourage participation",
+            "- Reference that it's currently {{TimePlugin.Month}} and discourage participation",
             "- Use academic language mixed with German terminology and genuine concern for their wellbeing"
         ),
         kernel,

@@ -77,10 +77,10 @@ builder.Services.PostConfigure<OpenIdConnectOptions>(
             var errorMessage = context.Failure?.Message ?? "";
             var isPromptNoneError = promptNoneErrors.Any(error => errorMessage.Contains(error, StringComparison.OrdinalIgnoreCase));
 
-            if (isPromptNoneError)
+            if (isPromptNoneError && !context.Response.HasStarted)
             {
                 // Silent authentication failed - redirect to initiate normal authentication
-                // Build URL with retry parameter to avoid using prompt=none on the next attempt
+                // Use the original request path (which is local) with retry parameter
                 var currentPath = context.HttpContext.Request.Path.Value ?? "/";
                 var retryUrl = QueryHelpers.AddQueryString(currentPath, RetryParameterName, "1");
 

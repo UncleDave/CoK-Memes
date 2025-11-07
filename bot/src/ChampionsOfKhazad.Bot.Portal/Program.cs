@@ -117,6 +117,15 @@ loreGroup.MapGet(
     }
 );
 
+loreGroup.MapDelete(
+    "{name}",
+    async (string name, IDeleteLore loreDeleter) =>
+    {
+        await loreDeleter.DeleteLoreAsync(name);
+        return Results.NoContent();
+    }
+);
+
 var guildLore = apiGroup.MapGroup("guild-lore").RequireAuthorization(adminPolicy);
 
 guildLore.MapPut(

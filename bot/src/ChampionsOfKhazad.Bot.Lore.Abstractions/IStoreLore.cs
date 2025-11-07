@@ -7,5 +7,6 @@ public interface IStoreLore
     Task UpsertLoreAsync(ILore lore);
     Task UpsertLoreAsync(IGuildLore lore);
     Task UpsertLoreAsync(IMemberLore lore);
+    Task DeleteLoreAsync(string name);
     Task<IReadOnlyList<ILore>> SearchLoreAsync(float[] queryVector, uint max, CancellationToken cancellationToken = default);
 }

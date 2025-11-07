@@ -38,6 +38,10 @@ const api = {
       headers: { "content-type": "application/json" },
       body: JSON.stringify(buildMemberLoreBody(formData)),
     }),
+  deleteLore: async (name: string) =>
+    fetch(`/api/lore/${name}`, {
+      method: "DELETE",
+    }),
 };
 
 export default api;

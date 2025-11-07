@@ -9,6 +9,7 @@ using Discord;
 using Discord.Rest;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -82,7 +83,7 @@ builder.Services.PostConfigure<OpenIdConnectOptions>(
                 // Silent authentication failed - redirect to initiate normal authentication
                 // Build URL with retry parameter to avoid using prompt=none on the next attempt
                 var currentPath = context.HttpContext.Request.Path.HasValue ? context.HttpContext.Request.Path.Value : "/";
-                var retryUrl = Microsoft.AspNetCore.WebUtilities.QueryHelpers.AddQueryString(currentPath, RetryParameterName, "1");
+                var retryUrl = QueryHelpers.AddQueryString(currentPath, RetryParameterName, "1");
 
                 context.Response.Redirect(retryUrl);
                 context.HandleResponse();

@@ -31,27 +31,28 @@ builder
     });
 
 // Configure OpenIdConnect to avoid prompting for consent on every login
-builder.Services.Configure<OpenIdConnectOptions>(
+builder.Services.PostConfigure<OpenIdConnectOptions>(
     Auth0Constants.AuthenticationScheme,
     options =>
     {
-        var existingEvents = options.Events ?? new OpenIdConnectEvents();
-        var existingOnRedirectToIdentityProvider = existingEvents.OnRedirectToIdentityProvider;
+        // Store reference to any existing OnRedirectToIdentityProvider handler
+        var existingOnRedirectToIdentityProvider = options.Events?.OnRedirectToIdentityProvider;
 
-        options.Events = new OpenIdConnectEvents
+        // Ensure Events object exists
+        options.Events ??= new OpenIdConnectEvents();
+
+        // Wrap the existing handler (if any) with our custom logic
+        options.Events.OnRedirectToIdentityProvider = async context =>
         {
-            OnRedirectToIdentityProvider = async context =>
+            // Call existing handler if present
+            if (existingOnRedirectToIdentityProvider != null)
             {
-                // Call existing handler if present
-                if (existingOnRedirectToIdentityProvider != null)
-                {
-                    await existingOnRedirectToIdentityProvider(context);
-                }
+                await existingOnRedirectToIdentityProvider(context);
+            }
 
-                // Remove the prompt parameter to avoid re-prompting users for consent on every login
-                // This allows Auth0/Discord to use existing authorization for returning users
-                context.ProtocolMessage.Prompt = null;
-            },
+            // Remove the prompt parameter to avoid re-prompting users for consent on every login
+            // This allows Auth0/Discord to use existing authorization for returning users
+            context.ProtocolMessage.Prompt = null;
         };
     }
 );

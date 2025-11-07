@@ -35,14 +35,22 @@ builder.Services.Configure<OpenIdConnectOptions>(
     Auth0Constants.AuthenticationScheme,
     options =>
     {
+        var existingEvents = options.Events ?? new OpenIdConnectEvents();
+        var existingOnRedirectToIdentityProvider = existingEvents.OnRedirectToIdentityProvider;
+
         options.Events = new OpenIdConnectEvents
         {
-            OnRedirectToIdentityProvider = context =>
+            OnRedirectToIdentityProvider = async context =>
             {
+                // Call existing handler if present
+                if (existingOnRedirectToIdentityProvider != null)
+                {
+                    await existingOnRedirectToIdentityProvider(context);
+                }
+
                 // Remove the prompt parameter to avoid re-prompting users for consent on every login
                 // This allows Auth0/Discord to use existing authorization for returning users
                 context.ProtocolMessage.Prompt = null;
-                return Task.CompletedTask;
             },
         };
     }

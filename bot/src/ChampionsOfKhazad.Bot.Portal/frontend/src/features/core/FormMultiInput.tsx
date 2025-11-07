@@ -1,22 +1,40 @@
 import { Add, Delete } from "@mui/icons-material";
 import { FormLabel, IconButton, Input, Stack } from "@mui/joy";
-import { useCallback, useState } from "react";
+import { forwardRef, useCallback, useEffect, useRef, useState } from "react";
 
 interface InputRowProps {
   id: string;
   value: string;
   name: string;
   removeValue: (key: string) => void;
+  shouldFocus?: boolean;
 }
 
-const InputRow = ({ id, value, name, removeValue }: InputRowProps) => (
-  <Stack direction="row" gap={1}>
-    <Input name={name} defaultValue={value} sx={{ flexGrow: 1 }} />
-    <IconButton onClick={() => removeValue(id)}>
-      <Delete />
-    </IconButton>
-  </Stack>
+const InputRow = forwardRef<HTMLInputElement, InputRowProps>(
+  ({ id, value, name, removeValue, shouldFocus }, ref) => {
+    useEffect(() => {
+      if (shouldFocus && ref && typeof ref !== "function" && ref.current) {
+        ref.current.focus();
+      }
+    }, [shouldFocus, ref]);
+
+    return (
+      <Stack direction="row" gap={1}>
+        <Input
+          slotProps={{ input: { ref } }}
+          name={name}
+          defaultValue={value}
+          sx={{ flexGrow: 1 }}
+        />
+        <IconButton onClick={() => removeValue(id)}>
+          <Delete />
+        </IconButton>
+      </Stack>
+    );
+  },
 );
+
+InputRow.displayName = "InputRow";
 
 interface FormMultiInputProps {
   label: string;
@@ -33,9 +51,13 @@ const FormMultiInput = ({
     () =>
       defaultValues?.map((x) => ({ key: crypto.randomUUID(), value: x })) ?? [],
   );
+  const [lastAddedKey, setLastAddedKey] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const addValue = useCallback(() => {
-    setValues((x) => [...x, { key: crypto.randomUUID(), value: "" }]);
+    const newKey = crypto.randomUUID();
+    setValues((x) => [...x, { key: newKey, value: "" }]);
+    setLastAddedKey(newKey);
   }, []);
 
   const removeValue = useCallback((key: string) => {
@@ -52,6 +74,8 @@ const FormMultiInput = ({
           value={value}
           name={name}
           removeValue={removeValue}
+          shouldFocus={key === lastAddedKey}
+          ref={key === lastAddedKey ? inputRef : null}
         />
       ))}
       <IconButton

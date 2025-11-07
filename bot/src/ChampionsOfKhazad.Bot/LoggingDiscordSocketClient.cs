@@ -26,11 +26,7 @@ public class LoggingDiscordSocketClient : DiscordSocketClient
         if (_options.StartMessageUserId.HasValue && !_isReady)
         {
             var startMessageTargetUser = await GetUserAsync(_options.StartMessageUserId.Value);
-            var message = _options.CommitSha is not null
-                ? $"Bot started, commit: [{_options.CommitSha}]({Constants.RepositoryUrl}/commit/{_options.CommitSha})"
-                : "Bot started";
-
-            await startMessageTargetUser.SendMessageAsync(message);
+            await startMessageTargetUser.SendMessageAsync("Bot started");
 
             _isReady = true;
         }

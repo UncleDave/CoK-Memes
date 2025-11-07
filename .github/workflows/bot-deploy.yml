@@ -29,4 +29,3 @@ jobs:
           work-dir: bot/src/ChampionsOfKhazad.Bot.Infrastructure/
         env:
           PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
-          COMMIT_SHA: ${{ github.sha }}

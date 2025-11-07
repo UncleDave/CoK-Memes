@@ -7,6 +7,7 @@ using ChampionsOfKhazad.Bot.Lore.Abstractions;
 using ChampionsOfKhazad.Bot.Portal;
 using Discord;
 using Discord.Rest;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 
@@ -28,6 +29,24 @@ builder
         options.ClientSecret = authOptions.ClientSecret;
         options.ResponseType = OpenIdConnectResponseType.Code;
     });
+
+// Configure OpenIdConnect to avoid prompting for consent on every login
+builder.Services.Configure<OpenIdConnectOptions>(
+    Auth0Constants.AuthenticationScheme,
+    options =>
+    {
+        options.Events = new OpenIdConnectEvents
+        {
+            OnRedirectToIdentityProvider = context =>
+            {
+                // Remove the prompt parameter to avoid re-prompting users for consent on every login
+                // This allows Auth0/Discord to use existing authorization for returning users
+                context.ProtocolMessage.Prompt = null;
+                return Task.CompletedTask;
+            },
+        };
+    }
+);
 
 builder.Services.AddSingleton(authOptions);
 

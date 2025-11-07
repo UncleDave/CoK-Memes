@@ -24,8 +24,7 @@ const InputRow = forwardRef<HTMLInputElement, InputRowProps>(
           if (typeof ref === "function") {
             ref(element);
           } else {
-            (ref as React.MutableRefObject<HTMLInputElement | null>).current =
-              element;
+            ref.current = element;
           }
         }
 
@@ -78,15 +77,10 @@ const FormMultiInput = ({
     setLastAddedKey(newKey);
   }, []);
 
-  const removeValue = useCallback(
-    (key: string) => {
-      setValues((x) => x.filter((y) => y.key !== key));
-      if (key === lastAddedKey) {
-        setLastAddedKey(null);
-      }
-    },
-    [lastAddedKey],
-  );
+  const removeValue = useCallback((key: string) => {
+    setValues((x) => x.filter((y) => y.key !== key));
+    setLastAddedKey((current) => (current === key ? null : current));
+  }, []);
 
   return (
     <Stack gap={1}>

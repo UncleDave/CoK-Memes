@@ -133,7 +133,7 @@ guildLore.MapPost(
     async (UpdateGuildLoreContract contract, ICreateLore loreCreator) =>
     {
         await loreCreator.CreateLoreAsync(new GuildLore(contract.Name, contract.Content));
-        return Results.Created($"/api/lore/{contract.Name}", null);
+        return Results.Created($"/api/lore/{Uri.EscapeDataString(contract.Name)}", null);
     }
 );
 
@@ -165,7 +165,7 @@ memberLore.MapPost(
                 Roles = contract.Roles ?? [],
             }
         );
-        return Results.Created($"/api/lore/{contract.Name}", null);
+        return Results.Created($"/api/lore/{Uri.EscapeDataString(contract.Name)}", null);
     }
 );
 

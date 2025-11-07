@@ -32,7 +32,7 @@ const router = createBrowserRouter([
           const url = new URL(request.url);
           const type = url.searchParams.get("type");
 
-          if (type === "member" || formData.has("mainCharacter")) {
+          if (type === "member") {
             await api.createMemberLore(formData);
           } else {
             await api.createGuildLore(formData);

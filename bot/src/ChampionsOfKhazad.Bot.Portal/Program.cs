@@ -35,6 +35,8 @@ builder.Services.PostConfigure<OpenIdConnectOptions>(
     Auth0Constants.AuthenticationScheme,
     options =>
     {
+        const string RetryParameterName = "auth_retry";
+
         // Store reference to any existing handlers
         var existingOnRedirectToIdentityProvider = options.Events?.OnRedirectToIdentityProvider;
         var existingOnRemoteFailure = options.Events?.OnRemoteFailure;
@@ -52,7 +54,7 @@ builder.Services.PostConfigure<OpenIdConnectOptions>(
             }
 
             // Check if this is a retry after prompt=none failed (indicated by query parameter)
-            var isRetry = context.HttpContext.Request.Query.ContainsKey("retry");
+            var isRetry = context.HttpContext.Request.Query.ContainsKey(RetryParameterName);
 
             if (!isRetry)
             {
@@ -67,18 +69,22 @@ builder.Services.PostConfigure<OpenIdConnectOptions>(
         // Wrap the existing OnRemoteFailure handler to handle prompt=none failures
         options.Events.OnRemoteFailure = async context =>
         {
-            // Check if this is a login_required or consent_required error from prompt=none
-            var errorDescription = context.Failure?.Message ?? "";
+            // Check if this is a prompt=none error by examining the failure message
+            // OAuth errors for prompt=none are: login_required, consent_required, interaction_required
+            var errorMessage = context.Failure?.Message ?? "";
             var isPromptNoneError =
-                errorDescription.Contains("login_required")
-                || errorDescription.Contains("consent_required")
-                || errorDescription.Contains("interaction_required");
+                errorMessage.Contains("login_required", StringComparison.OrdinalIgnoreCase)
+                || errorMessage.Contains("consent_required", StringComparison.OrdinalIgnoreCase)
+                || errorMessage.Contains("interaction_required", StringComparison.OrdinalIgnoreCase);
 
             if (isPromptNoneError)
             {
                 // Silent authentication failed - redirect to initiate normal authentication
-                // Add retry parameter to avoid using prompt=none on the next attempt
-                context.Response.Redirect(context.HttpContext.Request.Path + "?retry=1");
+                // Build URL with retry parameter to avoid using prompt=none on the next attempt
+                var currentPath = context.HttpContext.Request.Path.HasValue ? context.HttpContext.Request.Path.Value : "/";
+                var retryUrl = Microsoft.AspNetCore.WebUtilities.QueryHelpers.AddQueryString(currentPath, RetryParameterName, "1");
+
+                context.Response.Redirect(retryUrl);
                 context.HandleResponse();
                 return;
             }

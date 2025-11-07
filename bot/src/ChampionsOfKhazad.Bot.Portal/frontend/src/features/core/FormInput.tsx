@@ -7,6 +7,7 @@ interface FormInputProps {
   defaultValue?: string;
   required?: boolean;
   helperText?: string;
+  disabled?: boolean;
 }
 
 const FormInput = ({
@@ -15,9 +16,15 @@ const FormInput = ({
   defaultValue,
   required,
   helperText,
+  disabled,
 }: FormInputProps) => (
   <FormControl label={label} helperText={helperText}>
-    <Input name={name} defaultValue={defaultValue} required={required} />
+    <Input
+      name={name}
+      defaultValue={defaultValue}
+      required={required}
+      disabled={disabled}
+    />
   </FormControl>
 );
 

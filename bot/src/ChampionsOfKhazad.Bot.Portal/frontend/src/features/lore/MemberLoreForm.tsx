@@ -6,10 +6,18 @@ import MemberLoreContract from "./member-lore-contract.ts";
 
 interface MemberLoreFormProps {
   lore: MemberLoreContract;
+  isCreating?: boolean;
 }
 
-const MemberLoreForm = ({ lore }: MemberLoreFormProps) => (
+const MemberLoreForm = ({ lore, isCreating = false }: MemberLoreFormProps) => (
   <LoreForm>
+    <FormInput
+      label="Name"
+      name="name"
+      defaultValue={isCreating ? "" : lore.name}
+      required
+      disabled={!isCreating}
+    />
     <FormMultiInput
       label="Aliases"
       name="aliases"

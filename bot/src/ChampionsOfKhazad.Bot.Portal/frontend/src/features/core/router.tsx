@@ -18,12 +18,36 @@ const router = createBrowserRouter([
       {
         path: "lore",
         element: <LorePage />,
-        loader: () => fetch("/api/lore"),
+        loader: async () => {
+          const response = await fetch("/api/lore");
+          return response.json();
+        },
+      },
+      {
+        path: "lore/new",
+        element: <EditLorePage />,
+        loader: () => null,
+        action: async ({ request }) => {
+          const formData = await request.formData();
+          const url = new URL(request.url);
+          const type = url.searchParams.get("type");
+
+          if (type === "member" || formData.has("mainCharacter")) {
+            await api.createMemberLore(formData);
+          } else {
+            await api.createGuildLore(formData);
+          }
+
+          return redirect("/lore");
+        },
       },
       {
         path: "lore/:name",
         element: <EditLorePage />,
-        loader: ({ params }) => fetch(`/api/lore/${params.name}`),
+        loader: async ({ params }) => {
+          const response = await fetch(`/api/lore/${params.name}`);
+          return response.json();
+        },
         action: async ({ params, request }) => {
           const formData = await request.formData();
 

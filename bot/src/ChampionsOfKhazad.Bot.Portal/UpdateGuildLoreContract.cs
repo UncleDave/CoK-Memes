@@ -3,4 +3,4 @@
 namespace ChampionsOfKhazad.Bot.Portal;
 
 [method: UsedImplicitly]
-public record UpdateGuildLoreContract(string Content);
+public record UpdateGuildLoreContract(string Name, string Content);

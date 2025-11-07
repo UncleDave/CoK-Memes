@@ -13,6 +13,7 @@ public static class LoreBotBuilderExtensions
             .AddSingleton<IGetLore>(sp => sp.GetRequiredService<LoreService>())
             .AddSingleton<ICreateLore>(sp => sp.GetRequiredService<LoreService>())
             .AddSingleton<IUpdateLore>(sp => sp.GetRequiredService<LoreService>())
+            .AddSingleton<IDeleteLore>(sp => sp.GetRequiredService<LoreService>())
             .AddSingleton<IGetRelatedLore, RelatedLoreService>();
 
         return new GuildLoreBuilder(builder.Services, builder.BotConfiguration);

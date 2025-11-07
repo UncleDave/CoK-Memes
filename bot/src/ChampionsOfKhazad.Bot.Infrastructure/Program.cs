@@ -112,11 +112,6 @@ return await Pulumi.Deployment.RunAsync(() =>
         new() { Name = "MediatR__LicenseKey", SecretRef = mediatrLicenseKeySecretName },
     };
 
-    var commitSha = Environment.GetEnvironmentVariable("COMMIT_SHA");
-
-    if (commitSha is not null)
-        containerEnv.Add(new EnvironmentVarArgs { Name = "Bot__CommitSha", Value = commitSha });
-
     var registryCredentials = new RegistryCredentialsArgs
     {
         Server = imageRegistryServer,

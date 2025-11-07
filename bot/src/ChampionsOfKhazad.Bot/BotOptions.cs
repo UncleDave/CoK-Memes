@@ -13,6 +13,4 @@ public class BotOptions
     public ulong GuildId { get; set; }
 
     public ulong? StartMessageUserId { get; set; }
-
-    public string? CommitSha { get; set; }
 }

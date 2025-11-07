@@ -12,16 +12,24 @@ interface InputRowProps {
 
 const InputRow = forwardRef<HTMLInputElement, InputRowProps>(
   ({ id, value, name, removeValue, shouldFocus }, ref) => {
+    const localRef = useRef<HTMLInputElement>(null);
+    const inputRef = ref || localRef;
+
     useEffect(() => {
-      if (shouldFocus && ref && typeof ref !== "function" && ref.current) {
-        ref.current.focus();
+      if (
+        shouldFocus &&
+        inputRef &&
+        typeof inputRef !== "function" &&
+        inputRef.current
+      ) {
+        inputRef.current.focus();
       }
-    }, [shouldFocus, ref]);
+    }, [shouldFocus, inputRef]);
 
     return (
       <Stack direction="row" gap={1}>
         <Input
-          slotProps={{ input: { ref } }}
+          slotProps={{ input: { ref: inputRef } }}
           name={name}
           defaultValue={value}
           sx={{ flexGrow: 1 }}
@@ -52,7 +60,6 @@ const FormMultiInput = ({
       defaultValues?.map((x) => ({ key: crypto.randomUUID(), value: x })) ?? [],
   );
   const [lastAddedKey, setLastAddedKey] = useState<string | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
 
   const addValue = useCallback(() => {
     const newKey = crypto.randomUUID();
@@ -60,9 +67,15 @@ const FormMultiInput = ({
     setLastAddedKey(newKey);
   }, []);
 
-  const removeValue = useCallback((key: string) => {
-    setValues((x) => x.filter((y) => y.key !== key));
-  }, []);
+  const removeValue = useCallback(
+    (key: string) => {
+      setValues((x) => x.filter((y) => y.key !== key));
+      if (key === lastAddedKey) {
+        setLastAddedKey(null);
+      }
+    },
+    [lastAddedKey],
+  );
 
   return (
     <Stack gap={1}>
@@ -75,7 +88,6 @@ const FormMultiInput = ({
           name={name}
           removeValue={removeValue}
           shouldFocus={key === lastAddedKey}
-          ref={key === lastAddedKey ? inputRef : null}
         />
       ))}
       <IconButton

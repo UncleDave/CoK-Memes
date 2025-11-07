@@ -1,9 +1,10 @@
-﻿using JetBrains.Annotations;
+using JetBrains.Annotations;
 
 namespace ChampionsOfKhazad.Bot.Portal;
 
 [method: UsedImplicitly]
-public record UpdateMemberLoreContract(
+public record CreateMemberLoreContract(
+    string Name,
     string Pronouns,
     string Nationality,
     string MainCharacter,

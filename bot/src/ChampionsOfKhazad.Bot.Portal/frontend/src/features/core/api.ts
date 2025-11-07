@@ -13,7 +13,6 @@ const api = {
       method: "PUT",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        name: formData.get("name"),
         content: formData.get("content"),
       }),
     }),
@@ -36,7 +35,6 @@ const api = {
       method: "PUT",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        name: formData.get("name"),
         pronouns: formData.get("pronouns"),
         nationality: formData.get("nationality"),
         mainCharacter: formData.get("mainCharacter"),

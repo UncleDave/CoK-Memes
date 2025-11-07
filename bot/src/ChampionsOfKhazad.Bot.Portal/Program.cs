@@ -130,7 +130,7 @@ guildLore.MapPut(
 
 guildLore.MapPost(
     "",
-    async (UpdateGuildLoreContract contract, ICreateLore loreCreator) =>
+    async (CreateGuildLoreContract contract, ICreateLore loreCreator) =>
     {
         await loreCreator.CreateLoreAsync(new GuildLore(contract.Name, contract.Content));
         return Results.Created($"/api/lore/{Uri.EscapeDataString(contract.Name)}", null);
@@ -156,7 +156,7 @@ memberLore.MapPut(
 
 memberLore.MapPost(
     "",
-    async (UpdateMemberLoreContract contract, ICreateLore loreCreator) =>
+    async (CreateMemberLoreContract contract, ICreateLore loreCreator) =>
     {
         await loreCreator.CreateLoreAsync(
             new MemberLore(contract.Name, contract.Pronouns, contract.Nationality, contract.MainCharacter, contract.Biography)

@@ -18,15 +18,11 @@ const router = createBrowserRouter([
       {
         path: "lore",
         element: <LorePage />,
-        loader: async () => {
-          const response = await fetch("/api/lore");
-          return response.json();
-        },
+        loader: () => fetch("/api/lore"),
       },
       {
         path: "lore/new",
         element: <EditLorePage />,
-        loader: () => null,
         action: async ({ request }) => {
           const formData = await request.formData();
           const url = new URL(request.url);
@@ -44,10 +40,7 @@ const router = createBrowserRouter([
       {
         path: "lore/:name",
         element: <EditLorePage />,
-        loader: async ({ params }) => {
-          const response = await fetch(`/api/lore/${params.name}`);
-          return response.json();
-        },
+        loader: ({ params }) => fetch(`/api/lore/${params.name}`),
         action: async ({ params, request }) => {
           const formData = await request.formData();
 

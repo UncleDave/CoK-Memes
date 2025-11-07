@@ -35,13 +35,14 @@ builder.Services.PostConfigure<OpenIdConnectOptions>(
     Auth0Constants.AuthenticationScheme,
     options =>
     {
-        // Store reference to any existing OnRedirectToIdentityProvider handler
+        // Store reference to any existing handlers
         var existingOnRedirectToIdentityProvider = options.Events?.OnRedirectToIdentityProvider;
+        var existingOnRemoteFailure = options.Events?.OnRemoteFailure;
 
         // Ensure Events object exists
         options.Events ??= new OpenIdConnectEvents();
 
-        // Wrap the existing handler (if any) with our custom logic
+        // Wrap the existing OnRedirectToIdentityProvider handler
         options.Events.OnRedirectToIdentityProvider = async context =>
         {
             // Call existing handler if present
@@ -50,9 +51,43 @@ builder.Services.PostConfigure<OpenIdConnectOptions>(
                 await existingOnRedirectToIdentityProvider(context);
             }
 
-            // Remove the prompt parameter to avoid re-prompting users for consent on every login
-            // This allows Auth0/Discord to use existing authorization for returning users
-            context.ProtocolMessage.Prompt = null;
+            // Check if this is a retry after prompt=none failed (indicated by query parameter)
+            var isRetry = context.HttpContext.Request.Query.ContainsKey("retry");
+
+            if (!isRetry)
+            {
+                // First attempt - use prompt=none to attempt silent authentication (SSO)
+                // If the user has an active Auth0 session, this will skip the consent screen
+                // If not, it will fail and be handled by OnRemoteFailure
+                context.ProtocolMessage.Prompt = "none";
+            }
+            // On retry, don't set prompt=none, allowing normal authentication flow
+        };
+
+        // Wrap the existing OnRemoteFailure handler to handle prompt=none failures
+        options.Events.OnRemoteFailure = async context =>
+        {
+            // Check if this is a login_required or consent_required error from prompt=none
+            var errorDescription = context.Failure?.Message ?? "";
+            var isPromptNoneError =
+                errorDescription.Contains("login_required")
+                || errorDescription.Contains("consent_required")
+                || errorDescription.Contains("interaction_required");
+
+            if (isPromptNoneError)
+            {
+                // Silent authentication failed - redirect to initiate normal authentication
+                // Add retry parameter to avoid using prompt=none on the next attempt
+                context.Response.Redirect(context.HttpContext.Request.Path + "?retry=1");
+                context.HandleResponse();
+                return;
+            }
+
+            // Call existing handler for other errors
+            if (existingOnRemoteFailure != null)
+            {
+                await existingOnRemoteFailure(context);
+            }
         };
     }
 );

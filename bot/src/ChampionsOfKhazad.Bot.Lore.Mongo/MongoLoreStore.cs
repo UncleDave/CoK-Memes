@@ -72,4 +72,7 @@ internal class MongoLoreStore(IMongoCollection<LoreDocument> loreCollection, IEm
 
         return documents.Select(x => x.ToModel()).ToList();
     }
+
+    public Task DeleteLoreAsync(string name) =>
+        loreCollection.DeleteOneAsync(x => x.Name == name, new DeleteOptions { Collation = Collections.Lore.UniqueIndex.Collation });
 }

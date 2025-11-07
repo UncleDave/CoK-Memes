@@ -44,10 +44,14 @@ const router = createBrowserRouter([
         action: async ({ params, request }) => {
           const formData = await request.formData();
 
-          if (formData.has("mainCharacter")) {
-            await api.updateMemberLore(params.name!, formData);
+          if (request.method === "DELETE") {
+            await api.deleteLore(params.name!);
           } else {
-            await api.updateGuildLore(params.name!, formData);
+            if (formData.has("mainCharacter")) {
+              await api.updateMemberLore(params.name!, formData);
+            } else {
+              await api.updateGuildLore(params.name!, formData);
+            }
           }
 
           return redirect("/lore");

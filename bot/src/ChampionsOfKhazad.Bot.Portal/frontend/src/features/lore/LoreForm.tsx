@@ -7,9 +7,20 @@ const LoreForm = ({ children }: PropsWithChildren) => (
     <Stack spacing={1}>
       {children}
       <Stack direction="row" justifyContent="space-between">
-        <Button component={Link} to="/lore">
-          Cancel
-        </Button>
+        <Stack direction="row" spacing={1}>
+          <Button component={Link} to="/lore">
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            name="intent"
+            value="delete"
+            color="danger"
+            formMethod="delete"
+          >
+            Delete
+          </Button>
+        </Stack>
         <Button type="submit">Save</Button>
       </Stack>
     </Stack>

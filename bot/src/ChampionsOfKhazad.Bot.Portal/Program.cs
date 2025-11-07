@@ -8,6 +8,7 @@ using ChampionsOfKhazad.Bot.Portal;
 using Discord;
 using Discord.Rest;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -114,6 +115,15 @@ loreGroup.MapGet(
     {
         var lore = await loreGetter.GetLoreAsync(name, cancellationToken);
         return lore is null ? Results.NotFound() : Results.Ok(lore);
+    }
+);
+
+loreGroup.MapDelete(
+    "{name}",
+    async (string name, [FromServices] IDeleteLore loreDeleter) =>
+    {
+        await loreDeleter.DeleteLoreAsync(name);
+        return Results.NoContent();
     }
 );
 

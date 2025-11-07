@@ -9,7 +9,7 @@ const EditLorePage = () => {
   const lore = useLoaderData() as GuildLoreContract | MemberLoreContract | null;
   const [searchParams] = useSearchParams();
   const type = searchParams.get("type");
-  const isCreating = lore === null;
+  const isCreating = !lore;
 
   // For creation, create an empty lore object based on type
   const loreData: GuildLoreContract | MemberLoreContract = isCreating

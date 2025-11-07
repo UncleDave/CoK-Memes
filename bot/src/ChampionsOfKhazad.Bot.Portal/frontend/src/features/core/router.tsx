@@ -21,6 +21,23 @@ const router = createBrowserRouter([
         loader: () => fetch("/api/lore"),
       },
       {
+        path: "lore/new",
+        element: <EditLorePage />,
+        action: async ({ request }) => {
+          const formData = await request.formData();
+          const url = new URL(request.url);
+          const type = url.searchParams.get("type");
+
+          if (type === "member") {
+            await api.createMemberLore(formData);
+          } else {
+            await api.createGuildLore(formData);
+          }
+
+          return redirect("/lore");
+        },
+      },
+      {
         path: "lore/:name",
         element: <EditLorePage />,
         loader: ({ params }) => fetch(`/api/lore/${params.name}`),

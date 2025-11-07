@@ -128,6 +128,15 @@ guildLore.MapPut(
     }
 );
 
+guildLore.MapPost(
+    "",
+    async (CreateGuildLoreContract contract, ICreateLore loreCreator) =>
+    {
+        await loreCreator.CreateLoreAsync(new GuildLore(contract.Name, contract.Content));
+        return Results.Created($"/api/lore/{Uri.EscapeDataString(contract.Name)}", null);
+    }
+);
+
 var memberLore = apiGroup.MapGroup("member-lore").RequireAuthorization(adminPolicy);
 
 memberLore.MapPut(
@@ -142,6 +151,21 @@ memberLore.MapPut(
             }
         );
         return Results.NoContent();
+    }
+);
+
+memberLore.MapPost(
+    "",
+    async (CreateMemberLoreContract contract, ICreateLore loreCreator) =>
+    {
+        await loreCreator.CreateLoreAsync(
+            new MemberLore(contract.Name, contract.Pronouns, contract.Nationality, contract.MainCharacter, contract.Biography)
+            {
+                Aliases = contract.Aliases ?? [],
+                Roles = contract.Roles ?? [],
+            }
+        );
+        return Results.Created($"/api/lore/{Uri.EscapeDataString(contract.Name)}", null);
     }
 );
 

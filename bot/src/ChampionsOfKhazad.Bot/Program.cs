@@ -1,15 +1,14 @@
 ﻿using System.Globalization;
 using ChampionsOfKhazad.Bot;
 using ChampionsOfKhazad.Bot.Core;
+using ChampionsOfKhazad.Bot.Logging;
 using ChampionsOfKhazad.Bot.RaidHelper;
 using Discord;
 using Discord.WebSocket;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Serilog;
-using Serilog.Events;
-using Serilog.Sinks.Discord;
+using Microsoft.Extensions.Logging;
 
 var culture = CultureInfo.GetCultureInfo("en-GB");
 
@@ -18,21 +17,23 @@ CultureInfo.CurrentUICulture = culture;
 
 var host = Host.CreateApplicationBuilder(args);
 
-// ReSharper disable once MoveLocalFunctionAfterJumpStatement
-LoggerConfiguration ConfigureLogger(LoggerConfiguration loggerConfiguration, IHostEnvironment hostEnvironment) =>
-    loggerConfiguration
-        .MinimumLevel.Is(hostEnvironment.IsDevelopment() ? LogEventLevel.Debug : LogEventLevel.Information)
-        .Enrich.FromLogContext()
-        .WriteTo.Console()
-        .WriteTo.Discord(
-            host.Configuration.GetValue<ulong>("DiscordSerilogSink:WebhookId"),
-            host.Configuration.GetValue<string>("DiscordSerilogSink:WebhookToken"),
-            restrictedToMinimumLevel: LogEventLevel.Error
-        );
+host.Logging.ClearProviders();
+host.Logging.AddConsole();
+host.Logging.SetMinimumLevel(host.Environment.IsDevelopment() ? LogLevel.Debug : LogLevel.Information);
 
-Log.Logger = ConfigureLogger(new LoggerConfiguration(), host.Environment).CreateLogger();
+// Add Discord logging for errors
+var discordWebhookId = host.Configuration.GetValue<ulong>("DiscordLogger:WebhookId");
+var discordWebhookToken = host.Configuration.GetValue<string>("DiscordLogger:WebhookToken");
 
-host.Services.AddSerilog();
+if (discordWebhookId != 0 && !string.IsNullOrEmpty(discordWebhookToken))
+{
+    host.Logging.AddDiscord(config =>
+    {
+        config.WebhookId = discordWebhookId;
+        config.WebhookToken = discordWebhookToken;
+        config.MinimumLevel = LogLevel.Error;
+    });
+}
 
 host.Services.AddOptionsWithEagerValidation<BotOptions>(host.Configuration.GetSection(BotOptions.Key));
 

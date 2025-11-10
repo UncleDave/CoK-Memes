@@ -4,18 +4,11 @@ using Microsoft.Extensions.Logging;
 
 namespace ChampionsOfKhazad.Bot.Logging;
 
-internal sealed class DiscordLogger : ILogger
+public class DiscordLogger(string categoryName, DiscordWebhookClient webhookClient, DiscordLoggerConfiguration configuration) : ILogger
 {
-    private readonly string _categoryName;
-    private readonly DiscordWebhookClient _webhookClient;
-    private readonly DiscordLoggerConfiguration _configuration;
-
-    public DiscordLogger(string categoryName, DiscordWebhookClient webhookClient, DiscordLoggerConfiguration configuration)
-    {
-        _categoryName = categoryName;
-        _webhookClient = webhookClient;
-        _configuration = configuration;
-    }
+    private readonly string _categoryName = categoryName;
+    private readonly DiscordWebhookClient _webhookClient = webhookClient;
+    private readonly DiscordLoggerConfiguration _configuration = configuration;
 
     public IDisposable? BeginScope<TState>(TState state)
         where TState : notnull => default;

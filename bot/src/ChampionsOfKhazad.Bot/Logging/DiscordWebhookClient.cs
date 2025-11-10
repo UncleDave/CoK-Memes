@@ -5,16 +5,10 @@ using Microsoft.Extensions.Logging;
 
 namespace ChampionsOfKhazad.Bot.Logging;
 
-internal sealed class DiscordWebhookClient : IDisposable
+public class DiscordWebhookClient(DiscordLoggerConfiguration configuration) : IDisposable
 {
-    private readonly HttpClient _httpClient;
-    private readonly string _webhookUrl;
-
-    public DiscordWebhookClient(DiscordLoggerConfiguration configuration)
-    {
-        _httpClient = new HttpClient();
-        _webhookUrl = $"https://discord.com/api/webhooks/{configuration.WebhookId}/{configuration.WebhookToken}";
-    }
+    private readonly HttpClient _httpClient = new();
+    private readonly string _webhookUrl = $"https://discord.com/api/webhooks/{configuration.WebhookId}/{configuration.WebhookToken}";
 
     public async Task SendLogMessageAsync(LogLevel logLevel, string categoryName, string message, Exception? exception)
     {

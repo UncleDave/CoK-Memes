@@ -96,7 +96,7 @@ public class RaidsSlashCommand(
         "The one where we finally get to the bottom of the mystery of the missing glizzy.",
         "The one where everyone hits the correct target.",
         "The one where Sel sings us a song.",
-        "The one where we all agree to not talk about the raid afterwards.",
+        "The one where we all agree not to talk about the raid afterwards.",
         "The one where Viktor resets the boss.",
     ];
 

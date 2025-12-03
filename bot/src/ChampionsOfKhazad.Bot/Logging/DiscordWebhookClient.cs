@@ -1,13 +1,12 @@
 using System.Net.Http.Json;
 using System.Text;
-using System.Text.Json;
 using Microsoft.Extensions.Logging;
 
 namespace ChampionsOfKhazad.Bot.Logging;
 
 public class DiscordWebhookClient(DiscordLoggerConfiguration configuration) : IDisposable
 {
-    private readonly HttpClient _httpClient = new();
+    private static readonly HttpClient HttpClient = new();
     private readonly string _webhookUrl = $"https://discord.com/api/webhooks/{configuration.WebhookId}/{configuration.WebhookToken}";
 
     public async Task SendLogMessageAsync(LogLevel logLevel, string categoryName, string message, Exception? exception)
@@ -24,12 +23,13 @@ public class DiscordWebhookClient(DiscordLoggerConfiguration configuration) : ID
 
             var payload = new { embeds = new[] { embed } };
 
-            var response = await _httpClient.PostAsJsonAsync(_webhookUrl, payload);
+            var response = await HttpClient.PostAsJsonAsync(_webhookUrl, payload);
             response.EnsureSuccessStatusCode();
         }
-        catch
+        catch (Exception ex)
         {
-            // Silently fail - we don't want logging errors to crash the application
+            // Log to fallback logger so webhook delivery failures are visible
+            Console.Error.WriteLine($"[DiscordWebhookClient] Failed to send log message to Discord webhook: {ex}");
         }
     }
 
@@ -49,14 +49,14 @@ public class DiscordWebhookClient(DiscordLoggerConfiguration configuration) : ID
 
             if (!string.IsNullOrEmpty(exception.StackTrace))
             {
-                var stackTrace = exception.StackTrace.Length > 1000 ? exception.StackTrace.Substring(0, 1000) + "..." : exception.StackTrace;
+                var stackTrace = exception.StackTrace.Length > 1000 ? exception.StackTrace[..1000] + "..." : exception.StackTrace;
                 description.AppendLine($"**Stack Trace:**\n```\n{stackTrace}\n```");
             }
         }
 
         // Discord embed descriptions are limited to 4096 characters
         var result = description.ToString();
-        return result.Length > 4096 ? result.Substring(0, 4093) + "..." : result;
+        return result.Length > 4096 ? result[..4093] + "..." : result;
     }
 
     private static string GetLogLevelEmoji(LogLevel logLevel) =>
@@ -85,6 +85,6 @@ public class DiscordWebhookClient(DiscordLoggerConfiguration configuration) : ID
 
     public void Dispose()
     {
-        _httpClient.Dispose();
+        // HttpClient is static and shared, so we don't dispose it here
     }
 }

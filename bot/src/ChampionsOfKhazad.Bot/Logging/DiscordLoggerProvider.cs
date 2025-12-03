@@ -17,6 +17,5 @@ public class DiscordLoggerProvider(IOptions<DiscordLoggerConfiguration> configur
     public void Dispose()
     {
         _loggers.Clear();
-        _webhookClient.Dispose();
     }
 }

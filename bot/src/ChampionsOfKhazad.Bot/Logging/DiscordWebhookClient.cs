@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 
 namespace ChampionsOfKhazad.Bot.Logging;
 
-public class DiscordWebhookClient(DiscordLoggerConfiguration configuration) : IDisposable
+public class DiscordWebhookClient(DiscordLoggerConfiguration configuration)
 {
     private static readonly HttpClient HttpClient = new();
     private readonly string _webhookUrl = $"https://discord.com/api/webhooks/{configuration.WebhookId}/{configuration.WebhookToken}";
@@ -82,9 +82,4 @@ public class DiscordWebhookClient(DiscordLoggerConfiguration configuration) : ID
             LogLevel.Trace => 0xC0C0C0, // Silver
             _ => 0x000000, // Black
         };
-
-    public void Dispose()
-    {
-        // HttpClient is static and shared, so we don't dispose it here
-    }
 }

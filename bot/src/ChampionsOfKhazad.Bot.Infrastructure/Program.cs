@@ -82,8 +82,8 @@ return await Pulumi.Deployment.RunAsync(() =>
     const string openAiApiKeySecretName = "open-ai-api-key";
     const string raidHelperApiKeySecretName = "raid-helper-api-key";
     const string mongoConnectionStringSecretName = "mongo-connection-string";
-    const string discordSerilogSinkWebhookIdSecretName = "discord-serilog-sink-webhook-id";
-    const string discordSerilogSinkWebhookTokenSecretName = "discord-serilog-sink-webhook-token";
+    const string discordLoggerWebhookIdSecretName = "discord-logger-webhook-id";
+    const string discordLoggerWebhookTokenSecretName = "discord-logger-webhook-token";
     const string googleSearchEngineApiKeySecretName = "google-search-engine-api-key";
     const string storageAccountAccessKeySecretName = "storage-account-access-key";
     const string portalAuthClientSecretName = "portal-auth-client-secret";
@@ -104,8 +104,8 @@ return await Pulumi.Deployment.RunAsync(() =>
         new() { Name = "OpenAIServiceOptions__ApiKey", SecretRef = openAiApiKeySecretName },
         new() { Name = "RaidHelper__ApiKey", SecretRef = raidHelperApiKeySecretName },
         new() { Name = "ConnectionStrings__Mongo", SecretRef = mongoConnectionStringSecretName },
-        new() { Name = "DiscordSerilogSink__WebhookId", SecretRef = discordSerilogSinkWebhookIdSecretName },
-        new() { Name = "DiscordSerilogSink__WebhookToken", SecretRef = discordSerilogSinkWebhookTokenSecretName },
+        new() { Name = "DiscordLogger__WebhookId", SecretRef = discordLoggerWebhookIdSecretName },
+        new() { Name = "DiscordLogger__WebhookToken", SecretRef = discordLoggerWebhookTokenSecretName },
         new() { Name = "GoogleSearchEngine__ApiKey", SecretRef = googleSearchEngineApiKeySecretName },
         new() { Name = "AzureStorageAccountName", Value = storageAccount.Name },
         new() { Name = "AzureStorageAccountAccessKey", SecretRef = storageAccountAccessKeySecretName },
@@ -135,12 +135,8 @@ return await Pulumi.Deployment.RunAsync(() =>
                     new SecretArgs { Name = openAiApiKeySecretName, Value = openAiApiKey },
                     new SecretArgs { Name = raidHelperApiKeySecretName, Value = config.RequireSecret("raidHelperApiKey") },
                     new SecretArgs { Name = mongoConnectionStringSecretName, Value = mongoConnectionString },
-                    new SecretArgs { Name = discordSerilogSinkWebhookIdSecretName, Value = config.RequireSecret("discordSerilogSinkWebhookId") },
-                    new SecretArgs
-                    {
-                        Name = discordSerilogSinkWebhookTokenSecretName,
-                        Value = config.RequireSecret("discordSerilogSinkWebhookToken"),
-                    },
+                    new SecretArgs { Name = discordLoggerWebhookIdSecretName, Value = config.RequireSecret("discordLoggerWebhookId") },
+                    new SecretArgs { Name = discordLoggerWebhookTokenSecretName, Value = config.RequireSecret("discordLoggerWebhookToken") },
                     new SecretArgs { Name = googleSearchEngineApiKeySecretName, Value = config.RequireSecret("googleSearchEngineApiKey") },
                     new SecretArgs { Name = storageAccountAccessKeySecretName, Value = storageAccountKey },
                     new SecretArgs { Name = mediatrLicenseKeySecretName, Value = config.RequireSecret("mediatrLicenseKey") },

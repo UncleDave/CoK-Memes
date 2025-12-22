@@ -12,13 +12,13 @@
     <PackageReference Include="Discord.Net.Analyzers" Version="3.14.1" />
     <PackageReference Include="Discord.Net.WebSocket" Version="3.18.0" />
     <PackageReference Include="Humanizer.Core" Version="3.0.1" />
-    <PackageReference Include="MediatR" Version="13.1.0" />
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" Version="10.0.0" />
-    <PackageReference Include="Serilog.Extensions.Hosting" Version="9.0.0" />
+    <PackageReference Include="MediatR" Version="14.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" Version="10.0.1" />
+    <PackageReference Include="Serilog.Extensions.Hosting" Version="10.0.0" />
     <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
     <PackageReference Include="Serilog.Sinks.Discord.Lite" Version="0.2.0" />
-    <PackageReference Include="System.Linq.Async" Version="6.0.1">
+    <PackageReference Include="System.Linq.Async" Version="7.0.0">
       <ExcludeAssets>compile</ExcludeAssets>
     </PackageReference>
   </ItemGroup>

@@ -10,95 +10,92 @@ public static class MessageExtensions
 {
     private static readonly Regex OpenAiNameExpression = new("^[a-zA-Z0-9_-]{1,64}$", RegexOptions.Compiled);
 
-    public static async IAsyncEnumerable<IMessage> GetPreviousMessagesAsync(this IMessage message, ushort batchSize = 20)
+    extension(IMessage message)
     {
-        var from = message;
-        int length;
-
-        do
+        public async IAsyncEnumerable<IMessage> GetPreviousMessagesAsync(ushort batchSize = 20)
         {
-            var batches = message.Channel.GetMessagesAsync(from, Direction.Before, batchSize);
-            length = 0;
+            var from = message;
+            int length;
 
-            await foreach (var messages in batches)
+            do
             {
-                foreach (var m in messages)
+                var batches = message.Channel.GetMessagesAsync(from, Direction.Before, batchSize);
+                length = 0;
+
+                await foreach (var messages in batches)
                 {
-                    length++;
-                    from = m;
-                    yield return m;
-                }
-            }
-        } while (length >= batchSize);
-    }
-
-    public static string GetAuthorName(this IMessage message) =>
-        message.Author is IGuildUser { DisplayName: not null } guildUser
-            ? guildUser.DisplayName
-            : message.Author.GlobalName ?? (message.Author.Username ?? message.Author.Id.ToString());
-
-    public static string GetOpenAiFriendlyAuthorName(this IMessage message) =>
-        message.Author is IGuildUser { DisplayName: not null } guildUser && OpenAiNameExpression.IsMatch(guildUser.DisplayName)
-            ? guildUser.DisplayName
-        : message.Author.GlobalName is not null && OpenAiNameExpression.IsMatch(message.Author.GlobalName) ? message.Author.GlobalName
-        : message.Author.Username is not null && OpenAiNameExpression.IsMatch(message.Author.Username) ? message.Author.Username
-        : message.Author.Id.ToString();
-
-    public static async ValueTask<ChatHistory> GetChatHistoryAsync(
-        this IMessage message,
-        ushort count,
-        ulong botId,
-        string botName,
-        CancellationToken cancellationToken
-    )
-    {
-        var chatHistory = await message
-            .GetPreviousMessagesAsync()
-            .Where(x => x.Author.Id != botId || !x.CleanContent.StartsWith(GenAi.Constants.ImageGenerationConfirmationMessage))
-            .Take(count)
-            .Reverse()
-            .AggregateAsync(new ChatHistory(), ProcessMessage, cancellationToken);
-
-        return ProcessMessage(chatHistory, message);
-
-        ChatHistory ProcessMessage(ChatHistory history, IMessage m)
-        {
-            var role = m.Author.Id == botId ? AuthorRole.Assistant : AuthorRole.User;
-            var content = new ChatMessageContentItemCollection();
-
-            if (!string.IsNullOrWhiteSpace(m.CleanContent))
-                content.Add(new TextContent(m.CleanContent));
-
-            // Grab attachments supported by the model - png, jpeg, jpg, webp, and gif
-            foreach (var attachment in m.Attachments)
-            {
-                if (
-                    attachment.Filename.EndsWith(".png")
-                    || attachment.Filename.EndsWith(".jpeg")
-                    || attachment.Filename.EndsWith(".jpg")
-                    || attachment.Filename.EndsWith(".webp")
-                )
-                {
-                    // 20 MB
-                    if (attachment.Size >= 20_000_000)
+                    foreach (var m in messages)
                     {
-                        content.Add(new TextContent("User attached an image that was too large to process."));
-                    }
-                    else
-                    {
-                        content.Add(new ImageContent(new Uri(attachment.Url)));
+                        length++;
+                        from = m;
+                        yield return m;
                     }
                 }
-            }
+            } while (length >= batchSize);
+        }
 
-            if (content.Count != 0)
+        public string GetAuthorName() => message.Author.GetName();
+
+        public string GetOpenAiFriendlyAuthorName() =>
+            message.Author is IGuildUser { DisplayName: not null } guildUser && OpenAiNameExpression.IsMatch(guildUser.DisplayName)
+                ? guildUser.DisplayName
+            : message.Author.GlobalName is not null && OpenAiNameExpression.IsMatch(message.Author.GlobalName) ? message.Author.GlobalName
+            : message.Author.Username is not null && OpenAiNameExpression.IsMatch(message.Author.Username) ? message.Author.Username
+            : message.Author.Id.ToString();
+
+        public async ValueTask<ChatHistory> GetChatHistoryAsync(ushort count, ulong botId, string botName, CancellationToken cancellationToken)
+        {
+            var chatHistory = await message
+                .GetPreviousMessagesAsync()
+                .Where(x => x.Author.Id != botId || !x.CleanContent.StartsWith(GenAi.Constants.ImageGenerationConfirmationMessage))
+                .Take(count)
+                .Reverse()
+                .AggregateAsync(new ChatHistory(), ProcessMessage, cancellationToken);
+
+            return ProcessMessage(chatHistory, message);
+
+            ChatHistory ProcessMessage(ChatHistory history, IMessage m)
             {
-                history.Add(
-                    new ChatMessageContent(role, content) { AuthorName = role == AuthorRole.Assistant ? botName : m.GetOpenAiFriendlyAuthorName() }
-                );
-            }
+                var role = m.Author.Id == botId ? AuthorRole.Assistant : AuthorRole.User;
+                var content = new ChatMessageContentItemCollection();
 
-            return history;
+                if (!string.IsNullOrWhiteSpace(m.CleanContent))
+                    content.Add(new TextContent(m.CleanContent));
+
+                // Grab attachments supported by the model - png, jpeg, jpg, webp, and gif
+                foreach (var attachment in m.Attachments)
+                {
+                    if (
+                        attachment.Filename.EndsWith(".png")
+                        || attachment.Filename.EndsWith(".jpeg")
+                        || attachment.Filename.EndsWith(".jpg")
+                        || attachment.Filename.EndsWith(".webp")
+                    )
+                    {
+                        // 20 MB
+                        if (attachment.Size >= 20_000_000)
+                        {
+                            content.Add(new TextContent("User attached an image that was too large to process."));
+                        }
+                        else
+                        {
+                            content.Add(new ImageContent(new Uri(attachment.Url)));
+                        }
+                    }
+                }
+
+                if (content.Count != 0)
+                {
+                    history.Add(
+                        new ChatMessageContent(role, content)
+                        {
+                            AuthorName = role == AuthorRole.Assistant ? botName : m.GetOpenAiFriendlyAuthorName(),
+                        }
+                    );
+                }
+
+                return history;
+            }
         }
     }
 

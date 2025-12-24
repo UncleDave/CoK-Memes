@@ -1,6 +1,7 @@
 ﻿using System.Globalization;
 using ChampionsOfKhazad.Bot;
 using ChampionsOfKhazad.Bot.Core;
+using ChampionsOfKhazad.Bot.EventLoop;
 using ChampionsOfKhazad.Bot.RaidHelper;
 using Discord;
 using Discord.WebSocket;
@@ -47,7 +48,8 @@ host.Services.AddSingleton<DiscordSocketClient>(services =>
                 | GatewayIntents.GuildMessages
                 | GatewayIntents.DirectMessages
                 | GatewayIntents.MessageContent
-                | GatewayIntents.GuildMessageReactions,
+                | GatewayIntents.GuildMessageReactions
+                | GatewayIntents.GuildVoiceStates,
             LogLevel = LogSeverity.Debug,
         }
     )
@@ -112,5 +114,10 @@ host.Services.AddHostedService<BotService>()
     .AddScoped<BotContext>(serviceProvider =>
         serviceProvider.GetRequiredService<BotContextProvider>().BotContext ?? throw new InvalidOperationException("BotContext is not available")
     );
+
+host.Services.AddSingleton<EventLoopService>()
+    .AddOptionsWithEagerValidation<EventLoopOptions>(host.Configuration.GetSection(EventLoopOptions.Key))
+    .AddScoped<IEventLoopEvent, ExcludedFromVoiceEvent>()
+    .AddOptionsWithEagerValidation<ExcludedFromVoiceEventOptions>(host.Configuration.GetEventLoopSection(ExcludedFromVoiceEventOptions.Key));
 
 host.Build().Run();

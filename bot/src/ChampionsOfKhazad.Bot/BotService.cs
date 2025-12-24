@@ -1,4 +1,5 @@
-﻿using Discord;
+﻿using ChampionsOfKhazad.Bot.EventLoop;
+using Discord;
 using Discord.WebSocket;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,13 +16,16 @@ public class BotService : IHostedService
     private readonly BotOptions _options;
     private readonly IServiceProvider _serviceProvider;
     private readonly BotContextProvider _botContextProvider;
+    private readonly EventLoopService _eventLoopService;
+    private readonly CancellationTokenSource _eventLoopCancellationTokenSource = new();
 
     public BotService(
         DiscordSocketClient client,
         ILogger<BotService> logger,
         IOptions<BotOptions> options,
         IServiceProvider serviceProvider,
-        BotContextProvider botContextProvider
+        BotContextProvider botContextProvider,
+        EventLoopService eventLoopService
     )
     {
         _client = client;
@@ -29,6 +33,7 @@ public class BotService : IHostedService
         _options = options.Value;
         _serviceProvider = serviceProvider;
         _botContextProvider = botContextProvider;
+        _eventLoopService = eventLoopService;
 
         _client.Ready += ReadyAsync;
         _client.MessageReceived += MessageReceivedAsync;
@@ -47,7 +52,11 @@ public class BotService : IHostedService
         await _client.StartAsync();
     }
 
-    public async Task StopAsync(CancellationToken cancellationToken) => await _client.StopAsync();
+    public async Task StopAsync(CancellationToken cancellationToken)
+    {
+        await _eventLoopCancellationTokenSource.CancelAsync();
+        await _client.StopAsync();
+    }
 
     private async Task ReadyAsync()
     {
@@ -63,6 +72,8 @@ public class BotService : IHostedService
 
         foreach (var slashCommand in SlashCommands.GlobalCommands)
             await _client.CreateGlobalApplicationCommandAsync(slashCommand.Properties);
+
+        _ = _eventLoopService.ExecuteAsync(_eventLoopCancellationTokenSource.Token);
 
         _logger.LogInformation("Bot started");
     }

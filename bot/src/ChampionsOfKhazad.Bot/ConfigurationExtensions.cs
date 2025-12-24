@@ -1,15 +1,18 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using ChampionsOfKhazad.Bot.EventLoop;
+using Microsoft.Extensions.Configuration;
 
 namespace ChampionsOfKhazad.Bot;
 
 public static class ConfigurationExtensions
 {
-    public static IConfigurationSection GetEventHandlerSection(this IConfiguration configuration, string key) =>
-        configuration.GetSection($"EventHandlers:{key}");
+    extension(IConfiguration configuration)
+    {
+        public IConfigurationSection GetEventHandlerSection(string key) => configuration.GetSection($"EventHandlers:{key}");
 
-    public static IConfigurationSection GetSlashCommandSection(this IConfiguration configuration, string key) =>
-        configuration.GetSection($"SlashCommands:{key}");
+        public IConfigurationSection GetSlashCommandSection(string key) => configuration.GetSection($"SlashCommands:{key}");
 
-    public static IConfigurationSection GetFollowerSection(this IConfiguration configuration, string key) =>
-        configuration.GetSection($"{AllFollowersOptions.Key}:{key}");
+        public IConfigurationSection GetFollowerSection(string key) => configuration.GetSection($"{AllFollowersOptions.Key}:{key}");
+
+        public IConfiguration GetEventLoopSection(string key) => configuration.GetSection($"{EventLoopOptions.Key}:{key}");
+    }
 }

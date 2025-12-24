@@ -34,12 +34,11 @@ public class EventLoopService(IOptions<EventLoopOptions> options, IServiceProvid
 
         foreach (var eventLoopEvent in events)
         {
-            var eventName = eventLoopEvent.GetType().Name;
             var eligible = await eventLoopEvent.EligibleToFire();
 
             logger.LogInformation(
                 "Checking event {EventLoopEvent} -> MeanTimeToHappen: {MeanTimeToHappen} | Eligible: {Eligible}",
-                eventName,
+                eventLoopEvent.Name,
                 eventLoopEvent.MeanTimeToHappen,
                 eligible
             );
@@ -52,7 +51,7 @@ public class EventLoopService(IOptions<EventLoopOptions> options, IServiceProvid
 
             logger.LogInformation(
                 "Rolling to fire event {EventLoopEvent} -> ProbabilityToFire: {ProbabilityToFire} | Roll: {Roll}",
-                eventName,
+                eventLoopEvent.Name,
                 probabilityToFire * 100,
                 roll * 100
             );

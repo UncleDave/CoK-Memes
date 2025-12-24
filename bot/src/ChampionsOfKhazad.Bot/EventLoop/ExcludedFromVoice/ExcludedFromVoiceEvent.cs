@@ -6,7 +6,7 @@ using Microsoft.SemanticKernel.ChatCompletion;
 namespace ChampionsOfKhazad.Bot.EventLoop;
 
 public class ExcludedFromVoiceEvent(IOptions<ExcludedFromVoiceEventOptions> options, BotContext botContext, ICompletionService completionService)
-    : EventLoopEvent(TimeSpan.FromMinutes(options.Value.MeanTimeToHappenMinutes))
+    : EventLoopEvent(TimeSpan.FromMinutes(options.Value.MeanTimeToHappenMinutes), "ExcludedFromVoice")
 {
     private readonly TimeSpan _cooldown = TimeSpan.FromMinutes(options.Value.CooldownMinutes);
     private SocketVoiceChannel? _triggeredVoiceChannel;

@@ -1,7 +1,9 @@
 ﻿namespace ChampionsOfKhazad.Bot.EventLoop;
 
-public abstract class EventLoopEvent(TimeSpan meanTimeToHappen) : IEventLoopEvent
+public abstract class EventLoopEvent(TimeSpan meanTimeToHappen, string name) : IEventLoopEvent
 {
+    public string Name => name;
+
     public TimeSpan MeanTimeToHappen { get; } = meanTimeToHappen;
 
     public abstract Task<bool> EligibleToFire();

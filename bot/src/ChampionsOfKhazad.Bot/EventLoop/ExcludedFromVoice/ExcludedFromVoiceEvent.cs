@@ -84,6 +84,8 @@ public class ExcludedFromVoiceEvent(IOptions<ExcludedFromVoiceEventOptions> opti
         var message = completionService.InvokeAsync(chatHistory, cancellationToken);
         var textChannel = await botContext.Guild.GetTextChannelAsync(options.Value.TextChannelId);
 
+        using var typing = textChannel.EnterTypingState();
+
         await textChannel.SendMessageAsync(await message);
 
         _lastTriggeredAt = DateTimeOffset.Now;

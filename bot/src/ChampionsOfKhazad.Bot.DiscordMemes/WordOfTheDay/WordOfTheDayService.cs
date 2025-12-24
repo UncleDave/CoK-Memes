@@ -35,6 +35,9 @@ internal class WordOfTheDayService(IWordOfTheDayStore wordOfTheDayStore, ILogger
         }
     }
 
+    public Task<WordOfTheDay?> GetMostRecentlyWonWordOfTheDayAsync(CancellationToken cancellationToken = default) =>
+        wordOfTheDayStore.GetMostRecentlyWonWordOfTheDayAsync(cancellationToken);
+
     public async Task<ushort> WinWordOfTheDayAsync(ulong userId)
     {
         var today = DateOnly.FromDateTime(DateTime.Now);

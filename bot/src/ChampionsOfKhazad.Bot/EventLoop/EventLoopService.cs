@@ -37,7 +37,7 @@ public class EventLoopService(IOptions<EventLoopOptions> options, IServiceProvid
 
         foreach (var eventLoopEvent in events)
         {
-            var eligible = await eventLoopEvent.EligibleToFire();
+            var eligible = await eventLoopEvent.EligibleToFire(cancellationToken);
 
             logger.LogInformation(
                 "Checking event {EventLoopEvent} -> MeanTimeToHappen: {MeanTimeToHappen} | Eligible: {Eligible}",

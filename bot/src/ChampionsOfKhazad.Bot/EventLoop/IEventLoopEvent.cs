@@ -4,6 +4,6 @@ public interface IEventLoopEvent
 {
     string Name { get; }
     TimeSpan MeanTimeToHappen { get; }
-    Task<bool> EligibleToFire();
+    Task<bool> EligibleToFire(CancellationToken cancellationToken);
     Task FireAsync(CancellationToken cancellationToken);
 }

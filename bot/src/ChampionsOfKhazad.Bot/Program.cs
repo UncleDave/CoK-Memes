@@ -118,6 +118,8 @@ host.Services.AddHostedService<BotService>()
 host.Services.AddHostedService<EventLoopService>()
     .AddOptionsWithEagerValidation<EventLoopOptions>(host.Configuration.GetSection(EventLoopOptions.Key))
     .AddScoped<IEventLoopEvent, ExcludedFromVoiceEvent>()
-    .AddOptionsWithEagerValidation<ExcludedFromVoiceEventOptions>(host.Configuration.GetEventLoopSection(ExcludedFromVoiceEventOptions.Key));
+    .AddOptionsWithEagerValidation<ExcludedFromVoiceEventOptions>(host.Configuration.GetEventLoopSection(ExcludedFromVoiceEventOptions.Key))
+    .AddScoped<IEventLoopEvent, WordOfTheDayHintEvent>()
+    .AddOptionsWithEagerValidation<WordOfTheDayHintEventOptions>(host.Configuration.GetEventLoopSection(WordOfTheDayHintEventOptions.Key));
 
 host.Build().Run();

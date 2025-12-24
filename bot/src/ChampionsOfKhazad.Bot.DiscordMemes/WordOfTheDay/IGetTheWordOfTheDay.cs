@@ -3,4 +3,5 @@
 public interface IGetTheWordOfTheDay
 {
     Task<WordOfTheDay> GetWordOfTheDayAsync(CancellationToken cancellationToken = default);
+    Task<WordOfTheDay?> GetMostRecentlyWonWordOfTheDayAsync(CancellationToken cancellationToken = default);
 }

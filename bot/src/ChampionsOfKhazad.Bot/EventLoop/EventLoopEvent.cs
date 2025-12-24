@@ -6,7 +6,7 @@ public abstract class EventLoopEvent(TimeSpan meanTimeToHappen, string name) : I
 
     public TimeSpan MeanTimeToHappen { get; } = meanTimeToHappen;
 
-    public abstract Task<bool> EligibleToFire();
+    public abstract Task<bool> EligibleToFire(CancellationToken cancellationToken);
 
     public abstract Task FireAsync(CancellationToken cancellationToken);
 }

@@ -48,6 +48,11 @@ public class ExcludedFromVoiceEvent(IOptions<ExcludedFromVoiceEventOptions> opti
             )
             + "]";
 
+        var isSelfDeprecating = Random.Shared.Next(0, 2) == 0;
+        var toneInstruction = isSelfDeprecating
+            ? "Tone: playful and humorous, with a light, self-deprecating tone. The bot is the butt of the joke and feels a bit left out, but in a cute way. You may tease gently, but do not be mean or aggressive.\n"
+            : "Tone: playful and humorous, with a mildly passive-aggressive tone about being left out, but still friendly overall. You may tease gently, but do not be mean or aggressive.\n";
+
         var systemMessage =
             $"You are a Discord bot posting a single message in a text channel.\n"
             + $"Context: There are {_triggeredVoiceChannel.ConnectedUsers.Count} users in the voice channel '{_triggeredVoiceChannel.Name}'. They have gathered without inviting you.\n";
@@ -67,7 +72,7 @@ public class ExcludedFromVoiceEvent(IOptions<ExcludedFromVoiceEventOptions> opti
             + "\n"
             + "--- TASK ---\n"
             + "Write one short Discord message about feeling a bit sad and left out of the fun in that voice channel.\n"
-            + "Tone: playful and humorous. You may choose either a light, self-deprecating tone or a mildly passive-aggressive tone. You may tease gently, but do not be mean or aggressive.\n"
+            + toneInstruction
             + "Safety: Do not insult, threaten, or harass anyone. Do not use slurs or hateful language. Do not target anyone in a way that could feel like bullying. Do not mention '@everyone' or '@here'.\n"
             + "Personalisation: Pick 1 to 3 users from UsersJson and work them naturally into the message. When you want to ping a user, use their 'mention' field exactly as given. Do not invent users that are not in UsersJson. Do not construct or use group mentions such as '@everyone' or '@here'.\n"
             + "Formatting: Return only the message you would send in Discord. No quotes around it, no code blocks, no markdown headings, no JSON, and no explanations.\n"

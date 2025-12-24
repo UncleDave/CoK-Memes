@@ -16,16 +16,13 @@ public class BotService : IHostedService
     private readonly BotOptions _options;
     private readonly IServiceProvider _serviceProvider;
     private readonly BotContextProvider _botContextProvider;
-    private readonly EventLoopService _eventLoopService;
-    private readonly CancellationTokenSource _eventLoopCancellationTokenSource = new();
 
     public BotService(
         DiscordSocketClient client,
         ILogger<BotService> logger,
         IOptions<BotOptions> options,
         IServiceProvider serviceProvider,
-        BotContextProvider botContextProvider,
-        EventLoopService eventLoopService
+        BotContextProvider botContextProvider
     )
     {
         _client = client;
@@ -33,7 +30,6 @@ public class BotService : IHostedService
         _options = options.Value;
         _serviceProvider = serviceProvider;
         _botContextProvider = botContextProvider;
-        _eventLoopService = eventLoopService;
 
         _client.Ready += ReadyAsync;
         _client.MessageReceived += MessageReceivedAsync;
@@ -54,7 +50,6 @@ public class BotService : IHostedService
 
     public async Task StopAsync(CancellationToken cancellationToken)
     {
-        await _eventLoopCancellationTokenSource.CancelAsync();
         await _client.StopAsync();
     }
 
@@ -72,8 +67,6 @@ public class BotService : IHostedService
 
         foreach (var slashCommand in SlashCommands.GlobalCommands)
             await _client.CreateGlobalApplicationCommandAsync(slashCommand.Properties);
-
-        _ = _eventLoopService.ExecuteAsync(_eventLoopCancellationTokenSource.Token);
 
         _logger.LogInformation("Bot started");
     }

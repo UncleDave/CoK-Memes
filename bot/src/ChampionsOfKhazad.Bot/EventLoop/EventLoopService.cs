@@ -1,25 +1,28 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace ChampionsOfKhazad.Bot.EventLoop;
 
 public class EventLoopService(IOptions<EventLoopOptions> options, IServiceProvider serviceProvider, ILogger<EventLoopService> logger)
+    : BackgroundService
 {
     private readonly TimeSpan _interval = TimeSpan.FromMinutes(options.Value.IntervalMinutes);
     private DateTimeOffset _lastRun = DateTimeOffset.Now;
 
-    public async Task ExecuteAsync(CancellationToken stoppingToken)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         logger.LogInformation("Starting Event Loop Service with interval {Interval} minutes", _interval.TotalMinutes);
 
         while (!stoppingToken.IsCancellationRequested)
         {
+            await Task.Delay(_interval, stoppingToken);
+
             var now = DateTimeOffset.Now;
             var deltaTime = now - _lastRun;
 
             await FireEventsAsync(deltaTime, stoppingToken);
-            await Task.Delay(_interval, stoppingToken);
         }
     }
 

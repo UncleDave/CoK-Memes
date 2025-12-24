@@ -115,7 +115,7 @@ host.Services.AddHostedService<BotService>()
         serviceProvider.GetRequiredService<BotContextProvider>().BotContext ?? throw new InvalidOperationException("BotContext is not available")
     );
 
-host.Services.AddSingleton<EventLoopService>()
+host.Services.AddHostedService<EventLoopService>()
     .AddOptionsWithEagerValidation<EventLoopOptions>(host.Configuration.GetSection(EventLoopOptions.Key))
     .AddScoped<IEventLoopEvent, ExcludedFromVoiceEvent>()
     .AddOptionsWithEagerValidation<ExcludedFromVoiceEventOptions>(host.Configuration.GetEventLoopSection(ExcludedFromVoiceEventOptions.Key));

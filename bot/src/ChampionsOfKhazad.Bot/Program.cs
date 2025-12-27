@@ -120,6 +120,8 @@ host.Services.AddHostedService<EventLoopService>()
     .AddScoped<IEventLoopEvent, ExcludedFromVoiceEvent>()
     .AddOptionsWithEagerValidation<ExcludedFromVoiceEventOptions>(host.Configuration.GetEventLoopSection(ExcludedFromVoiceEventOptions.Key))
     .AddScoped<IEventLoopEvent, WordOfTheDayHintEvent>()
-    .AddOptionsWithEagerValidation<WordOfTheDayHintEventOptions>(host.Configuration.GetEventLoopSection(WordOfTheDayHintEventOptions.Key));
+    .AddOptionsWithEagerValidation<WordOfTheDayHintEventOptions>(host.Configuration.GetEventLoopSection(WordOfTheDayHintEventOptions.Key))
+    .AddScoped<IEventLoopEvent, WeekCheckEvent>()
+    .AddOptionsWithEagerValidation<WeekCheckEventOptions>(host.Configuration.GetEventLoopSection(WeekCheckEventOptions.Key));
 
 host.Build().Run();

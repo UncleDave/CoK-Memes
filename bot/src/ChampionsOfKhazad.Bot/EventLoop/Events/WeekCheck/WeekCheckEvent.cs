@@ -4,19 +4,14 @@ using Microsoft.Extensions.Options;
 namespace ChampionsOfKhazad.Bot.EventLoop;
 
 public class WeekCheckEvent(IOptions<WeekCheckEventOptions> options, BotContext botContext)
-    : EventLoopEvent(TimeSpan.FromMinutes(options.Value.MeanTimeToHappenMinutes), "WeekCheck")
+    : EventLoopEvent(
+        TimeSpan.FromMinutes(options.Value.MeanTimeToHappenMinutes),
+        "WeekCheck",
+        new CooldownEligibilityStrategy("WeekCheck", TimeSpan.FromMinutes(options.Value.CooldownMinutes))
+    )
 {
-    private readonly TimeSpan _cooldown = TimeSpan.FromMinutes(options.Value.CooldownMinutes);
-    private static DateTimeOffset _lastTriggeredAt = DateTimeOffset.MinValue;
-
-    public override Task<bool> EligibleToFire(CancellationToken cancellationToken)
-    {
-        var now = DateTimeOffset.Now;
-
-        return now - _lastTriggeredAt < _cooldown
-            ? Task.FromResult(false)
-            : Task.FromResult(now.DayOfWeek is DayOfWeek.Friday or DayOfWeek.Saturday or DayOfWeek.Sunday);
-    }
+    public override async Task<bool> EligibleToFire(CancellationToken cancellationToken) =>
+        await base.EligibleToFire(cancellationToken) && DateTimeOffset.Now.DayOfWeek is DayOfWeek.Friday or DayOfWeek.Saturday or DayOfWeek.Sunday;
 
     public override async Task FireAsync(CancellationToken cancellationToken)
     {
@@ -30,6 +25,6 @@ public class WeekCheckEvent(IOptions<WeekCheckEventOptions> options, BotContext 
 
         await channel.SendMessageAsync(message, options: requestOptions);
 
-        _lastTriggeredAt = DateTimeOffset.Now;
+        await base.FireAsync(cancellationToken);
     }
 }

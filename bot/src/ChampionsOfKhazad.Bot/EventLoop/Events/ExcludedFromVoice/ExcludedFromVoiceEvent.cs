@@ -7,15 +7,17 @@ using Microsoft.SemanticKernel.ChatCompletion;
 namespace ChampionsOfKhazad.Bot.EventLoop;
 
 public class ExcludedFromVoiceEvent(IOptions<ExcludedFromVoiceEventOptions> options, BotContext botContext, ICompletionService completionService)
-    : EventLoopEvent(TimeSpan.FromMinutes(options.Value.MeanTimeToHappenMinutes), "ExcludedFromVoice")
+    : EventLoopEvent(
+        TimeSpan.FromMinutes(options.Value.MeanTimeToHappenMinutes),
+        "ExcludedFromVoice",
+        new CooldownEligibilityStrategy("ExcludedFromVoice", TimeSpan.FromMinutes(options.Value.CooldownMinutes))
+    )
 {
-    private readonly TimeSpan _cooldown = TimeSpan.FromMinutes(options.Value.CooldownMinutes);
     private SocketVoiceChannel? _triggeredVoiceChannel;
-    private static DateTimeOffset _lastTriggeredAt = DateTimeOffset.MinValue;
 
     public override async Task<bool> EligibleToFire(CancellationToken cancellationToken)
     {
-        if (DateTimeOffset.Now - _lastTriggeredAt < _cooldown)
+        if (!await base.EligibleToFire(cancellationToken))
             return false;
 
         var voiceChannels = await botContext.Guild.GetVoiceChannelsAsync(options: new RequestOptions { CancelToken = cancellationToken });
@@ -92,7 +94,7 @@ public class ExcludedFromVoiceEvent(IOptions<ExcludedFromVoiceEventOptions> opti
 
         await textChannel.SendMessageAsync(await message);
 
-        _lastTriggeredAt = DateTimeOffset.Now;
+        await base.FireAsync(cancellationToken);
     }
 
     private static string EscapeForJsonString(string value) =>

@@ -1,12 +1,16 @@
 ﻿namespace ChampionsOfKhazad.Bot.EventLoop;
 
-public abstract class EventLoopEvent(TimeSpan meanTimeToHappen, string name) : IEventLoopEvent
+public abstract class EventLoopEvent(TimeSpan meanTimeToHappen, string name, IEligibilityStrategy eligibilityStrategy) : IEventLoopEvent
 {
-    public string Name => name;
-
     public TimeSpan MeanTimeToHappen { get; } = meanTimeToHappen;
 
-    public abstract Task<bool> EligibleToFire(CancellationToken cancellationToken);
+    public string Name => name;
 
-    public abstract Task FireAsync(CancellationToken cancellationToken);
+    public virtual Task<bool> EligibleToFire(CancellationToken cancellationToken) => eligibilityStrategy.IsEligibleToFireAsync(cancellationToken);
+
+    public virtual Task FireAsync(CancellationToken cancellationToken)
+    {
+        eligibilityStrategy.OnFired();
+        return Task.CompletedTask;
+    }
 }

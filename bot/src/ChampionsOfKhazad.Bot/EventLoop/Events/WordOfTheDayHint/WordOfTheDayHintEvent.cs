@@ -11,17 +11,20 @@ public class WordOfTheDayHintEvent(
     BotContext botContext,
     ICompletionService completionService,
     IGetTheWordOfTheDay wordOfTheDayGetter
-) : EventLoopEvent(TimeSpan.FromMinutes(options.Value.MeanTimeToHappenMinutes), "WordOfTheDayHint")
+)
+    : EventLoopEvent(
+        TimeSpan.FromMinutes(options.Value.MeanTimeToHappenMinutes),
+        "WordOfTheDayHint",
+        new CooldownEligibilityStrategy("WordOfTheDayHint", TimeSpan.FromMinutes(options.Value.CooldownMinutes))
+    )
 {
-    private readonly TimeSpan _cooldown = TimeSpan.FromMinutes(options.Value.CooldownMinutes);
     private readonly TimeSpan _minimumTimeSinceLastWinner = TimeSpan.FromMinutes(options.Value.MinimumTimeSinceLastWinnerMinutes);
     private WordOfTheDay? _mostRecentlyWonWordOfTheDay;
     private TimeSpan? _timeSinceLastWin;
-    private static DateTimeOffset _lastTriggeredAt = DateTimeOffset.MinValue;
 
     public override async Task<bool> EligibleToFire(CancellationToken cancellationToken)
     {
-        if (DateTimeOffset.Now - _lastTriggeredAt < _cooldown)
+        if (!await base.EligibleToFire(cancellationToken))
             return false;
 
         var mostRecentlyWonWordOfTheDay = await wordOfTheDayGetter.GetMostRecentlyWonWordOfTheDayAsync(cancellationToken);
@@ -75,6 +78,6 @@ public class WordOfTheDayHintEvent(
 
         await textChannel.SendMessageAsync(await message);
 
-        _lastTriggeredAt = DateTimeOffset.Now;
+        await base.FireAsync(cancellationToken);
     }
 }

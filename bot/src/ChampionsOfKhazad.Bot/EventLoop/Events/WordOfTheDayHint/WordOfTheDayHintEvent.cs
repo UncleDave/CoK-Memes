@@ -15,7 +15,10 @@ public class WordOfTheDayHintEvent(
     : EventLoopEvent(
         TimeSpan.FromMinutes(options.Value.MeanTimeToHappenMinutes),
         "WordOfTheDayHint",
-        new CooldownEligibilityStrategy("WordOfTheDayHint", TimeSpan.FromMinutes(options.Value.CooldownMinutes))
+        new AllOfEligibilityStrategy(
+            new ReasonableHoursEligibilityStrategy(),
+            new CooldownEligibilityStrategy("WordOfTheDayHint", TimeSpan.FromMinutes(options.Value.CooldownMinutes))
+        )
     )
 {
     private readonly TimeSpan _minimumTimeSinceLastWinner = TimeSpan.FromMinutes(options.Value.MinimumTimeSinceLastWinnerMinutes);

@@ -3,5 +3,6 @@
 public interface IEligibilityStrategy
 {
     Task<bool> IsEligibleToFireAsync(CancellationToken cancellationToken);
-    void OnFired();
+
+    void OnFired() { }
 }

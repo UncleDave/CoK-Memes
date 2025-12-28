@@ -7,12 +7,13 @@ public class WeekCheckEvent(IOptions<WeekCheckEventOptions> options, BotContext 
     : EventLoopEvent(
         TimeSpan.FromMinutes(options.Value.MeanTimeToHappenMinutes),
         "WeekCheck",
-        new CooldownEligibilityStrategy("WeekCheck", TimeSpan.FromMinutes(options.Value.CooldownMinutes))
+        new AllOfEligibilityStrategy(
+            new ReasonableHoursEligibilityStrategy(),
+            new DayOfWeekEligibilityStrategy(DayOfWeek.Friday, DayOfWeek.Saturday, DayOfWeek.Sunday),
+            new CooldownEligibilityStrategy("WeekCheck", TimeSpan.FromMinutes(options.Value.CooldownMinutes))
+        )
     )
 {
-    public override async Task<bool> EligibleToFire(CancellationToken cancellationToken) =>
-        await base.EligibleToFire(cancellationToken) && DateTimeOffset.Now.DayOfWeek is DayOfWeek.Friday or DayOfWeek.Saturday or DayOfWeek.Sunday;
-
     public override async Task FireAsync(CancellationToken cancellationToken)
     {
         var requestOptions = new RequestOptions { CancelToken = cancellationToken };

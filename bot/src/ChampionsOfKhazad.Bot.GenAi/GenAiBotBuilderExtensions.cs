@@ -65,9 +65,7 @@ public static class GenAiBotBuilderExtensions
             .AddScoped<CondescendingTeacherPersonality>()
             .AddScoped<NoNutNovemberExpertPersonality>()
             .AddScoped<RatExpertPersonality>()
-            .AddScoped<StonerBroPersonality>()
-            .AddScoped<HarassmentLawyerPersonality>()
-            .AddScoped<ProHarassmentLawyerPersonality>();
+            .AddScoped<StonerBroPersonality>();
 
         return new GenAiBuilder(builder.Services, builder.BotConfiguration);
     }

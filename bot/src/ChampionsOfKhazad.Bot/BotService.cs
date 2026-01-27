@@ -35,6 +35,7 @@ public class BotService : IHostedService
         _client.MessageReceived += MessageReceivedAsync;
         _client.ReactionAdded += ReactionAddedAsync;
         _client.SlashCommandExecuted += SlashCommandExecutedAsync;
+        _client.UserLeft += UserLeftAsync;
     }
 
     public async Task StartAsync(CancellationToken cancellationToken)
@@ -90,6 +91,8 @@ public class BotService : IHostedService
         var notification = SlashCommands.All.Single(x => x.Properties.Name.Value == command.CommandName).CreateNotification(command);
         await PublishWithScope(notification);
     }
+
+    private async Task UserLeftAsync(SocketGuild guild, SocketUser user) => await PublishWithScope(new UserLeft(user));
 
     private async Task PublishWithScope(INotification notification)
     {

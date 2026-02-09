@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Pulumi" Version="3.98.0" />
+    <PackageReference Include="Pulumi" Version="3.99.0" />
     <PackageReference Include="Pulumi.AzureNative" Version="3.13.0" />
     <PackageReference Include="Pulumi.Docker" Version="4.11.0" />
   </ItemGroup>

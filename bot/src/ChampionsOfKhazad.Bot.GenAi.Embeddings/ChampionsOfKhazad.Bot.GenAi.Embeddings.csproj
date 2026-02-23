@@ -9,6 +9,7 @@
     <PackageReference Include="Microsoft.SemanticKernel" Version="1.70.0" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="Microsoft.SemanticKernel.Core" Version="1.71.0" />
     <ProjectReference Include="..\ChampionsOfKhazad.Bot.Core\ChampionsOfKhazad.Bot.Core.csproj" />
   </ItemGroup>
 </Project>

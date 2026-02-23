@@ -15,6 +15,7 @@
     <PackageReference Include="Microsoft.SemanticKernel.Plugins.Web" Version="1.70.0-alpha" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="Microsoft.SemanticKernel.Core" Version="1.71.0" />
     <ProjectReference Include="..\ChampionsOfKhazad.Bot.Core\ChampionsOfKhazad.Bot.Core.csproj" />
     <ProjectReference Include="..\ChampionsOfKhazad.Bot.Lore.Abstractions\ChampionsOfKhazad.Bot.Lore.Abstractions.csproj" />
   </ItemGroup>

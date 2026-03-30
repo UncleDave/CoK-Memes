@@ -10,11 +10,11 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Discord.Net.Analyzers" Version="3.14.1" />
-    <PackageReference Include="Discord.Net.WebSocket" Version="3.19.0" />
-    <PackageReference Include="Humanizer.Core" Version="3.0.8" />
+    <PackageReference Include="Discord.Net.WebSocket" Version="3.19.1" />
+    <PackageReference Include="Humanizer.Core" Version="3.0.10" />
     <PackageReference Include="MediatR" Version="14.1.0" />
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.3" />
-    <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" Version="10.0.3" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.5" />
+    <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" Version="10.0.5" />
     <PackageReference Include="Serilog.Extensions.Hosting" Version="10.0.0" />
     <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
     <PackageReference Include="Serilog.Sinks.Discord.Lite" Version="0.2.0" />

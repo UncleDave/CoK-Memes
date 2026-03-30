@@ -9,7 +9,7 @@ public static class ServiceCollectionExtensions
     {
         services.AddHttpClient<RaidHelperClient>(client =>
         {
-            client.BaseAddress = new Uri("https://raid-helper.dev/api/");
+            client.BaseAddress = new Uri("https://raid-helper.xyz/api/");
             client.DefaultRequestHeaders.Authorization = AuthenticationHeaderValue.Parse(apiKey);
         });
 

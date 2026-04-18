@@ -47,7 +47,7 @@ public class SummariseSlashCommand(BotContext botContext, ICompletionService com
             new ChatHistory(
                 string.Join(
                     '\n',
-                    $"Summarise the following messages from the #{notification.Command.Channel.Name} channel. Respond with a JSON object in the following format: {{ \"title\": \"Short title that summarises the messages\", \"description\": \"The full summary of the messages\" }}",
+                    $"Summarise the following messages from the #{notification.Command.Channel.Name} channel using no more than 4000 characters. Respond with a JSON object in the following format: {{ \"title\": \"Short title that summarises the messages\", \"description\": \"The full summary of the messages\" }}",
                     formattedMessages
                 )
             ),

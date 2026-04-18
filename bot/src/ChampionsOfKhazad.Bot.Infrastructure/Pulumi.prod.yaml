@@ -16,7 +16,7 @@ config:
     secure: AAABAKCgX8IXhfRF88JxDXvpqpxErBwmPbjWMl3W5qcduQHNb3Z6jzHfCTVdVIR0MVqydg2DwVVJswoUYHpWSBO1In8SJSew
   azure-native:clientId: 23eb70a2-0327-4c11-b88b-8cf0077efddd
   azure-native:clientSecret:
-    secure: AAABAHY61yJ36JTwlizslIsgy5qnW6BaOl7x9oMhbMETrG/can1VsJxyyKpmUR9p74QLc5doSDNB2Ef0Zm88u9EtF2j3A9e6
+    secure: AAABAEpK0Dz8sV79MJkQBv42w7mUkZR4PCh7eBDfXjgLtdLsCNjBYsTxWgKamEK9UDyj6+/4CABPRBO5BNOtkPXv6jcFa36J
   azure-native:tenantId: 081eef35-1428-44d4-890e-171600b2710f
   mongodbatlas:privateKey:
     secure: AAABALyvp6CqW2C30vbXAzfnZCvKmqCFFk5wjmi1F/8mwRenGdnC/0PtMVQUYVVReKpWTmr08qr+07CFMn/6jbfTZ38=

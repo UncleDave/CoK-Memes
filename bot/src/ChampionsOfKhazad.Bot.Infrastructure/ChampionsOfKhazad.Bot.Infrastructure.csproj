@@ -6,6 +6,7 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="OpenTelemetry.Api" Version="1.15.3" />
     <PackageReference Include="Pulumi" Version="3.103.0" />
     <PackageReference Include="Pulumi.AzureNative" Version="3.16.0" />
     <PackageReference Include="Pulumi.Docker" Version="4.11.2" />

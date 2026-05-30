@@ -96,6 +96,7 @@ public class RaidsSlashCommand(
         "The one where Sel sings us a song.",
         "The one where we all agree not to talk about the raid afterwards.",
         "The one where Viktor resets the boss.",
+        "Unfortunately.",
     ];
 
     public async Task Handle(RaidsSlashCommandExecuted notification, CancellationToken cancellationToken)
@@ -147,7 +148,7 @@ public class RaidsSlashCommand(
             TemplateId = "wowmop",
             Date = date.ToShortDateString(),
             Time = "19:30",
-            Title = $"Throne of Thunder: {RandomUtils.PickRandom(RaidNames)}",
+            Title = $"Siege of Orgrimmar: {RandomUtils.PickRandom(RaidNames)}",
             Description = RandomUtils.PickRandom(RaidDescriptions),
             AdvancedSettings = new CreateEventRequestAdvancedSettings
             {

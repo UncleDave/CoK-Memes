@@ -19,7 +19,7 @@
     <PackageReference Include="AspNetCore.SpaYarp" Version="2.0.1" />
     <PackageReference Include="Auth0.AspNetCore.Authentication" Version="1.8.0" />
     <PackageReference Include="Discord.Net.Rest" Version="3.20.1" />
-    <PackageReference Include="JetBrains.Annotations" Version="2025.2.4" />
+    <PackageReference Include="JetBrains.Annotations" Version="2026.2.0" />
   </ItemGroup>
   <ItemGroup>
     <Content Remove="frontend\**" />

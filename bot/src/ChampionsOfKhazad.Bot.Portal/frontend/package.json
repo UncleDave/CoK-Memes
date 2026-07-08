@@ -11,7 +11,7 @@
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
-    "@mui/icons-material": "^7.3.9",
+    "@mui/icons-material": "^9.2.0",
     "@mui/joy": "^5.0.0-beta.52",
     "masonic": "^4.1.0",
     "react": "19",
@@ -26,14 +26,14 @@
     "@types/react": "19",
     "@types/react-dom": "19",
     "@typescript-eslint/eslint-plugin": "^8.62.0",
-    "@typescript-eslint/parser": "^8.38.1-alpha.8",
+    "@typescript-eslint/parser": "^8.63.0",
     "@vitejs/plugin-react": "^6.0.3",
     "eslint": "^10.6.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.3",
     "globals": "^17.7.0",
     "prettier": "^3.9.3",
-    "typescript": "^5.9.3",
+    "typescript": "^6.0.3",
     "vite": "^8.1.0"
   }
 }

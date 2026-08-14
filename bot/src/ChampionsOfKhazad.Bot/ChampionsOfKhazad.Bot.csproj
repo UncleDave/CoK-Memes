@@ -12,7 +12,7 @@
     <PackageReference Include="Discord.Net.WebSocket" Version="3.20.1" />
     <PackageReference Include="Humanizer.Core" Version="3.0.10" />
     <PackageReference Include="MediatR" Version="14.2.0" />
-    <PackageReference Include="Microsoft.Extensions.AI" Version="10.5.0" />
+    <PackageReference Include="Microsoft.Extensions.AI" Version="10.9.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.11" />
     <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" Version="10.0.11" />
     <PackageReference Include="Serilog.Extensions.Hosting" Version="10.0.0" />

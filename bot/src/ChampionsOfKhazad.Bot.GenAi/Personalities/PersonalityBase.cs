@@ -13,9 +13,13 @@ internal abstract class PersonalityBase(
     IChatCompletionService chatCompletionService
 ) : IPersonality
 {
+#pragma warning disable OPENAI001
+    private static readonly object NoReasoningEffort = OpenAI.Chat.ChatReasoningEffortLevel.None;
+#pragma warning restore OPENAI001
+
     protected static readonly OpenAIPromptExecutionSettings DefaultPromptSettings = new()
     {
-        ReasoningEffort = "none",
+        ReasoningEffort = NoReasoningEffort,
         ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions,
     };
 

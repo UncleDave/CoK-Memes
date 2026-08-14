@@ -15,6 +15,7 @@ internal abstract class PersonalityBase(
 {
     protected static readonly OpenAIPromptExecutionSettings DefaultPromptSettings = new()
     {
+        ReasoningEffort = "none",
         ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions,
     };
 

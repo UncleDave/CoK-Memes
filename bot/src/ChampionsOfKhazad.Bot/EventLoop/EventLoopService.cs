@@ -37,31 +37,44 @@ public class EventLoopService(IOptions<EventLoopOptions> options, IServiceProvid
 
         foreach (var eventLoopEvent in events)
         {
-            var eligible = await eventLoopEvent.EligibleToFire(cancellationToken);
-
-            logger.LogInformation(
-                "Checking event {EventLoopEvent} -> MeanTimeToHappen: {MeanTimeToHappen} | Eligible: {Eligible}",
-                eventLoopEvent.Name,
-                eventLoopEvent.MeanTimeToHappen,
-                eligible
-            );
-
-            if (!eligible)
-                continue;
-
-            var probabilityToFire = deltaTime.TotalMilliseconds / eventLoopEvent.MeanTimeToHappen.TotalMilliseconds;
-            var roll = Random.Shared.NextDouble();
-
-            logger.LogInformation(
-                "Rolling to fire event {EventLoopEvent} -> ProbabilityToFire: {ProbabilityToFire} | Roll: {Roll}",
-                eventLoopEvent.Name,
-                probabilityToFire * 100,
-                roll * 100
-            );
-
-            if (roll < probabilityToFire)
+            try
             {
-                await eventLoopEvent.FireAsync(cancellationToken);
+                var eligible = await eventLoopEvent.EligibleToFire(cancellationToken);
+
+                logger.LogInformation(
+                    "Checking event {EventLoopEvent} -> MeanTimeToHappen: {MeanTimeToHappen} | Eligible: {Eligible}",
+                    eventLoopEvent.Name,
+                    eventLoopEvent.MeanTimeToHappen,
+                    eligible
+                );
+
+                if (!eligible)
+                    continue;
+
+                var probabilityToFire = deltaTime.TotalMilliseconds / eventLoopEvent.MeanTimeToHappen.TotalMilliseconds;
+                var roll = Random.Shared.NextDouble();
+
+                logger.LogInformation(
+                    "Rolling to fire event {EventLoopEvent} -> ProbabilityToFire: {ProbabilityToFire} | Roll: {Roll}",
+                    eventLoopEvent.Name,
+                    probabilityToFire * 100,
+                    roll * 100
+                );
+
+                if (roll < probabilityToFire)
+                {
+                    logger.LogInformation("Firing event {EventLoopEvent}.", eventLoopEvent.Name);
+                    await eventLoopEvent.FireAsync(cancellationToken);
+                    logger.LogInformation("Event {EventLoopEvent} completed.", eventLoopEvent.Name);
+                }
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                logger.LogError(exception, "Event {EventLoopEvent} failed.", eventLoopEvent.Name);
             }
         }
     }

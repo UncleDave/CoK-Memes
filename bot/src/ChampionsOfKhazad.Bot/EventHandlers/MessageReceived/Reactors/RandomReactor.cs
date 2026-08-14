@@ -1,9 +1,8 @@
-﻿using ChampionsOfKhazad.Bot.GenAi;
+using ChampionsOfKhazad.Bot.GenAi;
 using Discord;
 using MediatR;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
-using Microsoft.SemanticKernel;
-using Microsoft.SemanticKernel.ChatCompletion;
 
 namespace ChampionsOfKhazad.Bot;
 
@@ -41,7 +40,7 @@ public class RandomReactor(ILogger<RandomReactor> logger, ICompletionService com
             )
         )
         {
-            new ChatMessageContent(AuthorRole.User, message.CleanContent) { AuthorName = message.GetOpenAiFriendlyAuthorName() },
+            new ChatMessage(ChatRole.User, message.CleanContent) { AuthorName = message.GetOpenAiFriendlyAuthorName() },
         };
 
         var completionResult = await completionService.InvokeAsync(chatHistory, cancellationToken);

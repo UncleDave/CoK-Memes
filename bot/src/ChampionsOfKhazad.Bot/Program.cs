@@ -5,6 +5,7 @@ using ChampionsOfKhazad.Bot.EventLoop;
 using ChampionsOfKhazad.Bot.RaidHelper;
 using Discord;
 using Discord.WebSocket;
+using MediatR.NotificationPublishers;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -60,7 +61,7 @@ host.Services.AddSingleton<DiscordSocketClient>(services =>
 host.Services.AddMediatR(configuration =>
 {
     configuration.RegisterServicesFromAssemblyContaining<Program>();
-    configuration.NotificationPublisherType = typeof(ParallelNonBlockingPublisher);
+    configuration.NotificationPublisherType = typeof(TaskWhenAllPublisher);
     configuration.LicenseKey = host.Configuration.GetRequiredString("MediatR:LicenseKey");
 });
 
@@ -80,8 +81,6 @@ host.Services.AddBot(configuration =>
     {
         // TODO: Move these to an object
         configuration.OpenAiApiKey = host.Configuration.GetRequiredString("OpenAIServiceOptions:ApiKey");
-        configuration.GoogleSearchEngineId = host.Configuration.GetRequiredString("GoogleSearchEngine:Id");
-        configuration.GoogleSearchEngineApiKey = host.Configuration.GetRequiredString("GoogleSearchEngine:ApiKey");
         configuration.AzureStorageAccountName = host.Configuration.GetRequiredString("AzureStorageAccountName");
         configuration.AzureStorageAccountAccessKey = host.Configuration.GetRequiredString("AzureStorageAccountAccessKey");
         configuration.ImageGeneration.DailyAllowances =

@@ -84,7 +84,6 @@ return await Pulumi.Deployment.RunAsync(() =>
     const string mongoConnectionStringSecretName = "mongo-connection-string";
     const string discordSerilogSinkWebhookIdSecretName = "discord-serilog-sink-webhook-id";
     const string discordSerilogSinkWebhookTokenSecretName = "discord-serilog-sink-webhook-token";
-    const string googleSearchEngineApiKeySecretName = "google-search-engine-api-key";
     const string storageAccountAccessKeySecretName = "storage-account-access-key";
     const string portalAuthClientSecretName = "portal-auth-client-secret";
     const string mediatrLicenseKeySecretName = "mediatr-license-key";
@@ -106,7 +105,6 @@ return await Pulumi.Deployment.RunAsync(() =>
         new() { Name = "ConnectionStrings__Mongo", SecretRef = mongoConnectionStringSecretName },
         new() { Name = "DiscordSerilogSink__WebhookId", SecretRef = discordSerilogSinkWebhookIdSecretName },
         new() { Name = "DiscordSerilogSink__WebhookToken", SecretRef = discordSerilogSinkWebhookTokenSecretName },
-        new() { Name = "GoogleSearchEngine__ApiKey", SecretRef = googleSearchEngineApiKeySecretName },
         new() { Name = "AzureStorageAccountName", Value = storageAccount.Name },
         new() { Name = "AzureStorageAccountAccessKey", SecretRef = storageAccountAccessKeySecretName },
         new() { Name = "MediatR__LicenseKey", SecretRef = mediatrLicenseKeySecretName },
@@ -141,7 +139,6 @@ return await Pulumi.Deployment.RunAsync(() =>
                         Name = discordSerilogSinkWebhookTokenSecretName,
                         Value = config.RequireSecret("discordSerilogSinkWebhookToken"),
                     },
-                    new SecretArgs { Name = googleSearchEngineApiKeySecretName, Value = config.RequireSecret("googleSearchEngineApiKey") },
                     new SecretArgs { Name = storageAccountAccessKeySecretName, Value = storageAccountKey },
                     new SecretArgs { Name = mediatrLicenseKeySecretName, Value = config.RequireSecret("mediatrLicenseKey") },
                 },

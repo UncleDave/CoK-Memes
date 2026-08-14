@@ -1,15 +1,8 @@
-﻿using ChampionsOfKhazad.Bot.Lore.Abstractions;
-using Microsoft.SemanticKernel;
-using Microsoft.SemanticKernel.ChatCompletion;
+using Microsoft.Extensions.AI;
 
 namespace ChampionsOfKhazad.Bot.GenAi;
 
-internal class CondescendingTeacherPersonality(
-    Kernel kernel,
-    IGetRelatedLore relatedLoreGetter,
-    IEmojiHandler emojiHandler,
-    IChatCompletionService chatCompletionService
-)
+internal class CondescendingTeacherPersonality(IEmojiHandler emojiHandler, IChatClient chatClient, PersonalityTools personalityTools)
     : PersonalityBase(
         string.Join(
             '\n',
@@ -22,8 +15,8 @@ internal class CondescendingTeacherPersonality(
             "- Maintain an air of intellectual superiority while praising them",
             "- Sound like you're talking down to a child who exceeded low expectations"
         ),
-        kernel,
-        relatedLoreGetter,
+        false,
         emojiHandler,
-        chatCompletionService
+        chatClient,
+        personalityTools
     );

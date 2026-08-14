@@ -1,5 +1,4 @@
-﻿using ChampionsOfKhazad.Bot.EventLoop;
-using Discord;
+﻿using Discord;
 using Discord.WebSocket;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
@@ -77,30 +76,41 @@ public class BotService : IHostedService
         if (message is not SocketUserMessage userMessage || message.Author.IsBot)
             return;
 
-        await PublishWithScope(new MessageReceived(userMessage));
+        await PublishInBackground(new MessageReceived(userMessage));
     }
 
     private async Task ReactionAddedAsync(
         Cacheable<IUserMessage, ulong> message,
         Cacheable<IMessageChannel, ulong> channel,
         SocketReaction reaction
-    ) => await PublishWithScope(new ReactionAdded(reaction));
+    ) => await PublishInBackground(new ReactionAdded(reaction));
 
     private async Task SlashCommandExecutedAsync(SocketSlashCommand command)
     {
         var notification = SlashCommands.All.Single(x => x.Properties.Name.Value == command.CommandName).CreateNotification(command);
-        await PublishWithScope(notification);
+        await PublishInBackground(notification);
     }
 
-    private async Task UserLeftAsync(SocketGuild guild, SocketUser user) => await PublishWithScope(new UserLeft(user));
+    private async Task UserLeftAsync(SocketGuild guild, SocketUser user) => await PublishInBackground(new UserLeft(user));
 
-    private async Task PublishWithScope(INotification notification)
+    private Task PublishInBackground(INotification notification)
     {
-        // We don't dispose of the scope here because the INotificationPublisher is non-blocking, and it may be disposed too early.
-        // Unsure if this will cause a memory leak
-        var messageScope = _serviceProvider.CreateScope();
-        var publisher = messageScope.ServiceProvider.GetRequiredService<IPublisher>();
+        _ = Task.Run(() => PublishWithScopeAsync(notification));
 
-        await publisher.Publish(notification);
+        return Task.CompletedTask;
+    }
+
+    private async Task PublishWithScopeAsync(INotification notification)
+    {
+        try
+        {
+            await using var messageScope = _serviceProvider.CreateAsyncScope();
+            var publisher = messageScope.ServiceProvider.GetRequiredService<IPublisher>();
+            await publisher.Publish(notification);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(exception, "Error publishing notification {NotificationType}", notification.GetType().Name);
+        }
     }
 }

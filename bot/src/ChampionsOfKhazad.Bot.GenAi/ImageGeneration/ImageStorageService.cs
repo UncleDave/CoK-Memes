@@ -5,16 +5,17 @@ namespace ChampionsOfKhazad.Bot.GenAi;
 
 internal class ImageStorageService(BlobServiceClient blobServiceClient)
 {
-    public async Task UploadImageAsync(string imageName, ReadOnlyMemory<byte> data)
+    public async Task UploadImageAsync(string imageName, ReadOnlyMemory<byte> data, CancellationToken cancellationToken)
     {
         var containerClient = blobServiceClient.GetBlobContainerClient(Constants.GeneratedImagesBlobContainerName);
-        await containerClient.CreateIfNotExistsAsync(PublicAccessType.Blob);
+        await containerClient.CreateIfNotExistsAsync(PublicAccessType.Blob, cancellationToken: cancellationToken);
 
         var blobClient = containerClient.GetBlobClient(imageName);
 
         await blobClient.UploadAsync(
             BinaryData.FromBytes(data),
-            new BlobUploadOptions { HttpHeaders = new BlobHttpHeaders { ContentType = $"image/{Constants.DefaultImageFileType}" } }
+            new BlobUploadOptions { HttpHeaders = new BlobHttpHeaders { ContentType = $"image/{Constants.DefaultImageFileType}" } },
+            cancellationToken
         );
     }
 }

@@ -2,7 +2,6 @@
 using Discord;
 using Discord.WebSocket;
 using Microsoft.Extensions.Options;
-using Microsoft.SemanticKernel.ChatCompletion;
 
 namespace ChampionsOfKhazad.Bot.EventLoop;
 

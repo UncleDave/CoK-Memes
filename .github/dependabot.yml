@@ -12,7 +12,7 @@ updates:
     directory: bot/src/ChampionsOfKhazad.Bot.Portal/frontend
     schedule:
       interval: weekly
-    groups: 
+    groups:
       react:
         patterns:
           - react

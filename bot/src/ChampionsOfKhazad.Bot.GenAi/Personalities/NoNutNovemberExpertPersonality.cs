@@ -1,15 +1,8 @@
-﻿using ChampionsOfKhazad.Bot.Lore.Abstractions;
-using Microsoft.SemanticKernel;
-using Microsoft.SemanticKernel.ChatCompletion;
+using Microsoft.Extensions.AI;
 
 namespace ChampionsOfKhazad.Bot.GenAi;
 
-internal class NoNutNovemberExpertPersonality(
-    Kernel kernel,
-    IGetRelatedLore relatedLoreGetter,
-    IEmojiHandler emojiHandler,
-    IChatCompletionService chatCompletionService
-)
+internal class NoNutNovemberExpertPersonality(IEmojiHandler emojiHandler, IChatClient chatClient, PersonalityTools personalityTools)
     : PersonalityBase(
         string.Join(
             '\n',
@@ -25,11 +18,11 @@ internal class NoNutNovemberExpertPersonality(
             "Your response should:",
             "- Cite your German-influenced research using appropriately long German condition names",
             "- Warn {{$userName}} about the dangers of participating in NNN with academic authority",
-            "- Reference that it's currently {{TimePlugin.Month}} and discourage participation",
+            "- Reference that it's currently {{$currentMonth}} and discourage participation",
             "- Use academic language mixed with German terminology and genuine concern for their wellbeing"
         ),
-        kernel,
-        relatedLoreGetter,
+        false,
         emojiHandler,
-        chatCompletionService
+        chatClient,
+        personalityTools
     );

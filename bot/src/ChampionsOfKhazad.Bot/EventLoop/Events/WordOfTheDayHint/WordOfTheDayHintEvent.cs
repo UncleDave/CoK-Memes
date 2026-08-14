@@ -2,7 +2,6 @@
 using ChampionsOfKhazad.Bot.GenAi;
 using Discord;
 using Microsoft.Extensions.Options;
-using Microsoft.SemanticKernel.ChatCompletion;
 
 namespace ChampionsOfKhazad.Bot.EventLoop;
 

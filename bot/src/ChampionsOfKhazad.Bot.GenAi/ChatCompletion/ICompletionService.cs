@@ -1,5 +1,3 @@
-﻿using Microsoft.SemanticKernel.ChatCompletion;
-
 namespace ChampionsOfKhazad.Bot.GenAi;
 
 public interface ICompletionService
@@ -13,5 +11,5 @@ public interface ICompletionService
     IPersonality RatExpert { get; }
     IPersonality StonerBro { get; }
 
-    public Task<string> InvokeAsync(ChatHistory chatHistory, CancellationToken cancellationToken = default);
+    Task<string> InvokeAsync(ChatHistory chatHistory, CancellationToken cancellationToken = default);
 }

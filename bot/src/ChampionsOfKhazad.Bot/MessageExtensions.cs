@@ -1,8 +1,7 @@
-﻿using System.Text.RegularExpressions;
+using System.Text.RegularExpressions;
 using ChampionsOfKhazad.Bot.GenAi;
 using Discord;
-using Microsoft.SemanticKernel;
-using Microsoft.SemanticKernel.ChatCompletion;
+using Microsoft.Extensions.AI;
 
 namespace ChampionsOfKhazad.Bot;
 
@@ -56,41 +55,33 @@ public static class MessageExtensions
 
             ChatHistory ProcessMessage(ChatHistory history, IMessage m)
             {
-                var role = m.Author.Id == botId ? AuthorRole.Assistant : AuthorRole.User;
-                var content = new ChatMessageContentItemCollection();
+                var role = m.Author.Id == botId ? ChatRole.Assistant : ChatRole.User;
+                List<AIContent> content = [];
 
                 if (!string.IsNullOrWhiteSpace(m.CleanContent))
                     content.Add(new TextContent(m.CleanContent));
 
-                // Grab attachments supported by the model - png, jpeg, jpg, webp, and gif
                 foreach (var attachment in m.Attachments)
                 {
-                    if (
-                        attachment.Filename.EndsWith(".png")
-                        || attachment.Filename.EndsWith(".jpeg")
-                        || attachment.Filename.EndsWith(".jpg")
-                        || attachment.Filename.EndsWith(".webp")
-                    )
+                    var mediaType = GetImageMediaType(attachment.Filename);
+
+                    if (mediaType is null)
+                        continue;
+
+                    if (attachment.Size >= 20_000_000)
                     {
-                        // 20 MB
-                        if (attachment.Size >= 20_000_000)
-                        {
-                            content.Add(new TextContent("User attached an image that was too large to process."));
-                        }
-                        else
-                        {
-                            content.Add(new ImageContent(new Uri(attachment.Url)));
-                        }
+                        content.Add(new TextContent("User attached an image that was too large to process."));
+                    }
+                    else
+                    {
+                        content.Add(new UriContent(new Uri(attachment.Url), mediaType));
                     }
                 }
 
                 if (content.Count != 0)
                 {
                     history.Add(
-                        new ChatMessageContent(role, content)
-                        {
-                            AuthorName = role == AuthorRole.Assistant ? botName : m.GetOpenAiFriendlyAuthorName(),
-                        }
+                        new ChatMessage(role, content) { AuthorName = role == ChatRole.Assistant ? botName : m.GetOpenAiFriendlyAuthorName() }
                     );
                 }
 
@@ -100,4 +91,14 @@ public static class MessageExtensions
     }
 
     public static IMessageContext ToMessageContext(this IUserMessage message) => new DiscordMessageContext(message);
+
+    private static string? GetImageMediaType(string filename) =>
+        Path.GetExtension(filename).ToLowerInvariant() switch
+        {
+            ".png" => "image/png",
+            ".jpeg" or ".jpg" => "image/jpeg",
+            ".webp" => "image/webp",
+            ".gif" => "image/gif",
+            _ => null,
+        };
 }

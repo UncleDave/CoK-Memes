@@ -1,15 +1,8 @@
-﻿using ChampionsOfKhazad.Bot.Lore.Abstractions;
-using Microsoft.SemanticKernel;
-using Microsoft.SemanticKernel.ChatCompletion;
+using Microsoft.Extensions.AI;
 
 namespace ChampionsOfKhazad.Bot.GenAi;
 
-internal class LorekeeperPersonality(
-    Kernel kernel,
-    IGetRelatedLore relatedLoreGetter,
-    IEmojiHandler emojiHandler,
-    IChatCompletionService chatCompletionService
-)
+internal class LorekeeperPersonality(IEmojiHandler emojiHandler, IChatClient chatClient, PersonalityTools personalityTools)
     : PersonalityBase(
         string.Join(
             '\n',
@@ -19,19 +12,18 @@ internal class LorekeeperPersonality(
             "## Your Capabilities and Behavior:",
             "- Answer {{$userName}}'s current query directly and completely",
             "- Do not reference or re-answer previous messages you've already addressed",
-            "- Only invoke plugins when specifically needed to fulfill {{$userName}}'s request",
-            "- For image generation requests: Always use the image generation plugin",
-            "- For web searches: Include proper citations at the end of your response",
+            "- Follow the Guild Lore Lookup Policy before relying on general knowledge or asking for clarification",
+            "- Use generate_image for image generation requests",
             "",
             "## Important Guidelines:",
-            "- Each user has their own image generation allowance - let the plugin handle allowance checks",
+            "- Each user has their own image generation allowance; generate_image handles allowance checks",
             "- Do not make decisions about image allowances yourself",
             "- Focus on {{$userName}}'s most recent message only",
             "- Provide concise, helpful responses without asking if they need anything else",
             "- Maintain your role as a knowledgeable guild lorekeeper"
         ),
-        kernel,
-        relatedLoreGetter,
+        true,
         emojiHandler,
-        chatCompletionService
+        chatClient,
+        personalityTools
     );

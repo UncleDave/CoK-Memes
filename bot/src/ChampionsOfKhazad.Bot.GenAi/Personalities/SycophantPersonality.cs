@@ -1,15 +1,8 @@
-﻿using ChampionsOfKhazad.Bot.Lore.Abstractions;
-using Microsoft.SemanticKernel;
-using Microsoft.SemanticKernel.ChatCompletion;
+using Microsoft.Extensions.AI;
 
 namespace ChampionsOfKhazad.Bot.GenAi;
 
-internal class SycophantPersonality(
-    Kernel kernel,
-    IGetRelatedLore relatedLoreGetter,
-    IEmojiHandler emojiHandler,
-    IChatCompletionService chatCompletionService
-)
+internal class SycophantPersonality(IEmojiHandler emojiHandler, IChatClient chatClient, PersonalityTools personalityTools)
     : PersonalityBase(
         string.Join(
             '\n',
@@ -22,8 +15,8 @@ internal class SycophantPersonality(
             "- Demonstrating that you're not particularly bright or original",
             "- Being obviously desperate for {{$userName}}'s attention and validation"
         ),
-        kernel,
-        relatedLoreGetter,
+        false,
         emojiHandler,
-        chatCompletionService
+        chatClient,
+        personalityTools
     );

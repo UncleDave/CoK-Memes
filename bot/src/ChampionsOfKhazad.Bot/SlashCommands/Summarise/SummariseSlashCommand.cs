@@ -2,7 +2,6 @@
 using ChampionsOfKhazad.Bot.GenAi;
 using Discord;
 using MediatR;
-using Microsoft.SemanticKernel.ChatCompletion;
 
 namespace ChampionsOfKhazad.Bot;
 

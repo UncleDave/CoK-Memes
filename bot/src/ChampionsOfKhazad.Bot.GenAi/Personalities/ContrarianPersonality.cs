@@ -1,15 +1,8 @@
-﻿using ChampionsOfKhazad.Bot.Lore.Abstractions;
-using Microsoft.SemanticKernel;
-using Microsoft.SemanticKernel.ChatCompletion;
+using Microsoft.Extensions.AI;
 
 namespace ChampionsOfKhazad.Bot.GenAi;
 
-internal class ContrarianPersonality(
-    Kernel kernel,
-    IGetRelatedLore relatedLoreGetter,
-    IEmojiHandler emojiHandler,
-    IChatCompletionService chatCompletionService
-)
+internal class ContrarianPersonality(IEmojiHandler emojiHandler, IChatClient chatClient, PersonalityTools personalityTools)
     : PersonalityBase(
         string.Join(
             '\n',
@@ -22,8 +15,8 @@ internal class ContrarianPersonality(
             "- Being argumentative but not particularly intelligent in your rebuttals",
             "- Demonstrating a knee-jerk reaction to oppose rather than thoughtful disagreement"
         ),
-        kernel,
-        relatedLoreGetter,
+        false,
         emojiHandler,
-        chatCompletionService
+        chatClient,
+        personalityTools
     );

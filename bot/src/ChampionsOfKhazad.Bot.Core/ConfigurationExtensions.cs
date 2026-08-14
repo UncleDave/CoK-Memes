@@ -4,9 +4,20 @@ namespace ChampionsOfKhazad.Bot.Core;
 
 public static class ConfigurationExtensions
 {
-    public static string GetRequiredString(this IConfiguration configuration, string key) =>
-        configuration[key] ?? throw new ApplicationException($"{key} is required");
+    extension(IConfiguration configuration)
+    {
+        public string GetRequiredString(string key)
+        {
+            var value = configuration[key];
 
-    public static string GetRequiredConnectionString(this IConfiguration configuration, string key) =>
-        configuration.GetConnectionString(key) ?? throw new ApplicationException($"ConnectionStrings:{key} is required");
+            return !string.IsNullOrWhiteSpace(value) ? value : throw new ApplicationException($"{key} is required");
+        }
+
+        public string GetRequiredConnectionString(string key)
+        {
+            var value = configuration.GetConnectionString(key);
+
+            return !string.IsNullOrWhiteSpace(value) ? value : throw new ApplicationException($"ConnectionStrings:{key} is required");
+        }
+    }
 }

@@ -1,11 +1,13 @@
-﻿using Azure.Storage;
+using System.ClientModel;
+using Azure.Storage;
 using ChampionsOfKhazad.Bot.Core;
 using ChampionsOfKhazad.Bot.GenAi;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Azure;
-using Microsoft.SemanticKernel;
-using Microsoft.SemanticKernel.Data;
-using Microsoft.SemanticKernel.Plugins.Core;
-using Microsoft.SemanticKernel.Plugins.Web.Google;
+using Microsoft.Extensions.Logging;
+using OpenAI;
+using OpenAI.Chat;
+using OpenAI.Images;
 
 // ReSharper disable once CheckNamespace
 namespace Microsoft.Extensions.DependencyInjection;
@@ -22,29 +24,29 @@ public static class GenAiBotBuilderExtensions
         if (config.OpenAiApiKey is null)
             throw new MissingConfigurationValueException("OpenAiApiKey");
 
-        if (config.GoogleSearchEngineId is null)
-            throw new MissingConfigurationValueException("GoogleSearchEngineId");
-
-        if (config.GoogleSearchEngineApiKey is null)
-            throw new MissingConfigurationValueException("GoogleSearchEngineApiKey");
-
         if (config.AzureStorageAccountName is null)
             throw new MissingConfigurationValueException("AzureStorageAccountName");
 
         if (config.AzureStorageAccountAccessKey is null)
             throw new MissingConfigurationValueException("AzureStorageAccountAccessKey");
 
-        var googleTextSearch = new GoogleTextSearch(config.GoogleSearchEngineId, config.GoogleSearchEngineApiKey);
-        var imageGenerationHttpClient = new HttpClient { Timeout = TimeSpan.FromMinutes(5) };
+        builder.Services.AddSingleton(new ChatClient(Constants.DefaultCompletionsModel, config.OpenAiApiKey));
+        builder.Services.AddSingleton<IChatClient>(serviceProvider =>
+        {
+            var chatClient = new DiagnosticChatClient(
+                serviceProvider.GetRequiredService<ChatClient>().AsIChatClient(),
+                serviceProvider.GetRequiredService<ILogger<DiagnosticChatClient>>()
+            );
 
-        builder
-            .Services.AddKernel()
-            .AddOpenAIChatCompletion(Constants.DefaultCompletionsModel, config.OpenAiApiKey)
-            .AddOpenAITextToImage(config.OpenAiApiKey, modelId: Constants.DefaultImageModel, httpClient: imageGenerationHttpClient)
-            .Plugins.AddFromType<TimePlugin>()
-            .AddFromType<ImageGenerationPlugin>()
-            .Add(googleTextSearch.CreateWithGetSearchResults("GoogleSearchPlugin"));
-
+            return new ChatClientBuilder(chatClient).UseFunctionInvocation().Build();
+        });
+        builder.Services.AddSingleton(
+            new ImageClient(
+                Constants.DefaultImageModel,
+                new ApiKeyCredential(config.OpenAiApiKey),
+                new OpenAIClientOptions { NetworkTimeout = TimeSpan.FromMinutes(5) }
+            )
+        );
         builder.Services.AddAzureClients(azureBuilder =>
         {
             azureBuilder.AddBlobServiceClient(
@@ -58,6 +60,8 @@ public static class GenAiBotBuilderExtensions
             .AddScoped<IEmojiHandler, TEmojiHandler>()
             .AddSingleton(config.ImageGeneration)
             .AddSingleton<ImageStorageService>()
+            .AddSingleton<ImageGenerationService>()
+            .AddSingleton<PersonalityTools>()
             .AddScoped<LorekeeperPersonality>()
             .AddScoped<SycophantPersonality>()
             .AddScoped<ContrarianPersonality>()

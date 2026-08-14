@@ -1,97 +1,65 @@
-﻿using ChampionsOfKhazad.Bot.Lore.Abstractions;
-using Microsoft.SemanticKernel;
-using Microsoft.SemanticKernel.ChatCompletion;
-using Microsoft.SemanticKernel.Connectors.OpenAI;
+using Microsoft.Extensions.AI;
 
 namespace ChampionsOfKhazad.Bot.GenAi;
 
 internal abstract class PersonalityBase(
-    string systemPrompt,
-    Kernel kernel,
-    IGetRelatedLore relatedLoreGetter,
+    string personalityPrompt,
+    bool includeLorekeeperTools,
     IEmojiHandler emojiHandler,
-    IChatCompletionService chatCompletionService
+    IChatClient chatClient,
+    PersonalityTools personalityTools
 ) : IPersonality
 {
-#pragma warning disable OPENAI001
-    private static readonly object NoReasoningEffort = OpenAI.Chat.ChatReasoningEffortLevel.None;
-#pragma warning restore OPENAI001
-
-    protected static readonly OpenAIPromptExecutionSettings DefaultPromptSettings = new()
-    {
-        ReasoningEffort = NoReasoningEffort,
-        ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions,
-    };
-
-    private static readonly IPromptTemplateFactory PromptTemplateFactory = new KernelPromptTemplateFactory();
-
-    private readonly IPromptTemplate _systemPromptTemplate = PromptTemplateFactory.Create(
-        new PromptTemplateConfig(
-            string.Join(
-                '\n',
-                "## ROLE AND CONTEXT",
-                systemPrompt,
-                "",
-                "## AUTHOR INFORMATION",
-                "You are responding to a Discord message from: {{$userName}}",
-                "The author's identity and context are crucial for your response.",
-                "",
-                "## AVAILABLE RESOURCES",
-                "### Relevant Lore Entries:",
-                "{{$lore}}",
-                "",
-                "### Available Emojis:",
-                "Standard unicode emojis and these guild emojis are available for use:",
-                "{{$emojis}}",
-                "",
-                "## RESPONSE GUIDELINES",
-                "- Keep your response concise and under 100 words",
-                "- Stay in character consistently",
-                "- Reference the author ({{$userName}}) appropriately based on your role",
-                "- Use emojis naturally when they enhance your message",
-                "- Make your response engaging and contextually appropriate for Discord"
-            )
-        )
+    private readonly string _systemPromptTemplate = string.Join(
+        '\n',
+        "## ROLE AND CONTEXT",
+        personalityPrompt,
+        "",
+        "## AUTHOR INFORMATION",
+        "You are responding to a Discord message from: {{$userName}}",
+        "The author's identity and context are crucial for your response.",
+        "",
+        "## AVAILABLE RESOURCES",
+        "### Guild Lore Lookup Policy:",
+        "- Treat a direct question to this bot as potentially guild-local.",
+        "- Call search_lore before answering any question that could refer to a guild member, player, character, name, nickname, alias, event, history, rule, or inside joke.",
+        "- When a term is ambiguous or also has a well-known outside meaning, prefer its possible guild meaning and search first.",
+        "- Do not guess, say you lack lore, or ask for more context until you have searched the relevant terms from the current message.",
+        "- Skip search_lore only for requests that are clearly unrelated to guild lore.",
+        "- You do not have public-web access. Do not claim to have searched or browsed the web, provide live citations, or present current external information as verified.",
+        "",
+        "### Available Emojis:",
+        "Standard unicode emojis and these guild emojis are available for use:",
+        "{{$emojis}}",
+        "",
+        "## RESPONSE GUIDELINES",
+        "- Keep your response concise and under 100 words",
+        "- Stay in character consistently",
+        "- Reference the author ({{$userName}}) appropriately based on your role",
+        "- Use emojis naturally when they enhance your message",
+        "- Make your response engaging and contextually appropriate for Discord"
     );
 
     public virtual async Task<string> InvokeAsync(
         ChatHistory chatHistory,
         IMessageContext messageContext,
         CancellationToken cancellationToken = default
-    ) => await InvokeAsync(chatHistory, messageContext, new Dictionary<string, object?>(), cancellationToken);
-
-    public virtual async Task<string> InvokeAsync(
-        ChatHistory chatHistory,
-        IMessageContext messageContext,
-        IDictionary<string, object?> arguments,
-        CancellationToken cancellationToken = default
     )
     {
-        kernel.SetMessageContext(messageContext);
+        var systemPrompt = _systemPromptTemplate
+            .Replace("{{$userName}}", messageContext.UserName)
+            .Replace("{{$emojis}}", string.Join(' ', emojiHandler.GetEmojis()))
+            .Replace("{{$currentMonth}}", DateTimeOffset.Now.ToString("MMMM"));
 
-        var input = chatHistory.Last();
-        var lore = input.Content is not null ? await relatedLoreGetter.GetRelatedLoreAsync(input.Content) : [];
+        var messages = new ChatHistory([new ChatMessage(ChatRole.System, systemPrompt), .. chatHistory]);
+        var options = new ChatOptions
+        {
+            Reasoning = new ReasoningOptions { Effort = ReasoningEffort.Medium },
+            Tools = personalityTools.Create(messageContext, includeLorekeeperTools),
+        };
 
-        var systemPrompt = await _systemPromptTemplate.RenderAsync(
-            kernel,
-            new KernelArguments(arguments)
-            {
-                { "userName", messageContext.UserName },
-                { "lore", string.Join("\n---\n\n", lore.Select(x => x.ToString())) },
-                { "emojis", string.Join(' ', emojiHandler.GetEmojis()) },
-            },
-            cancellationToken
-        );
+        var response = await chatClient.GetResponseAsync(messages, options, cancellationToken);
 
-        var chatHistoryWithSystemPrompt = new ChatHistory([new ChatMessageContent(AuthorRole.System, systemPrompt), .. chatHistory]);
-
-        var response = await chatCompletionService.GetChatMessageContentAsync(
-            chatHistoryWithSystemPrompt,
-            DefaultPromptSettings,
-            kernel,
-            cancellationToken
-        );
-
-        return emojiHandler.ProcessMessage(response.ToString());
+        return emojiHandler.ProcessMessage(response.Text);
     }
 }

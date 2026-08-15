@@ -20,7 +20,7 @@ internal sealed class DiagnosticChatClient(IChatClient innerClient, ILogger<Diag
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             logger.LogInformation(
-                "Chat completion was cancelled for {MessageCount} messages with {ToolCount} tools.",
+                "AI response was cancelled for {MessageCount} messages with {ToolCount} tools.",
                 requestMessages.Count,
                 options?.Tools?.Count ?? 0
             );
@@ -30,7 +30,7 @@ internal sealed class DiagnosticChatClient(IChatClient innerClient, ILogger<Diag
         {
             logger.LogError(
                 exception,
-                "Chat completion failed for {MessageCount} messages with {ToolCount} tools.",
+                "AI response failed for {MessageCount} messages with {ToolCount} tools.",
                 requestMessages.Count,
                 options?.Tools?.Count ?? 0
             );

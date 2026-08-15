@@ -6,8 +6,8 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Azure;
 using Microsoft.Extensions.Logging;
 using OpenAI;
-using OpenAI.Chat;
 using OpenAI.Images;
+using OpenAI.Responses;
 
 // ReSharper disable once CheckNamespace
 namespace Microsoft.Extensions.DependencyInjection;
@@ -30,16 +30,18 @@ public static class GenAiBotBuilderExtensions
         if (config.AzureStorageAccountAccessKey is null)
             throw new MissingConfigurationValueException("AzureStorageAccountAccessKey");
 
-        builder.Services.AddSingleton(new ChatClient(Constants.DefaultCompletionsModel, config.OpenAiApiKey));
+#pragma warning disable OPENAI001
+        builder.Services.AddSingleton(new ResponsesClient(config.OpenAiApiKey));
         builder.Services.AddSingleton<IChatClient>(serviceProvider =>
         {
             var chatClient = new DiagnosticChatClient(
-                serviceProvider.GetRequiredService<ChatClient>().AsIChatClient(),
+                serviceProvider.GetRequiredService<ResponsesClient>().AsIChatClient(Constants.DefaultCompletionsModel),
                 serviceProvider.GetRequiredService<ILogger<DiagnosticChatClient>>()
             );
 
             return new ChatClientBuilder(chatClient).UseFunctionInvocation().Build();
         });
+#pragma warning restore OPENAI001
         builder.Services.AddSingleton(
             new ImageClient(
                 Constants.DefaultImageModel,

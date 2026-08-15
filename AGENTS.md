@@ -29,9 +29,9 @@ C# is formatted by CSharpier with a 150-column width. Preserve nullable referenc
 
 There is currently no automated test framework or coverage threshold. Validate every change with the relevant build and lint commands. For UI work, also exercise the changed flow with `npm run dev`. If adding tests, create clearly named `*.Tests` projects, add them to the solution, and make `dotnet test` part of validation.
 
-## Commit & Pull Request Guidelines
+## Commit & Publishing Guidelines
 
-History favors short, imperative summaries without scope prefixes, for example `add week check event` or `Update AI model constants`. Keep commits focused; reserve `Bump ...` wording for dependency updates. Pull requests should explain the behavior and affected projects, link relevant issues, list validation commands, and include screenshots for visible portal or static-site changes. Ensure all applicable GitHub Actions checks pass.
+This repository does not use feature branches or pull requests. Work, commit, and push directly on the current branch only when the user asks to publish. History favors short, imperative summaries without scope prefixes, for example `add week check event` or `Update AI model constants`. Keep commits focused; reserve `Bump ...` wording for dependency updates. Ensure all applicable GitHub Actions checks pass.
 
 ## Security & Configuration
 

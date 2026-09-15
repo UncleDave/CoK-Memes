@@ -23,6 +23,7 @@ internal class PersonalityTools(IGetRelatedLore relatedLoreGetter, ImageGenerati
         if (!includeLorekeeperTools)
             return tools;
 
+        tools.Add(new HostedWebSearchTool());
         tools.Add(
             AIFunctionFactory.Create(requestTools.GenerateImageAsync, "generate_image", "Generates an image from the supplied text prompt.", null)
         );

@@ -30,6 +30,7 @@
     <Project Path="src\ChampionsOfKhazad.Bot.EmbeddingsRegenerator\ChampionsOfKhazad.Bot.EmbeddingsRegenerator.csproj" Type="C#" />
     <Project Path="src\ChampionsOfKhazad.Bot.GenAi.Embeddings\ChampionsOfKhazad.Bot.GenAi.Embeddings.csproj" Type="C#" />
     <Project Path="src\ChampionsOfKhazad.Bot.GenAi.Mongo\ChampionsOfKhazad.Bot.GenAi.Mongo.csproj" Type="C#" />
+    <Project Path="src\ChampionsOfKhazad.Bot.GenAi.Tests\ChampionsOfKhazad.Bot.GenAi.Tests.csproj" Type="C#" />
     <Project Path="src\ChampionsOfKhazad.Bot.GenAi\ChampionsOfKhazad.Bot.GenAi.csproj" Type="C#" />
     <Project Path="src\ChampionsOfKhazad.Bot.Infrastructure\ChampionsOfKhazad.Bot.Infrastructure.csproj" Type="C#" />
     <Project Path="src\ChampionsOfKhazad.Bot.Lore.Mongo\ChampionsOfKhazad.Bot.Lore.Mongo.csproj" Type="C#" />

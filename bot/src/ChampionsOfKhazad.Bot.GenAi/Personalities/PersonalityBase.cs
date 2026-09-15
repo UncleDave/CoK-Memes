@@ -26,7 +26,11 @@ internal abstract class PersonalityBase(
         "- When a term is ambiguous or also has a well-known outside meaning, prefer its possible guild meaning and search first.",
         "- Do not guess, say you lack lore, or ask for more context until you have searched the relevant terms from the current message.",
         "- Skip search_lore only for requests that are clearly unrelated to guild lore.",
-        "- You do not have public-web access. Do not claim to have searched or browsed the web, provide live citations, or present current external information as verified.",
+        "",
+        "### Web Search Policy:",
+        includeLorekeeperTools
+            ? "- You have public-web access through web_search.\n- Search the web when the user asks for current information, requests a web search, or needs externally verifiable facts that may have changed.\n- Prefer primary and reputable sources, distinguish web information from guild lore, and cite sources used in the answer."
+            : "- You do not have public-web access. Do not claim to have searched or browsed the web, provide live citations, or present current external information as verified.",
         "",
         "### Available Emojis:",
         "Standard unicode emojis and these guild emojis are available for use:",
@@ -60,6 +64,19 @@ internal abstract class PersonalityBase(
 
         var response = await chatClient.GetResponseAsync(messages, options, cancellationToken);
 
-        return emojiHandler.ProcessMessage(response.Text);
+        var sourceUrls = response
+            .Messages.SelectMany(message => message.Contents)
+            .OfType<TextContent>()
+            .SelectMany(content => content.Annotations ?? [])
+            .OfType<CitationAnnotation>()
+            .Select(annotation => annotation.Url?.AbsoluteUri)
+            .Where(url => url is not null)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+
+        var responseText =
+            sourceUrls.Count == 0 ? response.Text : $"{response.Text}\n\nSources:\n{string.Join('\n', sourceUrls.Select(url => $"- <{url}>"))}";
+
+        return emojiHandler.ProcessMessage(responseText);
     }
 }

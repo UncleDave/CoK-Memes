@@ -34,4 +34,7 @@
     <ProjectReference Include="..\ChampionsOfKhazad.Bot.Lore\ChampionsOfKhazad.Bot.Lore.csproj" />
     <ProjectReference Include="..\ChampionsOfKhazad.Bot.RaidHelper\ChampionsOfKhazad.Bot.RaidHelper.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="ChampionsOfKhazad.Bot.Tests" />
+  </ItemGroup>
 </Project>

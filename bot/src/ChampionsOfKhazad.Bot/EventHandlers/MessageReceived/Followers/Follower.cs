@@ -22,6 +22,6 @@ public abstract class Follower(ulong ignoreBotMentionsInChannelId, BotContext bo
 
         using var typing = textChannel.EnterTypingState();
 
-        await textChannel.SendMessageAsync(await GetResponseAsync(notification, cancellationToken));
+        await textChannel.SendMessageInChunksAsync(await GetResponseAsync(notification, cancellationToken), cancellationToken);
     }
 }

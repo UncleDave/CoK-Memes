@@ -26,7 +26,7 @@ public class MentionHandler(IOptions<MentionHandlerOptions> options, BotContext 
         var chatHistory = await message.GetChatHistoryAsync(20, context.BotId, GenAi.Constants.OpenAiFriendlyLorekeeperName, cancellationToken);
         var response = await completionService.Lorekeeper.InvokeAsync(chatHistory, notification.Message.ToMessageContext(), cancellationToken);
 
-        await message.ReplyAsync(response);
+        await message.ReplyInChunksAsync(response, cancellationToken);
     }
 
     public override string ToString() => nameof(MentionHandler);

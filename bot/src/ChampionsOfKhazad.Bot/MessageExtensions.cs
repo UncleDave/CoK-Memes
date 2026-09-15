@@ -90,7 +90,80 @@ public static class MessageExtensions
         }
     }
 
+    extension(IUserMessage message)
+    {
+        public async Task ReplyInChunksAsync(string content, CancellationToken cancellationToken = default)
+        {
+            var chunks = SplitMessageContent(content);
+            var requestOptions = new RequestOptions { CancelToken = cancellationToken };
+
+            await message.ReplyAsync(chunks[0], options: requestOptions);
+
+            foreach (var chunk in chunks.Skip(1))
+                await message.Channel.SendMessageAsync(chunk, options: requestOptions);
+        }
+    }
+
+    extension(IMessageChannel channel)
+    {
+        public async Task SendMessageInChunksAsync(string content, CancellationToken cancellationToken = default)
+        {
+            var requestOptions = new RequestOptions { CancelToken = cancellationToken };
+
+            foreach (var chunk in SplitMessageContent(content))
+                await channel.SendMessageAsync(chunk, options: requestOptions);
+        }
+    }
+
     public static IMessageContext ToMessageContext(this IUserMessage message) => new DiscordMessageContext(message);
+
+    internal static IReadOnlyList<string> SplitMessageContent(string content)
+    {
+        ArgumentNullException.ThrowIfNull(content);
+
+        if (content.Length <= DiscordConfig.MaxMessageSize)
+            return [content];
+
+        List<string> chunks = [];
+        var offset = 0;
+
+        while (content.Length - offset > DiscordConfig.MaxMessageSize)
+        {
+            var chunkLength = FindChunkLength(content, offset);
+            chunks.Add(content.Substring(offset, chunkLength));
+            offset += chunkLength;
+        }
+
+        chunks.Add(content[offset..]);
+        return chunks;
+    }
+
+    private static int FindChunkLength(string content, int offset)
+    {
+        var candidate = content.AsSpan(offset, DiscordConfig.MaxMessageSize);
+        var splitIndex = candidate.LastIndexOf("\n\n");
+
+        if (splitIndex >= 0)
+            return splitIndex + 2;
+
+        splitIndex = candidate.LastIndexOf('\n');
+
+        if (splitIndex >= 0)
+            return splitIndex + 1;
+
+        for (var index = candidate.Length - 1; index >= 0; index--)
+        {
+            if (char.IsWhiteSpace(candidate[index]))
+                return index + 1;
+        }
+
+        var chunkLength = DiscordConfig.MaxMessageSize;
+
+        if (char.IsHighSurrogate(content[offset + chunkLength - 1]) && char.IsLowSurrogate(content[offset + chunkLength]))
+            chunkLength--;
+
+        return chunkLength;
+    }
 
     private static string? GetImageMediaType(string filename) =>
         Path.GetExtension(filename).ToLowerInvariant() switch

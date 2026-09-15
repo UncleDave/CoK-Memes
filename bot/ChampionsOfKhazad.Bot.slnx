@@ -24,6 +24,7 @@
   <Folder Name="/src/">
     <Project Path="src/ChampionsOfKhazad.Bot.Lore.Abstractions/ChampionsOfKhazad.Bot.Lore.Abstractions.csproj" />
     <Project Path="src/ChampionsOfKhazad.Bot/ChampionsOfKhazad.Bot.csproj" Type="C#" />
+    <Project Path="src\ChampionsOfKhazad.Bot.Tests\ChampionsOfKhazad.Bot.Tests.csproj" Type="C#" />
     <Project Path="src\ChampionsOfKhazad.Bot.Core\ChampionsOfKhazad.Bot.Core.csproj" Type="C#" />
     <Project Path="src\ChampionsOfKhazad.Bot.DiscordMemes.Mongo\ChampionsOfKhazad.Bot.DiscordMemes.Mongo.csproj" Type="C#" />
     <Project Path="src\ChampionsOfKhazad.Bot.DiscordMemes\ChampionsOfKhazad.Bot.DiscordMemes.csproj" Type="C#" />

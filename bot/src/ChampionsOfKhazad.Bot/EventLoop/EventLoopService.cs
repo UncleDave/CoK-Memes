@@ -63,9 +63,9 @@ public class EventLoopService(IOptions<EventLoopOptions> options, IServiceProvid
 
                 if (roll < probabilityToFire)
                 {
-                    logger.LogInformation("Firing event {EventLoopEvent}.", eventLoopEvent.Name);
+                    logger.LogInformation("Firing event {EventLoopEvent}", eventLoopEvent.Name);
                     await eventLoopEvent.FireAsync(cancellationToken);
-                    logger.LogInformation("Event {EventLoopEvent} completed.", eventLoopEvent.Name);
+                    logger.LogInformation("Event {EventLoopEvent} completed", eventLoopEvent.Name);
                 }
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -74,7 +74,7 @@ public class EventLoopService(IOptions<EventLoopOptions> options, IServiceProvid
             }
             catch (Exception exception)
             {
-                logger.LogError(exception, "Event {EventLoopEvent} failed.", eventLoopEvent.Name);
+                logger.LogError(exception, "Event {EventLoopEvent} failed", eventLoopEvent.Name);
             }
         }
     }

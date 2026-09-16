@@ -21,7 +21,7 @@ internal class ImageGenerationService(
         var stage = "checking the daily allowance";
         var ownsGenerationLock = false;
 
-        logger.LogInformation("Image generation requested by Discord user {UserId} with a {PromptLength}-character prompt.", userId, prompt.Length);
+        logger.LogInformation("Image generation requested by Discord user {UserId} with a {PromptLength}-character prompt", userId, prompt.Length);
 
         try
         {
@@ -29,7 +29,7 @@ internal class ImageGenerationService(
 
             if (userAllowance == 0)
             {
-                logger.LogInformation("Image generation denied for Discord user {UserId}: image generation is not allowed.", userId);
+                logger.LogInformation("Image generation denied for Discord user {UserId}: image generation is not allowed", userId);
                 return new GenerateImageResult(0, "User is not allowed to generate images.");
             }
 
@@ -38,7 +38,7 @@ internal class ImageGenerationService(
 
             if (availableAllowance == 0)
             {
-                logger.LogInformation("Image generation denied for Discord user {UserId}: daily allowance exhausted.", userId);
+                logger.LogInformation("Image generation denied for Discord user {UserId}: daily allowance exhausted", userId);
                 return new GenerateImageResult(0, "User has reached their daily image generation limit.");
             }
 
@@ -46,7 +46,7 @@ internal class ImageGenerationService(
 
             if (!UsersGeneratingImages.TryAdd(userId, 0))
             {
-                logger.LogInformation("Image generation denied for Discord user {UserId}: another request is already in progress.", userId);
+                logger.LogInformation("Image generation denied for Discord user {UserId}: another request is already in progress", userId);
                 return new GenerateImageResult(remainingAllowance, "User is already generating an image.");
             }
 
@@ -71,17 +71,17 @@ internal class ImageGenerationService(
             stage = "saving the generated-image record";
             await generatedImageStore.SaveGeneratedImageAsync(new GeneratedImage(prompt, userId, timestamp, imageName));
 
-            logger.LogInformation("Image generation completed for Discord user {UserId}.", userId);
+            logger.LogInformation("Image generation completed for Discord user {UserId}", userId);
             return new GenerateImageResult(remainingAllowance, new Uri($"{Constants.GeneratedImagesBaseUrl}/{imageName}"));
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            logger.LogInformation("Image generation cancelled while {Stage} for Discord user {UserId}.", stage, userId);
+            logger.LogInformation("Image generation cancelled while {Stage} for Discord user {UserId}", stage, userId);
             throw;
         }
         catch (Exception exception)
         {
-            logger.LogError(exception, "Image generation failed while {Stage} for Discord user {UserId}.", stage, userId);
+            logger.LogError(exception, "Image generation failed while {Stage} for Discord user {UserId}", stage, userId);
             return new GenerateImageResult(remainingAllowance, "Image generation failed. Please try again later.");
         }
         finally
@@ -107,7 +107,7 @@ internal class ImageGenerationService(
     )
     {
         logger.LogInformation(
-            "Generated image search requested by Discord user {UserId}. Search is restricted to the requesting user: {OnlyMine}.",
+            "Generated image search requested by Discord user {UserId}. Search is restricted to the requesting user: {OnlyMine}",
             messageContext.UserId,
             onlyMine
         );
@@ -126,12 +126,12 @@ internal class ImageGenerationService(
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            logger.LogInformation("Generated image search was cancelled for Discord user {UserId}.", messageContext.UserId);
+            logger.LogInformation("Generated image search was cancelled for Discord user {UserId}", messageContext.UserId);
             throw;
         }
         catch (Exception exception)
         {
-            logger.LogError(exception, "Generated image search failed for Discord user {UserId}.", messageContext.UserId);
+            logger.LogError(exception, "Generated image search failed for Discord user {UserId}", messageContext.UserId);
             return "Generated image search failed. Tell the user that image search is temporarily unavailable.";
         }
     }

@@ -14,7 +14,7 @@ public class WeekCheckEventOptions
 
     [Required]
     public required ushort CooldownMinutes { get; set; }
-    
+
     [Required]
     public required ulong UserId { get; set; }
 }

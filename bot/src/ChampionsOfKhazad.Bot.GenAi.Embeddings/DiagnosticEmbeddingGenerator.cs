@@ -22,14 +22,14 @@ internal sealed class DiagnosticEmbeddingGenerator(
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            logger.LogInformation("Embedding generation was cancelled for {InputCount} inputs.", inputs.Count);
+            logger.LogInformation("Embedding generation was cancelled for {InputCount} inputs", inputs.Count);
             throw;
         }
         catch (Exception exception)
         {
             logger.LogError(
                 exception,
-                "Embedding generation failed for {InputCount} inputs containing {CharacterCount} characters.",
+                "Embedding generation failed for {InputCount} inputs containing {CharacterCount} characters",
                 inputs.Count,
                 inputs.Sum(input => input.Length)
             );

@@ -9,5 +9,7 @@ public class DiscordMessageContext(IUserMessage message) : IMessageContext
 
     public string UserName { get; } = message.GetAuthorName();
 
-    public Task Reply(string content) => message.ReplyAsync(content);
+    public ulong? ChannelId { get; } = message.Channel.Id;
+
+    public Task Reply(string content) => message.ReplyAsync(content, allowedMentions: new AllowedMentions { MentionRepliedUser = true });
 }

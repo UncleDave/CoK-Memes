@@ -2,6 +2,7 @@
 using ChampionsOfKhazad.Bot;
 using ChampionsOfKhazad.Bot.Core;
 using ChampionsOfKhazad.Bot.EventLoop;
+using ChampionsOfKhazad.Bot.GenAi;
 using ChampionsOfKhazad.Bot.RaidHelper;
 using Discord;
 using Discord.WebSocket;
@@ -37,6 +38,7 @@ Log.Logger = ConfigureLogger(new LoggerConfiguration(), host.Environment).Create
 host.Services.AddSerilog();
 
 host.Services.AddOptionsWithEagerValidation<BotOptions>(host.Configuration.GetSection(BotOptions.Key));
+host.Services.AddOptionsWithEagerValidation<DiscordMessageToolsOptions>(host.Configuration.GetSection(DiscordMessageToolsOptions.Key));
 
 host.Services.AddSingleton<DiscordSocketClient>(services =>
     ActivatorUtilities.CreateInstance<LoggingDiscordSocketClient>(
@@ -111,6 +113,7 @@ host.Services.AddOptionsWithEagerValidation<EmoteStreakHandlerOptions>(host.Conf
 
 host.Services.AddHostedService<BotService>()
     .AddSingleton<BotContextProvider>()
+    .AddScoped<IDiscordMessageService, DiscordMessageService>()
     .AddScoped<BotContext>(serviceProvider =>
         serviceProvider.GetRequiredService<BotContextProvider>().BotContext ?? throw new InvalidOperationException("BotContext is not available")
     );

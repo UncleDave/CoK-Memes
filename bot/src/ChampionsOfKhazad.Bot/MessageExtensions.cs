@@ -97,10 +97,10 @@ public static class MessageExtensions
             var chunks = SplitMessageContent(content);
             var requestOptions = new RequestOptions { CancelToken = cancellationToken };
 
-            await message.ReplyAsync(chunks[0], options: requestOptions);
+            await message.ReplyAsync(chunks[0], options: requestOptions, allowedMentions: new AllowedMentions { MentionRepliedUser = true });
 
             foreach (var chunk in chunks.Skip(1))
-                await message.Channel.SendMessageAsync(chunk, options: requestOptions);
+                await message.Channel.SendMessageAsync(chunk, options: requestOptions, allowedMentions: AllowedMentions.None);
         }
     }
 
@@ -111,7 +111,7 @@ public static class MessageExtensions
             var requestOptions = new RequestOptions { CancelToken = cancellationToken };
 
             foreach (var chunk in SplitMessageContent(content))
-                await channel.SendMessageAsync(chunk, options: requestOptions);
+                await channel.SendMessageAsync(chunk, options: requestOptions, allowedMentions: AllowedMentions.None);
         }
     }
 

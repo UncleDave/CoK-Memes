@@ -188,13 +188,8 @@ internal sealed partial class DiscordMessageService(
             NormalUserChannelAccess.CanRead(channel, [guild.EveryoneRole]),
             CanUserRead(requester, channel)
         ));
-        var invokingCandidate = new DiscordMessageAccessPolicy.ChannelCandidate(
-            messageContext.ChannelId.Value,
-            NormalUserChannelAccess.CanRead(invokingPermissionChannel, [guild.EveryoneRole, normalUserRole]),
-            NormalUserChannelAccess.CanRead(invokingPermissionChannel, [guild.EveryoneRole]),
-            CanUserRead(requester, invokingPermissionChannel)
-        );
-        var allowedChannelIds = DiscordMessageAccessPolicy.GetAllowedSourceChannelIds(candidates, invokingCandidate);
+        var invokingChannelEveryoneCanRead = NormalUserChannelAccess.CanRead(invokingPermissionChannel, [guild.EveryoneRole]);
+        var allowedChannelIds = DiscordMessageAccessPolicy.GetAllowedSourceChannelIds(candidates, invokingChannelEveryoneCanRead);
         var allowedChannels = channels.Where(channel => allowedChannelIds.Contains(channel.Id)).ToArray();
 
         return allowedChannels.Length == 0 ? AccessResult.Denied : new AccessResult(allowedChannels);

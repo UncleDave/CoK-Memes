@@ -7,7 +7,7 @@ public static class Constants
     public const string ImageGenerationConfirmationMessage = "Generating your image. This may take a minute.";
 
     internal const string DefaultCompletionsModel = "gpt-5.6-luna";
-    internal const string DefaultImageModel = "gpt-image-2";
+    internal const string DefaultImageModel = "gpt-image-2.5-flare";
 
     internal const string GeneratedImagesBlobContainerName = "generated-images";
     public const string GeneratedImagesBaseUrl = $"https://images.championsofkhazad.com/{GeneratedImagesBlobContainerName}";

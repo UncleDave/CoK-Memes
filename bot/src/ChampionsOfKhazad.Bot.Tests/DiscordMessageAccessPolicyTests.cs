@@ -11,7 +11,7 @@ public class DiscordMessageAccessPolicyTests
             Channel(2, normalUserCanRead: false, everyoneCanRead: false, requesterCanRead: true),
         };
 
-        var result = DiscordMessageAccessPolicy.GetAllowedSourceChannelIds(channels, invokingChannelId: 1);
+        var result = DiscordMessageAccessPolicy.GetAllowedSourceChannelIds(channels, channels[0]);
 
         Assert.Contains(1UL, result);
         Assert.DoesNotContain(2UL, result);
@@ -26,7 +26,7 @@ public class DiscordMessageAccessPolicyTests
             Channel(2, normalUserCanRead: true, everyoneCanRead: false, requesterCanRead: false),
         };
 
-        var result = DiscordMessageAccessPolicy.GetAllowedSourceChannelIds(channels, invokingChannelId: 1);
+        var result = DiscordMessageAccessPolicy.GetAllowedSourceChannelIds(channels, channels[0]);
 
         Assert.Contains(1UL, result);
         Assert.DoesNotContain(2UL, result);
@@ -36,10 +36,22 @@ public class DiscordMessageAccessPolicyTests
     public void InaccessibleInvokingChannelDeniesAllSources()
     {
         var channels = new[] { Channel(1, normalUserCanRead: true, everyoneCanRead: false, requesterCanRead: true) };
+        var invokingChannel = Channel(2, normalUserCanRead: false, everyoneCanRead: false, requesterCanRead: false);
 
-        var result = DiscordMessageAccessPolicy.GetAllowedSourceChannelIds(channels, invokingChannelId: 2);
+        var result = DiscordMessageAccessPolicy.GetAllowedSourceChannelIds(channels, invokingChannel);
 
         Assert.Empty(result);
+    }
+
+    [Fact]
+    public void PrivateInvocationOutsideNormalRoleCanReadNormalRoleChannels()
+    {
+        var channels = new[] { Channel(1, normalUserCanRead: true, everyoneCanRead: false, requesterCanRead: true) };
+        var invokingChannel = Channel(2, normalUserCanRead: false, everyoneCanRead: false, requesterCanRead: true);
+
+        var result = DiscordMessageAccessPolicy.GetAllowedSourceChannelIds(channels, invokingChannel);
+
+        Assert.Contains(1UL, result);
     }
 
     [Fact]
@@ -51,7 +63,7 @@ public class DiscordMessageAccessPolicyTests
             Channel(2, normalUserCanRead: true, everyoneCanRead: false, requesterCanRead: true),
         };
 
-        var result = DiscordMessageAccessPolicy.GetAllowedSourceChannelIds(channels, invokingChannelId: 1);
+        var result = DiscordMessageAccessPolicy.GetAllowedSourceChannelIds(channels, channels[0]);
 
         Assert.Contains(1UL, result);
         Assert.DoesNotContain(2UL, result);
@@ -66,7 +78,7 @@ public class DiscordMessageAccessPolicyTests
             Channel(2, normalUserCanRead: true, everyoneCanRead: true, requesterCanRead: true),
         };
 
-        var result = DiscordMessageAccessPolicy.GetAllowedSourceChannelIds(channels, invokingChannelId: 1);
+        var result = DiscordMessageAccessPolicy.GetAllowedSourceChannelIds(channels, channels[0]);
 
         Assert.Contains(1UL, result);
         Assert.Contains(2UL, result);

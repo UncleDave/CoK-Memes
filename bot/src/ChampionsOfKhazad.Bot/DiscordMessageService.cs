@@ -175,6 +175,12 @@ internal sealed partial class DiscordMessageService(
         if (requester is null)
             return AccessResult.Denied;
 
+        var invokingChannel = guild.GetChannel(messageContext.ChannelId.Value);
+        var invokingPermissionChannel = invokingChannel is SocketThreadChannel thread ? thread.ParentChannel : invokingChannel;
+
+        if (invokingPermissionChannel is null or SocketVoiceChannel)
+            return AccessResult.Denied;
+
         var channels = guild.TextChannels.Where(channel => channel is not (SocketThreadChannel or SocketVoiceChannel)).ToArray();
         var candidates = channels.Select(channel => new DiscordMessageAccessPolicy.ChannelCandidate(
             channel.Id,
@@ -182,13 +188,19 @@ internal sealed partial class DiscordMessageService(
             NormalUserChannelAccess.CanRead(channel, [guild.EveryoneRole]),
             CanUserRead(requester, channel)
         ));
-        var allowedChannelIds = DiscordMessageAccessPolicy.GetAllowedSourceChannelIds(candidates, messageContext.ChannelId.Value);
+        var invokingCandidate = new DiscordMessageAccessPolicy.ChannelCandidate(
+            messageContext.ChannelId.Value,
+            NormalUserChannelAccess.CanRead(invokingPermissionChannel, [guild.EveryoneRole, normalUserRole]),
+            NormalUserChannelAccess.CanRead(invokingPermissionChannel, [guild.EveryoneRole]),
+            CanUserRead(requester, invokingPermissionChannel)
+        );
+        var allowedChannelIds = DiscordMessageAccessPolicy.GetAllowedSourceChannelIds(candidates, invokingCandidate);
         var allowedChannels = channels.Where(channel => allowedChannelIds.Contains(channel.Id)).ToArray();
 
         return allowedChannels.Length == 0 ? AccessResult.Denied : new AccessResult(allowedChannels);
     }
 
-    private static bool CanUserRead(SocketGuildUser user, SocketTextChannel channel)
+    private static bool CanUserRead(SocketGuildUser user, SocketGuildChannel channel)
     {
         var permissions = user.GetPermissions(channel);
         return permissions is { ViewChannel: true, ReadMessageHistory: true };

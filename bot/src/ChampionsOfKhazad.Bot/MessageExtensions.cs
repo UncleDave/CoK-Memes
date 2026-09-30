@@ -165,7 +165,7 @@ public static class MessageExtensions
         return chunkLength;
     }
 
-    private static string? GetImageMediaType(string filename) =>
+    internal static string? GetImageMediaType(string filename) =>
         Path.GetExtension(filename).ToLowerInvariant() switch
         {
             ".png" => "image/png",

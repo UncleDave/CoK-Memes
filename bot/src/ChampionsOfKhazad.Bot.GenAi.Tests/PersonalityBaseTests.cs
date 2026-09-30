@@ -31,6 +31,9 @@ public class PersonalityBaseTests
             Assert.Contains(LorekeeperPersonality.GetPrompt(temperament).Replace("{{$userName}}", "Tester"), chatClient.Messages![0].Text);
             Assert.Contains(chatClient.Options!.Tools!, tool => tool is HostedWebSearchTool);
             Assert.Contains(chatClient.Options.Tools!, tool => tool.Name == "read_discord_messages");
+            Assert.Contains("The current author's Discord user ID is 1.", chatClient.Messages[0].Text);
+            Assert.Contains("respond only to the message marked currentRequest", chatClient.Messages[0].Text);
+            Assert.Contains("do not reconstruct that closed conversation with tools", chatClient.Messages[0].Text);
             Assert.Equal("Earlier angry reply", chatClient.Messages[1].Text);
         }
     }

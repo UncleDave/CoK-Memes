@@ -113,6 +113,8 @@ host.Services.AddOptionsWithEagerValidation<EmoteStreakHandlerOptions>(host.Conf
 
 host.Services.AddHostedService<BotService>()
     .AddScoped<PersonalityDirectMessageCommand>()
+    .AddScoped<LorekeeperChatHistoryBuilder>()
+    .AddScoped<IDiscordClient>(serviceProvider => serviceProvider.GetRequiredService<BotContext>().Client.Rest)
     .AddSingleton<BotContextProvider>()
     .AddScoped<IDiscordMessageService, DiscordMessageService>()
     .AddScoped<BotContext>(serviceProvider =>

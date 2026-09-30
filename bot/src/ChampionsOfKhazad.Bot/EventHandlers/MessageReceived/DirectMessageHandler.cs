@@ -22,7 +22,8 @@ public class DirectMessageHandler(
         + "personality <baseline|grouchy|furious> [duration] — switch temperament\n"
         + "personality reset — restore baseline and clear any expiry\n\n"
         + "Duration: whole minutes, hours, or days (e.g. 30m, 2h, 1d), up to 30 days; expires to baseline. "
-        + "Without a duration, the personality stays active until changed. Example: personality furious 2h.";
+        + "Without a duration, the personality stays active until changed. Example: personality furious 2h.\n\n"
+        + "In guild chat: @Lorekeeper you've had a stroke. — cut that channel's conversation context here (admin only; confirmed with 🧠).";
     private static readonly Dictionary<ulong, DateTime> LastUserMessage = new();
 
     public async Task Handle(MessageReceived notification, CancellationToken cancellationToken)

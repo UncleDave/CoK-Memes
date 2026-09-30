@@ -52,6 +52,7 @@ public class DirectMessageHandlerTests
         Assert.Contains("personality reset", help);
         Assert.Contains("30m, 2h, 1d", help);
         Assert.Contains("personality furious 2h", help);
+        Assert.Contains("@Lorekeeper you've had a stroke.", help);
     }
 
     [Theory]

@@ -8,6 +8,47 @@ namespace ChampionsOfKhazad.Bot.GenAi.Tests;
 public class PersonalityBaseTests
 {
     [Fact]
+    public async Task LorekeeperUsesLatestSelectionOnEveryInvocationAndKeepsTools()
+    {
+        var chatClient = new CapturingChatClient(new ChatResponse(new ChatMessage(ChatRole.Assistant, "Answer")));
+        var service = new LorekeeperPersonalityService(
+            new MemoryPersonalityStore(),
+            TimeProvider.System,
+            NullLogger<LorekeeperPersonalityService>.Instance
+        );
+        var personality = new LorekeeperPersonality(
+            new PassThroughEmojiHandler(),
+            chatClient,
+            new PersonalityTools(new EmptyRelatedLore(), null!, new EmptyDiscordMessageService(), NullLogger<PersonalityTools>.Instance),
+            service
+        );
+        var history = new ChatHistory([new ChatMessage(ChatRole.Assistant, "Earlier angry reply")]);
+
+        foreach (var temperament in new[] { LorekeeperTemperament.Furious, LorekeeperTemperament.Grouchy, LorekeeperTemperament.Baseline })
+        {
+            await service.SetAsync(temperament, cancellationToken: TestContext.Current.CancellationToken);
+            await personality.InvokeAsync(history, new TestMessageContext(), TestContext.Current.CancellationToken);
+            Assert.Contains(LorekeeperPersonality.GetPrompt(temperament).Replace("{{$userName}}", "Tester"), chatClient.Messages![0].Text);
+            Assert.Contains(chatClient.Options!.Tools!, tool => tool is HostedWebSearchTool);
+            Assert.Contains(chatClient.Options.Tools!, tool => tool.Name == "read_discord_messages");
+            Assert.Equal("Earlier angry reply", chatClient.Messages[1].Text);
+        }
+    }
+
+    private sealed class MemoryPersonalityStore : ILorekeeperPersonalityStore
+    {
+        private LorekeeperPersonalitySetting? _setting;
+
+        public Task<LorekeeperPersonalitySetting?> GetAsync(CancellationToken cancellationToken = default) => Task.FromResult(_setting);
+
+        public Task SaveAsync(LorekeeperPersonalitySetting setting, CancellationToken cancellationToken = default)
+        {
+            _setting = setting;
+            return Task.CompletedTask;
+        }
+    }
+
+    [Fact]
     public async Task LorekeeperReceivesWebSearchToolAndPolicy()
     {
         var chatClient = new CapturingChatClient(new ChatResponse(new ChatMessage(ChatRole.Assistant, "Answer")));

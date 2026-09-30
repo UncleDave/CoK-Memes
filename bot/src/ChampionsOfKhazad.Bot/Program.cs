@@ -112,6 +112,7 @@ host.Services.AddOptionsWithEagerValidation<EmoteStreakHandlerOptions>(host.Conf
     .AddOptionsWithEagerValidation<DirectMessageHandlerOptions>(host.Configuration.GetEventHandlerSection(DirectMessageHandlerOptions.Key));
 
 host.Services.AddHostedService<BotService>()
+    .AddScoped<PersonalityDirectMessageCommand>()
     .AddSingleton<BotContextProvider>()
     .AddScoped<IDiscordMessageService, DiscordMessageService>()
     .AddScoped<BotContext>(serviceProvider =>

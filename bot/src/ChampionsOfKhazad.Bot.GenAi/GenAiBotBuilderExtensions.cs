@@ -4,6 +4,7 @@ using ChampionsOfKhazad.Bot.Core;
 using ChampionsOfKhazad.Bot.GenAi;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Azure;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using OpenAI;
 using OpenAI.Images;
@@ -57,8 +58,11 @@ public static class GenAiBotBuilderExtensions
             );
         });
 
+        builder.Services.TryAddSingleton<TimeProvider>(TimeProvider.System);
+
         builder
             .Services.AddScoped<ICompletionService, CompletionService>()
+            .AddSingleton<LorekeeperPersonalityService>()
             .AddScoped<IEmojiHandler, TEmojiHandler>()
             .AddSingleton(config.ImageGeneration)
             .AddSingleton<ImageStorageService>()

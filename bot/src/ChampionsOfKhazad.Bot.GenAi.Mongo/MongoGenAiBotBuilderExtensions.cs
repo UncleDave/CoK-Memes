@@ -24,7 +24,9 @@ public static class MongoGenAiBotBuilderExtensions
                     collection.Indexes.CreateOne(new CreateIndexModel<GeneratedImage>(Builders<GeneratedImage>.IndexKeys.Text(x => x.Prompt)));
                 }
             )
-            .Services.AddSingleton<IGeneratedImageStore, MongoGeneratedImageStore>();
+            .AddCollection<LorekeeperPersonalitySetting>("lorekeeperPersonality")
+            .Services.AddSingleton<IGeneratedImageStore, MongoGeneratedImageStore>()
+            .AddSingleton<ILorekeeperPersonalityStore, MongoLorekeeperPersonalityStore>();
 
         return builder;
     }

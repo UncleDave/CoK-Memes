@@ -5,8 +5,11 @@ using Microsoft.Extensions.Options;
 
 namespace ChampionsOfKhazad.Bot;
 
-public class DirectMessageHandler(IOptions<DirectMessageHandlerOptions> options, IGetTheWordOfTheDay wordOfTheDayGetter)
-    : INotificationHandler<MessageReceived>
+public class DirectMessageHandler(
+    IOptions<DirectMessageHandlerOptions> options,
+    IGetTheWordOfTheDay wordOfTheDayGetter,
+    PersonalityDirectMessageCommand personalityCommand
+) : INotificationHandler<MessageReceived>
 {
     private const string SourceUrl = $"{Constants.RepositoryUrl}/tree/main/bot";
     private const string Message = $"Hi! I'm a bot, if you want to know more you can find my juicy innards at {SourceUrl}";
@@ -19,12 +22,21 @@ public class DirectMessageHandler(IOptions<DirectMessageHandlerOptions> options,
         if (message.Channel is not IDMChannel)
             return;
 
+        if (message.Author.IsBot)
+            return;
+
         if (message.Author.Id == options.Value.AdminUserId)
         {
             if (message.CleanContent.Equals("word", StringComparison.InvariantCultureIgnoreCase))
             {
                 var wordOfTheDay = await wordOfTheDayGetter.GetWordOfTheDayAsync(cancellationToken);
                 await message.Channel.SendMessageAsync(wordOfTheDay.Word);
+            }
+            else
+            {
+                var response = await personalityCommand.ExecuteAsync(message.Content, cancellationToken);
+                if (response is not null)
+                    await message.Channel.SendMessageAsync(response);
             }
 
             return;

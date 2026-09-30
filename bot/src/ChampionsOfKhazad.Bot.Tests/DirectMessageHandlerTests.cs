@@ -53,6 +53,7 @@ public class DirectMessageHandlerTests
         Assert.Contains("30m, 2h, 1d", help);
         Assert.Contains("personality furious 2h", help);
         Assert.Contains("@Lorekeeper you've had a stroke.", help);
+        Assert.Contains("notebook show/discard", help);
     }
 
     [Theory]
@@ -67,13 +68,32 @@ public class DirectMessageHandlerTests
         Assert.DoesNotContain(replies, reply => reply.Contains("Admin DM commands:", StringComparison.Ordinal));
     }
 
-    private static DirectMessageHandler CreateHandler(MemoryStore store, WordGetter getter) =>
+    [Theory]
+    [InlineData(true, true, false, true)]
+    [InlineData(false, true, false, false)]
+    [InlineData(true, false, false, false)]
+    [InlineData(true, true, true, false)]
+    public async Task OnlyHumanAdminInDmCanPauseNotebook(bool admin, bool dm, bool bot, bool shouldPause)
+    {
+        var notes = new NotebookStore();
+        var notebook = new NotebookService(notes, null!, null!, null!, TimeProvider.System, NullLogger<NotebookService>.Instance);
+        var handler = CreateHandler(
+            new MemoryStore(),
+            new WordGetter(),
+            new NotebookDirectMessageCommand(notebook, TimeProvider.System, NullLogger<NotebookDirectMessageCommand>.Instance)
+        );
+        await handler.Handle(new MessageReceived(CreateMessage(admin, dm, bot, "notebook pause", [])), TestContext.Current.CancellationToken);
+        Assert.Equal(shouldPause, notes.State.Paused);
+    }
+
+    private static DirectMessageHandler CreateHandler(MemoryStore store, WordGetter getter, NotebookDirectMessageCommand? notebookCommand = null) =>
         new(
             Options.Create(new DirectMessageHandlerOptions { AdminUserId = 1 }),
             getter,
             new PersonalityDirectMessageCommand(
                 new LorekeeperPersonalityService(store, TimeProvider.System, NullLogger<LorekeeperPersonalityService>.Instance)
-            )
+            ),
+            notebookCommand!
         );
 
     private static IUserMessage CreateMessage(bool admin, bool dm, bool bot, string content, List<string> replies)
@@ -133,6 +153,19 @@ public class DirectMessageHandlerTests
         {
             Setting = setting;
             return Task.CompletedTask;
+        }
+    }
+
+    private sealed class NotebookStore : INotebookStore
+    {
+        public NotebookState State { get; private set; } = new();
+
+        public Task<NotebookState> GetAsync(CancellationToken cancellationToken) => Task.FromResult(State);
+
+        public Task<bool> TrySaveAsync(NotebookState state, CancellationToken cancellationToken)
+        {
+            State = state with { Revision = state.Revision + 1 };
+            return Task.FromResult(true);
         }
     }
 

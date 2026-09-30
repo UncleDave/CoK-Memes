@@ -25,7 +25,9 @@ public static class MongoGenAiBotBuilderExtensions
                 }
             )
             .AddCollection<LorekeeperPersonalitySetting>("lorekeeperPersonality")
+            .AddCollection<NotebookState>("lorekeeperNotebook")
             .Services.AddSingleton<IGeneratedImageStore, MongoGeneratedImageStore>()
+            .AddSingleton<INotebookStore, MongoNotebookStore>()
             .AddSingleton<ILorekeeperPersonalityStore, MongoLorekeeperPersonalityStore>();
 
         return builder;

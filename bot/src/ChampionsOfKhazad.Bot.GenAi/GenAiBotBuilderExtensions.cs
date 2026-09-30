@@ -63,6 +63,8 @@ public static class GenAiBotBuilderExtensions
         builder
             .Services.AddScoped<ICompletionService, CompletionService>()
             .AddSingleton<LorekeeperPersonalityService>()
+            .AddScoped<NotebookService>()
+            .AddScoped<INotebookEvaluator, NotebookEvaluator>()
             .AddScoped<IEmojiHandler, TEmojiHandler>()
             .AddSingleton(config.ImageGeneration)
             .AddSingleton<ImageStorageService>()

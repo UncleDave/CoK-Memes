@@ -1,7 +1,12 @@
+using System.Diagnostics.CodeAnalysis;
+using System.Net;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using ChampionsOfKhazad.Bot.GenAi;
 using Discord;
+using Discord.Net;
 using Discord.WebSocket;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -12,13 +17,125 @@ internal sealed partial class DiscordMessageService(
     BotContext botContext,
     IOptions<DiscordMessageToolsOptions> options,
     ILogger<DiscordMessageService> logger
-) : IDiscordMessageService
+) : IDiscordMessageService, INotebookSourceReader
 {
     private const int MaximumSearchResults = 10;
     private const int MaximumReadResults = 25;
     private const int MaximumMessageLength = 1000;
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
     private readonly ulong _normalUserRoleId = options.Value.NormalUserRoleId;
+
+    public IReadOnlySet<string> GetAccessibleSourceUrls(IReadOnlyList<string> urls, IMessageContext messageContext)
+    {
+        var access = GetAccess(messageContext);
+        if (!access.IsAllowed)
+            return new HashSet<string>(StringComparer.Ordinal);
+        var channelIds = access.Channels.Select(channel => channel.Id).ToHashSet();
+        return FilterNotebookSourceUrls(urls, botContext.Guild.Id, channelIds);
+    }
+
+    internal static IReadOnlySet<string> FilterNotebookSourceUrls(IReadOnlyList<string> urls, ulong guildId, IReadOnlySet<ulong> channelIds) =>
+        urls.Where(url => TryParseNotebookSourceUrl(url, guildId, out var channelId, out _) && channelIds.Contains(channelId))
+            .ToHashSet(StringComparer.Ordinal);
+
+    internal static bool TryParseNotebookSourceUrl(string url, ulong guildId, out ulong channelId, out ulong messageId)
+    {
+        channelId = 0;
+        messageId = 0;
+        var match = NotebookMessageUrlRegex().Match(url);
+        return match.Success
+            && ulong.TryParse(match.Groups["guild"].Value, out var sourceGuildId)
+            && sourceGuildId == guildId
+            && ulong.TryParse(match.Groups["channel"].Value, out channelId)
+            && channelId != 0
+            && ulong.TryParse(match.Groups["message"].Value, out messageId)
+            && messageId != 0;
+    }
+
+    public async Task<IReadOnlyList<NotebookSource>?> ReadSourcesAsync(
+        IReadOnlyList<string> urls,
+        IMessageContext messageContext,
+        CancellationToken cancellationToken
+    )
+    {
+        if (urls.Count is < 1 or > 3)
+            return null;
+        var access = GetAccess(messageContext);
+        if (!access.IsAllowed)
+            return null;
+
+        var sources = new List<NotebookSource>();
+        var sourceChannelIds = new HashSet<ulong>();
+        foreach (var url in urls.Distinct(StringComparer.Ordinal))
+        {
+            if (!TryParseNotebookSourceUrl(url, botContext.Guild.Id, out var channelId, out var messageId))
+                return null;
+            var channel = access.Channels.SingleOrDefault(channel => channel.Id == channelId);
+            if (channel is null)
+                return null;
+            sourceChannelIds.Add(channelId);
+
+            IMessage? message;
+            try
+            {
+                // Use a REST channel rather than the socket message cache so edits/deletions are checked afresh.
+                var requestOptions = new RequestOptions { CancelToken = cancellationToken };
+                var restChannel =
+                    await ((IDiscordClient)botContext.Client.Rest).GetChannelAsync(channelId, options: requestOptions) as IMessageChannel;
+                if (restChannel is not ITextChannel textChannel || textChannel.Id != channelId || textChannel.GuildId != botContext.Guild.Id)
+                    return null;
+                message = await restChannel.GetMessageAsync(messageId, options: requestOptions);
+            }
+            catch (HttpException exception) when (exception.HttpCode is HttpStatusCode.NotFound or HttpStatusCode.Forbidden)
+            {
+                return null;
+            }
+            if (!IsNotebookEvidenceMessage(message, channelId, messageId))
+                return null;
+            var content = SanitizeNotebookSourceContent(
+                message.Content,
+                access.Channels.ToDictionary(channel => channel.Id, channel => channel.Name)
+            );
+            if (content is null)
+                return null;
+            var authorName = message.Author.GetName()[..Math.Min(message.Author.GetName().Length, 80)];
+            var mentions = message
+                .MentionedUserIds.Distinct()
+                .Select(id =>
+                {
+                    var user = (botContext.Guild as SocketGuild)?.GetUser(id);
+                    return new NotebookMentionedUser(id, user?.GetName());
+                })
+                .ToArray();
+            sources.Add(
+                new NotebookSource(
+                    $"https://discord.com/channels/{botContext.Guild.Id}/{channelId}/{messageId}",
+                    message.Author.Id,
+                    authorName,
+                    message.Timestamp.UtcDateTime,
+                    content
+                )
+                {
+                    ContentHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(message.Content))),
+                    ViewHash = NotebookSource.CalculateViewHash(content, authorName, mentions),
+                    MentionedUsers = mentions,
+                }
+            );
+        }
+
+        var currentAccess = GetAccess(messageContext);
+        return currentAccess.IsAllowed && sourceChannelIds.All(channelId => currentAccess.Channels.Any(channel => channel.Id == channelId))
+            ? sources
+            : null;
+    }
+
+    internal static bool IsNotebookEvidenceMessage([NotNullWhen(true)] IMessage? message, ulong channelId, ulong messageId) =>
+        message is not null
+        && message.Id == messageId
+        && message.Channel.Id == channelId
+        && !message.Author.IsBot
+        && message.Source == MessageSource.User
+        && !string.IsNullOrWhiteSpace(message.Content);
 
     public Task<string> FindChannelsAsync(string? query, IMessageContext messageContext, CancellationToken cancellationToken)
     {
@@ -274,6 +391,20 @@ internal sealed partial class DiscordMessageService(
 
     internal static string SanitizeContent(string content, IReadOnlyDictionary<ulong, string> accessibleChannels)
     {
+        var sanitized = SanitizeMessageContent(content, accessibleChannels);
+        return sanitized[..Math.Min(sanitized.Length, MaximumMessageLength)];
+    }
+
+    internal static string? SanitizeNotebookSourceContent(string content, IReadOnlyDictionary<ulong, string> accessibleChannels)
+    {
+        if (string.IsNullOrWhiteSpace(content) || content.Length > NotebookSource.MaximumContentLength)
+            return null;
+        var sanitized = SanitizeMessageContent(content, accessibleChannels, preserveUserIds: true);
+        return sanitized.Length <= NotebookSource.MaximumContentLength ? sanitized : null;
+    }
+
+    private static string SanitizeMessageContent(string content, IReadOnlyDictionary<ulong, string> accessibleChannels, bool preserveUserIds = false)
+    {
         var sanitized = ChannelMentionRegex()
             .Replace(
                 content,
@@ -283,10 +414,12 @@ internal sealed partial class DiscordMessageService(
                         : "[unavailable channel]"
             );
         sanitized = RoleMentionRegex().Replace(sanitized, "[role mention]");
-        sanitized = UserMentionRegex().Replace(sanitized, "[user mention]");
+        sanitized = preserveUserIds
+            ? UserMentionRegex().Replace(sanitized, match => $"[Discord user {match.Groups[1].Value}]")
+            : UserMentionRegex().Replace(sanitized, "[user mention]");
         sanitized = sanitized.Replace("@everyone", "@\u200beveryone", StringComparison.OrdinalIgnoreCase);
         sanitized = sanitized.Replace("@here", "@\u200bhere", StringComparison.OrdinalIgnoreCase);
-        return sanitized[..Math.Min(sanitized.Length, MaximumMessageLength)];
+        return sanitized;
     }
 
     private static string FormatChannel(SocketTextChannel channel) => $"#{channel.Name} ({channel.Id})";
@@ -303,8 +436,11 @@ internal sealed partial class DiscordMessageService(
     [GeneratedRegex(@"<@&\d+>")]
     private static partial Regex RoleMentionRegex();
 
-    [GeneratedRegex(@"<@!?\d+>")]
+    [GeneratedRegex(@"<@!?(\d+)>")]
     private static partial Regex UserMentionRegex();
+
+    [GeneratedRegex(@"\Ahttps://discord\.com/channels/(?<guild>\d+)/(?<channel>\d+)/(?<message>\d+)\z")]
+    private static partial Regex NotebookMessageUrlRegex();
 
     private sealed record MessageResult(
         ulong MessageId,

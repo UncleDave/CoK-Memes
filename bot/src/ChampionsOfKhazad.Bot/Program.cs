@@ -113,6 +113,9 @@ host.Services.AddOptionsWithEagerValidation<EmoteStreakHandlerOptions>(host.Conf
 
 host.Services.AddHostedService<BotService>()
     .AddScoped<PersonalityDirectMessageCommand>()
+    .AddScoped<NotebookDirectMessageCommand>()
+    .AddScoped<INotebookReviewer, DiscordNotebookReviewer>()
+    .AddScoped<INotebookSourceReader, DiscordMessageService>()
     .AddScoped<LorekeeperChatHistoryBuilder>()
     .AddSingleton(serviceProvider => new SharedDiscordRestClient(serviceProvider.GetRequiredService<DiscordSocketClient>().Rest))
     .AddSingleton<BotContextProvider>()

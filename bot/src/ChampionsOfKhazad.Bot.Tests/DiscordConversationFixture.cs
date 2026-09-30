@@ -21,6 +21,7 @@ internal class DiscordConversationFixture
     public bool UseEmbeddedTargets { get; set; }
     public ITextChannel Channel { get; }
     public IDiscordClient RestClient { get; }
+    public int RestClientDisposals { get; private set; }
 
     public DiscordConversationFixture()
     {
@@ -44,14 +45,25 @@ internal class DiscordConversationFixture
         );
         RestClient = Stub<IDiscordClient>(
             (method, args) =>
-                method.Name == "GetChannelAsync" && (ulong)args![0]! == ChannelId
+            {
+                if (method.Name is "Dispose" or "DisposeAsync")
+                {
+                    RestClientDisposals++;
+                    return method.Name == "DisposeAsync" ? ValueTask.CompletedTask : null;
+                }
+                return method.Name == "GetChannelAsync" && (ulong)args![0]! == ChannelId
                     ? Task.FromResult<IChannel>(historyChannel)
-                    : throw new NotSupportedException(method.Name)
+                    : throw new NotSupportedException(method.Name);
+            }
         );
     }
 
     public LorekeeperChatHistoryBuilder CreateBuilder() =>
-        new(RestClient, Options.Create(new DirectMessageHandlerOptions { AdminUserId = AdminId }), NullLogger<LorekeeperChatHistoryBuilder>.Instance);
+        new(
+            new SharedDiscordRestClient(RestClient),
+            Options.Create(new DirectMessageHandlerOptions { AdminUserId = AdminId }),
+            NullLogger<LorekeeperChatHistoryBuilder>.Instance
+        );
 
     public IUserMessage AddMessage(
         ulong id,

@@ -6,7 +6,7 @@ using Microsoft.Extensions.Options;
 namespace ChampionsOfKhazad.Bot;
 
 public class LorekeeperChatHistoryBuilder(
-    IDiscordClient restClient,
+    SharedDiscordRestClient restClient,
     IOptions<DirectMessageHandlerOptions> adminOptions,
     ILogger<LorekeeperChatHistoryBuilder> logger
 )
@@ -20,8 +20,8 @@ public class LorekeeperChatHistoryBuilder(
     {
         var requestOptions = new RequestOptions { CancelToken = cancellationToken };
         // The socket reader can stitch a discontinuous cache to older downloads, skipping markers.
-        // DI supplies DiscordSocketClient.Rest, so pagination checks authoritative channel history.
-        var historyChannel = await restClient.GetChannelAsync(trigger.Channel.Id, options: requestOptions) as IMessageChannel;
+        // Borrow DiscordSocketClient.Rest without making DI own/dispose it; pagination must bypass the socket cache.
+        var historyChannel = await restClient.Client.GetChannelAsync(trigger.Channel.Id, options: requestOptions) as IMessageChannel;
         if (historyChannel is null || historyChannel.Id != trigger.Channel.Id)
             throw new InvalidOperationException("The invoking Discord channel is unavailable for conversation history.");
         Dictionary<ulong, IMessage> scanned = [];

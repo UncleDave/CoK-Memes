@@ -14,9 +14,10 @@ The user configured by `EventHandlers:DirectMessage:AdminUserId` can DM the bot:
 
 | Command | Result |
 | --- | --- |
+| `help` | List all admin DM commands and personality duration examples |
 | `word` | Existing word-of-the-day backdoor (unchanged) |
 | `personality` | Show the active temperament and expiry |
-| `personality list` | List presets and command help |
+| `personality list` | List presets |
 | `personality baseline` | Original wise, helpful Lorekeeper (before `0f69256`) |
 | `personality grouchy` | First comic, rude persona (`0f69256`) |
 | `personality furious` | Intensified angry persona (`5aef344`) |

@@ -51,6 +51,8 @@ public class PersonalityDirectMessageCommandTests
         var list = await handler.ExecuteAsync("personality list", TestContext.Current.CancellationToken);
         Assert.Contains("grouchy", list!);
         Assert.Contains("furious", list!);
+        Assert.DoesNotContain("Commands:", list!);
+        Assert.DoesNotContain("Duration:", list!);
         Assert.Null(await handler.ExecuteAsync("word", TestContext.Current.CancellationToken));
         Assert.Null(await handler.ExecuteAsync("", TestContext.Current.CancellationToken));
         Assert.Null(store.Setting);

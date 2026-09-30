@@ -5,7 +5,7 @@ namespace ChampionsOfKhazad.Bot;
 
 public class PersonalityDirectMessageCommand(LorekeeperPersonalityService personalityService)
 {
-    private const string Help =
+    private const string HelpText =
         "Commands: personality | personality list | personality <baseline|grouchy|furious> [duration] | personality reset. Duration: whole minutes, hours, or days (e.g. 30m, 2h, 1d), up to 30 days; expires to baseline.";
 
     // Called only after the DM handler has verified the configured admin's identity.
@@ -19,8 +19,7 @@ public class PersonalityDirectMessageCommand(LorekeeperPersonalityService person
             return Describe(await personalityService.GetAsync(cancellationToken));
 
         if (parts.Length == 2 && parts[1].Equals("list", StringComparison.OrdinalIgnoreCase))
-            return "baseline — original wise, helpful Lorekeeper\ngrouchy — first comic, rude persona\nfurious — intensified angry, foul-mouthed persona\n\n"
-                + Help;
+            return "baseline — original wise, helpful Lorekeeper\ngrouchy — first comic, rude persona\nfurious — intensified angry, foul-mouthed persona";
 
         if (parts.Length == 2 && parts[1].Equals("reset", StringComparison.OrdinalIgnoreCase))
             return Describe(await personalityService.SetAsync(LorekeeperTemperament.Baseline, cancellationToken: cancellationToken));
@@ -34,14 +33,14 @@ public class PersonalityDirectMessageCommand(LorekeeperPersonalityService person
         };
 
         if (temperament is null || parts.Length > 3)
-            return Help;
+            return HelpText;
 
         TimeSpan? duration = null;
         if (parts.Length == 3)
         {
             duration = ParseDuration(parts[2]);
             if (duration is null)
-                return "Invalid duration. " + Help;
+                return "Invalid duration. " + HelpText;
         }
 
         return Describe(await personalityService.SetAsync(temperament.Value, duration, cancellationToken));

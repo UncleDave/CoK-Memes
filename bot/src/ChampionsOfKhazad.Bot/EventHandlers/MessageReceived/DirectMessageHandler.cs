@@ -13,6 +13,16 @@ public class DirectMessageHandler(
 {
     private const string SourceUrl = $"{Constants.RepositoryUrl}/tree/main/bot";
     private const string Message = $"Hi! I'm a bot, if you want to know more you can find my juicy innards at {SourceUrl}";
+    private const string AdminHelp =
+        "Admin DM commands:\n"
+        + "help — show this help\n"
+        + "word — reveal today's word of the day\n"
+        + "personality — show the current temperament and expiry\n"
+        + "personality list — list the presets\n"
+        + "personality <baseline|grouchy|furious> [duration] — switch temperament\n"
+        + "personality reset — restore baseline and clear any expiry\n\n"
+        + "Duration: whole minutes, hours, or days (e.g. 30m, 2h, 1d), up to 30 days; expires to baseline. "
+        + "Without a duration, the personality stays active until changed. Example: personality furious 2h.";
     private static readonly Dictionary<ulong, DateTime> LastUserMessage = new();
 
     public async Task Handle(MessageReceived notification, CancellationToken cancellationToken)
@@ -27,7 +37,11 @@ public class DirectMessageHandler(
 
         if (message.Author.Id == options.Value.AdminUserId)
         {
-            if (message.CleanContent.Equals("word", StringComparison.InvariantCultureIgnoreCase))
+            if (message.Content.Trim().Equals("help", StringComparison.OrdinalIgnoreCase))
+            {
+                await message.Channel.SendMessageAsync(AdminHelp);
+            }
+            else if (message.CleanContent.Equals("word", StringComparison.InvariantCultureIgnoreCase))
             {
                 var wordOfTheDay = await wordOfTheDayGetter.GetWordOfTheDayAsync(cancellationToken);
                 await message.Channel.SendMessageAsync(wordOfTheDay.Word);

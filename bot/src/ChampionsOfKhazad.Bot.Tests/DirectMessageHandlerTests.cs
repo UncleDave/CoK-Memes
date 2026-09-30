@@ -35,6 +35,37 @@ public class DirectMessageHandlerTests
         Assert.Null(store.Setting);
     }
 
+    [Theory]
+    [InlineData("help")]
+    [InlineData("HELP")]
+    [InlineData("  HeLp  ")]
+    public async Task AdminHelpListsCommandsWithoutAccessingPersistence(string content)
+    {
+        var replies = new List<string>();
+        var handler = CreateHandler(null!, null!);
+        await handler.Handle(new MessageReceived(CreateMessage(true, true, false, content, replies)), TestContext.Current.CancellationToken);
+
+        var help = Assert.Single(replies);
+        Assert.Contains("word —", help);
+        Assert.Contains("personality list", help);
+        Assert.Contains("baseline|grouchy|furious", help);
+        Assert.Contains("personality reset", help);
+        Assert.Contains("30m, 2h, 1d", help);
+        Assert.Contains("personality furious 2h", help);
+    }
+
+    [Theory]
+    [InlineData(false, true, false)]
+    [InlineData(true, false, false)]
+    [InlineData(true, true, true)]
+    public async Task AdminHelpIsNotExposedOutsideHumanAdminDms(bool admin, bool dm, bool bot)
+    {
+        var replies = new List<string>();
+        var handler = CreateHandler(null!, null!);
+        await handler.Handle(new MessageReceived(CreateMessage(admin, dm, bot, "help", replies)), TestContext.Current.CancellationToken);
+        Assert.DoesNotContain(replies, reply => reply.Contains("Admin DM commands:", StringComparison.Ordinal));
+    }
+
     private static DirectMessageHandler CreateHandler(MemoryStore store, WordGetter getter) =>
         new(
             Options.Create(new DirectMessageHandlerOptions { AdminUserId = 1 }),

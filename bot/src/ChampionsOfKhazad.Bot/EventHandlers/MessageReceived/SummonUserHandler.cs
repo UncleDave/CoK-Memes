@@ -4,7 +4,7 @@ using Microsoft.Extensions.Options;
 
 namespace ChampionsOfKhazad.Bot;
 
-public class SummonUserHandler(IOptions<SummonUserHandlerOptions> options) : INotificationHandler<MessageReceived>
+public class SummonUserHandler(IOptions<SummonUserHandlerOptions> options, CooldownTracker<string> cooldowns) : INotificationHandler<MessageReceived>
 {
     private static readonly string[] Messages =
     [
@@ -28,7 +28,7 @@ public class SummonUserHandler(IOptions<SummonUserHandlerOptions> options) : INo
     ];
 
     private readonly SummonUserHandlerOptions _options = options.Value;
-    private static DateTime? _lastSummon;
+    private static readonly TimeSpan Cooldown = TimeSpan.FromMinutes(15);
 
     public async Task Handle(MessageReceived notification, CancellationToken cancellationToken)
     {
@@ -37,7 +37,7 @@ public class SummonUserHandler(IOptions<SummonUserHandlerOptions> options) : INo
         if (
             message.Channel is not ITextChannel textChannel
             || !message.MentionedUserIds.Contains(_options.UserId)
-            || (_lastSummon is not null && (DateTime.Now - _lastSummon.Value).TotalMinutes < 15)
+            || cooldowns.IsOnCooldown(nameof(SummonUserHandler), Cooldown)
         )
             return;
 
@@ -64,14 +64,12 @@ public class SummonUserHandler(IOptions<SummonUserHandlerOptions> options) : INo
             streak++;
         }
 
-        if (streak > 1)
+        if (streak > 1 && cooldowns.TryAcquire(nameof(SummonUserHandler), Cooldown))
         {
             var summonMessage = Messages
                 .PickRandom()
                 .Replace("{Leader}", MentionUtils.MentionUser(_options.LeaderId))
                 .Replace("{RandomOrdinal}", RandomUtils.RandomOrdinal(1, 10000));
-
-            _lastSummon = DateTime.Now;
 
             await textChannel.SendMessageAsync($"{MentionUtils.MentionUser(_options.UserId)}, {summonMessage}");
         }

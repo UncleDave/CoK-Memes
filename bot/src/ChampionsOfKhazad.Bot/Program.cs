@@ -39,6 +39,7 @@ host.Services.AddSerilog();
 
 host.Services.AddOptionsWithEagerValidation<BotOptions>(host.Configuration.GetSection(BotOptions.Key));
 host.Services.AddOptionsWithEagerValidation<DiscordMessageToolsOptions>(host.Configuration.GetSection(DiscordMessageToolsOptions.Key));
+host.Services.AddSingleton(typeof(CooldownTracker<>));
 
 host.Services.AddSingleton<DiscordSocketClient>(services =>
     ActivatorUtilities.CreateInstance<LoggingDiscordSocketClient>(

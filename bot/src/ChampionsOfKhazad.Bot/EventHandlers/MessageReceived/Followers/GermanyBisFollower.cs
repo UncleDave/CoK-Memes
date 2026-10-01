@@ -11,13 +11,18 @@ public record GermanyBisFollowerOptions
     public required IEnumerable<ulong> UserIds { get; init; }
 }
 
-public class GermanyBisFollower(IOptions<AllFollowersOptions> allFollowersOptions, IOptions<GermanyBisFollowerOptions> options, BotContext botContext)
+public class GermanyBisFollower(
+    IOptions<AllFollowersOptions> allFollowersOptions,
+    IOptions<GermanyBisFollowerOptions> options,
+    BotContext botContext,
+    CooldownTracker<string> cooldowns
+)
     : StrategyFollower(
         allFollowersOptions.Value.IgnoreBotMentionsInChannelId,
         new AllOfFollowerTriggerStrategy(
             new TargetUserFollowerTriggerStrategy(options.Value.UserIds),
             new TriggerWordFollowerTriggerStrategy("germany bis"),
-            new CooldownFollowerTriggerStrategy("GermanyBis", TimeSpan.FromHours(1))
+            new CooldownFollowerTriggerStrategy("GermanyBis", TimeSpan.FromHours(1), cooldowns)
         ),
         new StaticFollowerResponseStrategy("https://i.imgur.com/6OklIvu.png"),
         botContext

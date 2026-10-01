@@ -9,7 +9,8 @@ public class DirectMessageHandler(
     IOptions<DirectMessageHandlerOptions> options,
     IGetTheWordOfTheDay wordOfTheDayGetter,
     PersonalityDirectMessageCommand personalityCommand,
-    NotebookDirectMessageCommand notebookCommand
+    NotebookDirectMessageCommand notebookCommand,
+    CooldownTracker<ulong> cooldowns
 ) : INotificationHandler<MessageReceived>
 {
     private const string SourceUrl = $"{Constants.RepositoryUrl}/tree/main/bot";
@@ -29,7 +30,6 @@ public class DirectMessageHandler(
         + "Duration: whole minutes, hours, or days (e.g. 30m, 2h, 1d), up to 30 days; expires to baseline. "
         + "Without a duration, the personality stays active until changed. Example: personality furious 2h.\n\n"
         + "In guild chat: @Lorekeeper you've had a stroke. — cut that channel's conversation context here (admin only; confirmed with 🧠).";
-    private static readonly Dictionary<ulong, DateTime> LastUserMessage = new();
 
     public async Task Handle(MessageReceived notification, CancellationToken cancellationToken)
     {
@@ -64,11 +64,7 @@ public class DirectMessageHandler(
             return;
         }
 
-        var isOnCooldown = LastUserMessage.TryGetValue(message.Author.Id, out var lastMessage) && (DateTime.Now - lastMessage).TotalMinutes < 5;
-
-        LastUserMessage[message.Author.Id] = DateTime.Now;
-
-        if (isOnCooldown)
+        if (!cooldowns.TryAcquire(message.Author.Id, TimeSpan.FromMinutes(5), refreshOnRejection: true))
             return;
 
         await message.Channel.SendMessageAsync(Message);

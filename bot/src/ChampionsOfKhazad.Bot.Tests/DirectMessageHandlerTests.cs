@@ -93,7 +93,8 @@ public class DirectMessageHandlerTests
             new PersonalityDirectMessageCommand(
                 new LorekeeperPersonalityService(store, TimeProvider.System, NullLogger<LorekeeperPersonalityService>.Instance)
             ),
-            notebookCommand!
+            notebookCommand!,
+            new CooldownTracker<ulong>(TimeProvider.System)
         );
 
     private static IUserMessage CreateMessage(bool admin, bool dm, bool bot, string content, List<string> replies)

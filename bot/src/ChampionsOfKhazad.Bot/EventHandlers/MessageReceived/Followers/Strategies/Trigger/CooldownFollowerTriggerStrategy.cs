@@ -1,19 +1,6 @@
-﻿using System.Collections.Concurrent;
+﻿namespace ChampionsOfKhazad.Bot;
 
-namespace ChampionsOfKhazad.Bot;
-
-public class CooldownFollowerTriggerStrategy(string key, TimeSpan cooldown) : IFollowerTriggerStrategy
+public class CooldownFollowerTriggerStrategy(string key, TimeSpan cooldown, CooldownTracker<string> cooldowns) : IFollowerTriggerStrategy
 {
-    private static readonly ConcurrentDictionary<string, DateTimeOffset> LastTriggered = new();
-
-    public bool ShouldTrigger(MessageReceived notification)
-    {
-        var hasPreviouslyTriggered = LastTriggered.TryGetValue(key, out var lastTriggered);
-
-        if (hasPreviouslyTriggered && DateTimeOffset.Now - lastTriggered < cooldown)
-            return false;
-
-        LastTriggered[key] = DateTimeOffset.Now;
-        return true;
-    }
+    public bool ShouldTrigger(MessageReceived notification) => cooldowns.TryAcquire(key, cooldown);
 }

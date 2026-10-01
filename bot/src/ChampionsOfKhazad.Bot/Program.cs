@@ -111,6 +111,10 @@ host.Services.AddOptionsWithEagerValidation<EmoteStreakHandlerOptions>(host.Conf
     .AddOptionsWithEagerValidation<GermanyBisFollowerOptions>(host.Configuration.GetFollowerSection(GermanyBisFollowerOptions.Key))
     .AddOptionsWithEagerValidation<DirectMessageHandlerOptions>(host.Configuration.GetEventHandlerSection(DirectMessageHandlerOptions.Key));
 
+// Hosted services stop in reverse order: disconnect Discord before draining the notification queue.
+host.Services.AddOptionsWithEagerValidation<NotificationQueueOptions>(host.Configuration.GetSection(NotificationQueueOptions.Key));
+host.Services.AddSingleton<NotificationQueue>().AddHostedService<NotificationQueueService>();
+
 host.Services.AddHostedService<BotService>()
     .AddScoped<PersonalityDirectMessageCommand>()
     .AddScoped<NotebookDirectMessageCommand>()

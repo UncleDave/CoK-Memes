@@ -1,7 +1,5 @@
 ﻿using Discord;
 using Discord.WebSocket;
-using MediatR;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -13,21 +11,21 @@ public class BotService : IHostedService
     private readonly DiscordSocketClient _client;
     private readonly ILogger<BotService> _logger;
     private readonly BotOptions _options;
-    private readonly IServiceProvider _serviceProvider;
+    private readonly NotificationQueue _notificationQueue;
     private readonly BotContextProvider _botContextProvider;
 
     public BotService(
         DiscordSocketClient client,
         ILogger<BotService> logger,
         IOptions<BotOptions> options,
-        IServiceProvider serviceProvider,
+        NotificationQueue notificationQueue,
         BotContextProvider botContextProvider
     )
     {
         _client = client;
         _logger = logger;
         _options = options.Value;
-        _serviceProvider = serviceProvider;
+        _notificationQueue = notificationQueue;
         _botContextProvider = botContextProvider;
 
         _client.Ready += ReadyAsync;
@@ -71,46 +69,35 @@ public class BotService : IHostedService
         _logger.LogInformation("Bot started");
     }
 
-    private async Task MessageReceivedAsync(SocketMessage message)
+    private Task MessageReceivedAsync(SocketMessage message)
     {
-        if (message is not SocketUserMessage userMessage || message.Author.IsBot)
-            return;
-
-        await PublishInBackground(new MessageReceived(userMessage));
-    }
-
-    private async Task ReactionAddedAsync(
-        Cacheable<IUserMessage, ulong> message,
-        Cacheable<IMessageChannel, ulong> channel,
-        SocketReaction reaction
-    ) => await PublishInBackground(new ReactionAdded(reaction));
-
-    private async Task SlashCommandExecutedAsync(SocketSlashCommand command)
-    {
-        var notification = SlashCommands.All.Single(x => x.Properties.Name.Value == command.CommandName).CreateNotification(command);
-        await PublishInBackground(notification);
-    }
-
-    private async Task UserLeftAsync(SocketGuild guild, SocketUser user) => await PublishInBackground(new UserLeft(user));
-
-    private Task PublishInBackground(INotification notification)
-    {
-        _ = Task.Run(() => PublishWithScopeAsync(notification));
+        if (message is SocketUserMessage userMessage && !message.Author.IsBot)
+            _notificationQueue.TryEnqueue(new MessageReceived(userMessage));
 
         return Task.CompletedTask;
     }
 
-    private async Task PublishWithScopeAsync(INotification notification)
+    private Task ReactionAddedAsync(Cacheable<IUserMessage, ulong> message, Cacheable<IMessageChannel, ulong> channel, SocketReaction reaction)
     {
-        try
-        {
-            await using var messageScope = _serviceProvider.CreateAsyncScope();
-            var publisher = messageScope.ServiceProvider.GetRequiredService<IPublisher>();
-            await publisher.Publish(notification);
-        }
-        catch (Exception exception)
-        {
-            _logger.LogError(exception, "Error publishing notification {NotificationType}", notification.GetType().Name);
-        }
+        _notificationQueue.TryEnqueue(new ReactionAdded(reaction));
+        return Task.CompletedTask;
+    }
+
+    private async Task SlashCommandExecutedAsync(SocketSlashCommand command)
+    {
+        var slashCommand = SlashCommands.All.Single(x => x.Properties.Name.Value == command.CommandName);
+
+        // Only the initial Discord acknowledgement is awaited here, never application handlers.
+        // Acknowledging before enqueueing keeps the three-second deadline independent of queue backlog.
+        await slashCommand.AcknowledgeAsync(command);
+
+        if (!_notificationQueue.TryEnqueue(slashCommand.CreateNotification(command)))
+            await command.FollowupAsync("I'm busy or shutting down. Please try again shortly.", ephemeral: true);
+    }
+
+    private Task UserLeftAsync(SocketGuild guild, SocketUser user)
+    {
+        _notificationQueue.TryEnqueue(new UserLeft(user));
+        return Task.CompletedTask;
     }
 }

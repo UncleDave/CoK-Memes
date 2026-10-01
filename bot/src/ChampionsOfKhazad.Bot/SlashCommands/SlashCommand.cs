@@ -4,4 +4,9 @@ using MediatR;
 
 namespace ChampionsOfKhazad.Bot;
 
-public record SlashCommand(ApplicationCommandProperties Properties, Func<SocketSlashCommand, INotification> CreateNotification);
+// The gateway acknowledges before enqueueing; notification handlers must not send another initial response/defer.
+public record SlashCommand(
+    ApplicationCommandProperties Properties,
+    Func<SocketSlashCommand, INotification> CreateNotification,
+    Func<ISlashCommandInteraction, Task> AcknowledgeAsync
+);

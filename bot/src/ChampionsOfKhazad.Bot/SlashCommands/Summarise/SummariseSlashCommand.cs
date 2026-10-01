@@ -12,8 +12,6 @@ public class SummariseSlashCommand(BotContext botContext, ICompletionService com
 
     public async Task Handle(SummariseSlashCommandExecuted notification, CancellationToken cancellationToken)
     {
-        await notification.Command.DeferAsync();
-
         var messages = (await notification.Command.Channel.GetMessagesAsync(200).FlattenAsync()).ToList();
 
         if (messages.Count < 10)

@@ -14,7 +14,7 @@ public class RipSlashCommand(IPublisher publisher, ICompletionService completion
         var characterClass = (string)notification.Command.Data.Options.Single(x => x.Name == "class").Value;
         var causeOfDeath = (string)notification.Command.Data.Options.Single(x => x.Name == "cause").Value;
 
-        var obituaryTask = completionService.InvokeAsync(
+        var obituary = await completionService.InvokeAsync(
             new ChatHistory(
                 string.Join(
                     '\n',
@@ -24,10 +24,6 @@ public class RipSlashCommand(IPublisher publisher, ICompletionService completion
             ),
             cancellationToken
         );
-
-        await notification.Command.DeferAsync();
-
-        var obituary = await obituaryTask;
 
         await publisher.Publish(
             new CharacterDeathReported(

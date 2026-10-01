@@ -13,8 +13,6 @@ public class RaidsSlashCommand(
     ILogger<RaidsSlashCommand> logger
 ) : INotificationHandler<RaidsSlashCommandExecuted>
 {
-    private static readonly string[] Acknowledgements = ["More work?", "Right-o.", "Yes, milord.", "All right.", "Off I go, then!"];
-
     private static readonly string[] RaidNames =
     [
         "Prepare To Wipe Edition",
@@ -102,8 +100,6 @@ public class RaidsSlashCommand(
     public async Task Handle(RaidsSlashCommandExecuted notification, CancellationToken cancellationToken)
     {
         var command = notification.Command;
-
-        await command.RespondAsync(RandomUtils.PickRandom(Acknowledgements), ephemeral: true);
 
         try
         {

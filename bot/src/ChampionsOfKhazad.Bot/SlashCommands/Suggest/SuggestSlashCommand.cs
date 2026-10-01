@@ -11,8 +11,6 @@ public class SuggestSlashCommand(IOptions<SuggestSlashCommandOptions> options, B
 
     public async Task Handle(SuggestSlashCommandExecuted notification, CancellationToken cancellationToken)
     {
-        await notification.Command.RespondAsync("Thanks for your suggestion!", ephemeral: true);
-
         var targetUser = await botContext.Client.GetUserAsync(_options.UserId);
         var suggestion = notification.Command.Data.Options.Single(x => x.Name == "suggestion").Value.ToString();
 

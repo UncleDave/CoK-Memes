@@ -28,6 +28,8 @@ internal class MongoLoreStore(IMongoCollection<LoreDocument> loreCollection, IEm
 
     public async Task<bool> CreateLoreAsync(ILore lore, CancellationToken cancellationToken = default)
     {
+        if (await ReadLoreAsync(lore.Name, cancellationToken) is not null)
+            return false;
         var document = await CreateDocumentAsync(lore, cancellationToken);
         try
         {
@@ -43,6 +45,8 @@ internal class MongoLoreStore(IMongoCollection<LoreDocument> loreCollection, IEm
 
     public async Task<bool> UpdateLoreAsync(ILore lore, CancellationToken cancellationToken = default)
     {
+        if (await ReadLoreAsync(lore.Name, cancellationToken) is null)
+            return false;
         var document = await CreateDocumentAsync(lore, cancellationToken);
         var result = await loreCollection.ReplaceOneAsync(
             x => x.Name == lore.Name,

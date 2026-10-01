@@ -75,7 +75,7 @@ builder
             builder.Configuration.GetValue<string>("BotToken") ?? throw new MissingConfigurationValueException("BotToken")
         )
     )
-    .AddSingleton<DiscordClientProvider>()
+    .AddSingleton<IDiscordClientProvider, DiscordClientProvider>()
     .AddSingleton(new DiscordUserResolverOptions(guildId))
     .AddSingleton<DiscordUserResolver>();
 

@@ -38,6 +38,7 @@
     <Project Path="src\ChampionsOfKhazad.Bot.Lore\ChampionsOfKhazad.Bot.Lore.csproj" Type="C#" />
     <Project Path="src\ChampionsOfKhazad.Bot.Mongo\ChampionsOfKhazad.Bot.Mongo.csproj" Type="C#" />
     <Project Path="src\ChampionsOfKhazad.Bot.Portal\ChampionsOfKhazad.Bot.Portal.csproj" Type="C#" />
+    <Project Path="src\ChampionsOfKhazad.Bot.Portal.Tests\ChampionsOfKhazad.Bot.Portal.Tests.csproj" Type="C#" />
     <Project Path="src\ChampionsOfKhazad.Bot.RaidHelper\ChampionsOfKhazad.Bot.RaidHelper.csproj" Type="C#" />
     <Project Path="src\DiscordConsole\DiscordConsole.csproj" Type="C#" />
   </Folder>

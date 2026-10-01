@@ -1,5 +1,4 @@
-﻿using Discord;
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 
 namespace ChampionsOfKhazad.Bot.Portal;
 
@@ -13,9 +12,9 @@ public class DiscordGuildAuthorizationHandler(DiscordUserResolver discordUserRes
             return;
         }
 
-        var user = await discordUserResolver.GetUserAsync(userId);
+        var user = await discordUserResolver.GetGuildUserAsync(userId);
 
-        if (user is IGuildUser guildUser && guildUser.GuildId == requirement.GuildId)
+        if (user?.GuildId == requirement.GuildId)
         {
             context.Succeed(requirement);
         }

@@ -5,7 +5,7 @@ namespace ChampionsOfKhazad.Bot.Portal;
 
 public record DiscordClientProviderOptions(string BotToken);
 
-public class DiscordClientProvider(DiscordRestClient discordClient, DiscordClientProviderOptions options)
+public class DiscordClientProvider(DiscordRestClient discordClient, DiscordClientProviderOptions options) : IDiscordClientProvider
 {
     public async Task<IDiscordClient> GetClientAsync()
     {

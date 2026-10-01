@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 
 namespace ChampionsOfKhazad.Bot.Portal.Tests;
@@ -14,37 +15,49 @@ public class LoreMutationEndpointTests
     [Theory]
     [InlineData("guild-lore")]
     [InlineData("member-lore")]
-    public async Task DuplicateCreateReturnsConflictAndPreservesTheOriginalEvenWhenOpenAiIsUnavailable(string route)
+    public async Task SuccessfulCreateReturnsCreatedAndBindsTheExpectedLore(string route)
     {
-        var fixture = new MongoLoreStoreFixture();
-        await using var app = await CreateAppAsync(fixture);
+        var store = new LoreStoreStub();
+        await using var app = await CreateAppAsync(store);
         using var client = app.GetTestClient();
-        using var first = await client.PostAsync($"/api/{route}", CreateBody(route, "Entry", "Original"), TestContext.Current.CancellationToken);
-        Assert.Equal(HttpStatusCode.Created, first.StatusCode);
-        Assert.Equal("/api/lore/Entry", first.Headers.Location!.OriginalString);
-        var original = Assert.Single(fixture.Documents);
-        fixture.EmbeddingFailure = new InvalidOperationException("OpenAI unavailable");
+        using var response = await client.PostAsync($"/api/{route}", CreateBody(route, "Entry", "Original"), TestContext.Current.CancellationToken);
 
-        using var duplicate = await client.PostAsync(
-            $"/api/{route}",
-            CreateBody(route, "eNtRy", "Replacement"),
-            TestContext.Current.CancellationToken
-        );
-
-        Assert.Equal(HttpStatusCode.Conflict, duplicate.StatusCode);
-        var error = await duplicate.Content.ReadFromJsonAsync<Dictionary<string, string>>(TestContext.Current.CancellationToken);
-        Assert.Equal("Lore with this name already exists.", error!["message"]);
-        Assert.Same(original, Assert.Single(fixture.Documents));
-        Assert.Equal(1, fixture.EmbeddingCalls);
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        Assert.Equal("/api/lore/Entry", response.Headers.Location!.OriginalString);
+        Assert.NotNull(store.Created);
+        Assert.Equal("Entry", store.Created.Name);
+        Assert.Equal("Original", route == "guild-lore" ? ((IGuildLore)store.Created).Content : ((IMemberLore)store.Created).Biography);
+        Assert.Null(store.Updated);
     }
 
     [Theory]
     [InlineData("guild-lore")]
     [InlineData("member-lore")]
-    public async Task MissingUpdateReturnsNotFoundWithoutCallingOpenAi(string route)
+    public async Task RejectedCreateReturnsConflictWithoutTryingAnUpdate(string route)
     {
-        var fixture = new MongoLoreStoreFixture { EmbeddingFailure = new InvalidOperationException("OpenAI unavailable") };
-        await using var app = await CreateAppAsync(fixture);
+        var store = new LoreStoreStub { CreateResult = false };
+        await using var app = await CreateAppAsync(store);
+        using var client = app.GetTestClient();
+        using var response = await client.PostAsync(
+            $"/api/{route}",
+            CreateBody(route, "Entry", "Replacement"),
+            TestContext.Current.CancellationToken
+        );
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        var error = await response.Content.ReadFromJsonAsync<Dictionary<string, string>>(TestContext.Current.CancellationToken);
+        Assert.Equal("Lore with this name already exists.", error!["message"]);
+        Assert.NotNull(store.Created);
+        Assert.Null(store.Updated);
+    }
+
+    [Theory]
+    [InlineData("guild-lore")]
+    [InlineData("member-lore")]
+    public async Task MissingUpdateReturnsNotFoundWithoutTryingACreate(string route)
+    {
+        var store = new LoreStoreStub { UpdateResult = false };
+        await using var app = await CreateAppAsync(store);
         using var client = app.GetTestClient();
         using var response = await client.PutAsync(
             $"/api/{route}/Missing",
@@ -53,20 +66,18 @@ public class LoreMutationEndpointTests
         );
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-        Assert.Equal(0, fixture.EmbeddingCalls);
-        Assert.Empty(fixture.Documents);
+        Assert.NotNull(store.Updated);
+        Assert.Null(store.Created);
     }
 
     [Theory]
     [InlineData("guild-lore")]
     [InlineData("member-lore")]
-    public async Task ExistingUpdateStillSucceedsAndKeepsOneEntry(string route)
+    public async Task SuccessfulUpdateReturnsNoContentAndBindsTheExpectedLore(string route)
     {
-        var fixture = new MongoLoreStoreFixture();
-        await using var app = await CreateAppAsync(fixture);
+        var store = new LoreStoreStub();
+        await using var app = await CreateAppAsync(store);
         using var client = app.GetTestClient();
-        using var first = await client.PostAsync($"/api/{route}", CreateBody(route, "Entry", "Original"), TestContext.Current.CancellationToken);
-        Assert.Equal(HttpStatusCode.Created, first.StatusCode);
 
         using var response = await client.PutAsync(
             $"/api/{route}/Entry",
@@ -75,50 +86,29 @@ public class LoreMutationEndpointTests
         );
 
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
-        Assert.Contains("Updated", Assert.Single(fixture.Documents).Content);
-        Assert.Equal(2, fixture.EmbeddingCalls);
+        Assert.NotNull(store.Updated);
+        Assert.Equal("Entry", store.Updated.Name);
+        Assert.Equal("Updated", route == "guild-lore" ? ((IGuildLore)store.Updated).Content : ((IMemberLore)store.Updated).Biography);
+        Assert.Null(store.Created);
     }
 
     [Theory]
     [InlineData("guild-lore")]
     [InlineData("member-lore")]
-    public async Task ConcurrentCreatesReturnOneCreatedAndOneConflictThroughTheDuplicateKeyPath(string route)
+    public async Task StoreFailuresPropagateInsteadOfReturningSuccessfulResults(string route)
     {
-        var bothInserting = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var arrivals = 0;
-        var fixture = new MongoLoreStoreFixture
-        {
-            BeforeInsert = async () =>
-            {
-                if (Interlocked.Increment(ref arrivals) == 2)
-                    bothInserting.SetResult();
-                await release.Task.WaitAsync(TestContext.Current.CancellationToken);
-            },
-        };
-        await using var app = await CreateAppAsync(fixture);
+        var failure = new InvalidOperationException("Store unavailable");
+        var store = new LoreStoreStub { WriteFailure = failure };
+        await using var app = await CreateAppAsync(store);
         using var client = app.GetTestClient();
-        var first = client.PostAsync($"/api/{route}", CreateBody(route, "Entry", "First"), TestContext.Current.CancellationToken);
-        var second = client.PostAsync($"/api/{route}", CreateBody(route, "eNtRy", "Second"), TestContext.Current.CancellationToken);
-        HttpResponseMessage[] responses;
-        try
-        {
-            await bothInserting.Task.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
-        }
-        finally
-        {
-            release.TrySetResult();
-            responses = await Task.WhenAll(first, second);
-        }
-        using var firstResponse = responses[0];
-        using var secondResponse = responses[1];
 
-        Assert.Equal([HttpStatusCode.Created, HttpStatusCode.Conflict], responses.Select(response => response.StatusCode).Order());
-        Assert.Single(fixture.Documents);
-        Assert.Equal(1, fixture.DuplicateKeyFailures);
+        var actual = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            client.PostAsync($"/api/{route}", CreateBody(route, "Entry", "Content"), TestContext.Current.CancellationToken)
+        );
+        Assert.Same(failure, actual);
     }
 
-    private static async Task<WebApplication> CreateAppAsync(MongoLoreStoreFixture fixture)
+    private static async Task<WebApplication> CreateAppAsync(IStoreLore store)
     {
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
@@ -126,8 +116,8 @@ public class LoreMutationEndpointTests
         builder.Services.AddAuthentication();
         builder.Services.AddAuthorization();
         builder.Services.AddBot(_ => { }).AddGuildLore();
-        builder.Services.AddSingleton<IStoreLore>(fixture.Store);
-        builder.Services.AddSingleton(fixture.Embeddings);
+        builder.Services.RemoveAll<IGetRelatedLore>();
+        builder.Services.AddSingleton(store);
         var app = builder.Build();
         app.UseAuthorization();
         // Isolate HTTP binding/status behavior here; membership authorization has its own tests.

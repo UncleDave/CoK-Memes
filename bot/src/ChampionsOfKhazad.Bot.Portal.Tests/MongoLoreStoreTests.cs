@@ -124,7 +124,7 @@ public class MongoLoreStoreTests
         bool[] results;
         try
         {
-            await bothInserting.Task.WaitAsync(TestContext.Current.CancellationToken);
+            await bothInserting.Task.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
         }
         finally
         {

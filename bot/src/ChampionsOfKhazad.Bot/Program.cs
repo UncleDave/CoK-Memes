@@ -77,9 +77,9 @@ host.Services.AddBot(configuration =>
         configuration.OpenAiApiKey = host.Configuration.GetRequiredString("OpenAIServiceOptions:ApiKey");
     })
     .AddGuildLore()
-    .AddMongoPersistence()
+    .AddLoreMongoPersistence()
     .AddDiscordMemes()
-    .AddMongoPersistence()
+    .AddDiscordMemesMongoPersistence()
     .AddGenAi<DiscordEmojiHandler>(configuration =>
     {
         // TODO: Move these to an object

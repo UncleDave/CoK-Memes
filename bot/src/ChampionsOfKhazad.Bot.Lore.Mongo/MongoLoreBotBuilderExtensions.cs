@@ -5,9 +5,9 @@ using ChampionsOfKhazad.Bot.Mongo;
 // ReSharper disable once CheckNamespace
 namespace Microsoft.Extensions.DependencyInjection;
 
-public static class MongoGuildLoreBuilderExtensions
+public static class MongoLoreBotBuilderExtensions
 {
-    public static GuildLoreBuilder AddMongoPersistence(this GuildLoreBuilder builder)
+    public static BotBuilder AddLoreMongoPersistence(this BotBuilder builder)
     {
         builder
             .AddMongo()

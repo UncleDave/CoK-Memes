@@ -65,7 +65,7 @@ builder
         configuration.OpenAiApiKey = builder.Configuration.GetRequiredString("OpenAi:ApiKey");
     })
     .AddGuildLore()
-    .AddMongoPersistence()
+    .AddLoreMongoPersistence()
     .AddGenAiMongoPersistence();
 
 builder

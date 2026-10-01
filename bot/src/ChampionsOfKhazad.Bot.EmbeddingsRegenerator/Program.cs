@@ -14,7 +14,7 @@ host.Services.AddBot(configuration =>
         configuration.OpenAiApiKey = host.Configuration.GetRequiredString("OpenAi:ApiKey");
     })
     .AddGuildLore()
-    .AddMongoPersistence();
+    .AddLoreMongoPersistence();
 
 var app = host.Build();
 

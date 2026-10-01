@@ -6,7 +6,7 @@ namespace Microsoft.Extensions.DependencyInjection;
 
 public static class LoreBotBuilderExtensions
 {
-    public static GuildLoreBuilder AddGuildLore(this BotBuilder builder)
+    public static BotBuilder AddGuildLore(this BotBuilder builder)
     {
         builder
             .Services.AddSingleton<LoreService>()
@@ -16,6 +16,6 @@ public static class LoreBotBuilderExtensions
             .AddSingleton<IDeleteLore>(sp => sp.GetRequiredService<LoreService>())
             .AddSingleton<IGetRelatedLore, RelatedLoreService>();
 
-        return new GuildLoreBuilder(builder.Services, builder.BotConfiguration);
+        return builder;
     }
 }

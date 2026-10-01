@@ -15,7 +15,7 @@ namespace Microsoft.Extensions.DependencyInjection;
 
 public static class GenAiBotBuilderExtensions
 {
-    public static GenAiBuilder AddGenAi<TEmojiHandler>(this BotBuilder builder, Action<GenAiConfig> configurator)
+    public static BotBuilder AddGenAi<TEmojiHandler>(this BotBuilder builder, Action<GenAiConfig> configurator)
         where TEmojiHandler : class, IEmojiHandler
     {
         var config = new GenAiConfig();
@@ -79,6 +79,6 @@ public static class GenAiBotBuilderExtensions
             .AddScoped<RatExpertPersonality>()
             .AddScoped<StonerBroPersonality>();
 
-        return new GenAiBuilder(builder.Services, builder.BotConfiguration);
+        return builder;
     }
 }

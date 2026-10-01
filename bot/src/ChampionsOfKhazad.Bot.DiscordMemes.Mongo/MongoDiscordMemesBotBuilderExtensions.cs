@@ -7,9 +7,9 @@ using ChampionsOfKhazad.Bot.Mongo;
 // ReSharper disable once CheckNamespace
 namespace Microsoft.Extensions.DependencyInjection;
 
-public static class MongoDiscordMemesBuilderExtensions
+public static class MongoDiscordMemesBotBuilderExtensions
 {
-    public static DiscordMemesBuilder AddMongoPersistence(this DiscordMemesBuilder builder)
+    public static BotBuilder AddDiscordMemesMongoPersistence(this BotBuilder builder)
     {
         builder
             .AddMongo()

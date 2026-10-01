@@ -26,19 +26,36 @@ internal class MongoLoreStore(IMongoCollection<LoreDocument> loreCollection, IEm
         return result?.ToModel();
     }
 
-    public Task UpsertLoreAsync(ILore lore) =>
-        lore switch
-        {
-            IGuildLore guildLore => UpsertLoreAsync(guildLore),
-            IMemberLore memberLore => UpsertLoreAsync(memberLore),
-            _ => throw new NotSupportedException($"Lore type '{lore.GetType().FullName}' is not supported."),
-        };
-
-    public async Task UpsertLoreAsync(IGuildLore lore)
+    public async Task<bool> CreateLoreAsync(ILore lore, CancellationToken cancellationToken = default)
     {
-        var embeddingResult = await embeddingsService.GenerateAsync(lore.Content);
-        var document = new LoreDocument(lore) { Embedding = embeddingResult.Vector.ToArray() };
+        var document = await CreateDocumentAsync(lore, cancellationToken);
+        try
+        {
+            // The existing unique, case-insensitive name index arbitrates concurrent creates.
+            await loreCollection.InsertOneAsync(document, cancellationToken: cancellationToken);
+            return true;
+        }
+        catch (MongoWriteException exception) when (exception.WriteError.Category == ServerErrorCategory.DuplicateKey)
+        {
+            return false;
+        }
+    }
 
+    public async Task<bool> UpdateLoreAsync(ILore lore, CancellationToken cancellationToken = default)
+    {
+        var document = await CreateDocumentAsync(lore, cancellationToken);
+        var result = await loreCollection.ReplaceOneAsync(
+            x => x.Name == lore.Name,
+            document,
+            new ReplaceOptions { IsUpsert = false, Collation = Collections.Lore.UniqueIndex.Collation },
+            cancellationToken
+        );
+        return result.MatchedCount == 1;
+    }
+
+    public async Task UpsertLoreAsync(ILore lore)
+    {
+        var document = await CreateDocumentAsync(lore, CancellationToken.None);
         await loreCollection.ReplaceOneAsync(
             x => x.Name == lore.Name,
             document,
@@ -46,17 +63,20 @@ internal class MongoLoreStore(IMongoCollection<LoreDocument> loreCollection, IEm
         );
     }
 
-    public async Task UpsertLoreAsync(IMemberLore lore)
-    {
-        var content = lore.ToString() ?? string.Empty;
-        var embeddingResult = await embeddingsService.GenerateAsync(content);
-        var document = new LoreDocument(lore) { Embedding = embeddingResult.Vector.ToArray() };
+    public Task UpsertLoreAsync(IGuildLore lore) => UpsertLoreAsync((ILore)lore);
 
-        await loreCollection.ReplaceOneAsync(
-            x => x.Name == lore.Name,
-            document,
-            new ReplaceOptions { IsUpsert = true, Collation = Collections.Lore.UniqueIndex.Collation }
-        );
+    public Task UpsertLoreAsync(IMemberLore lore) => UpsertLoreAsync((ILore)lore);
+
+    private async Task<LoreDocument> CreateDocumentAsync(ILore lore, CancellationToken cancellationToken)
+    {
+        var document = lore switch
+        {
+            IGuildLore guildLore => new LoreDocument(guildLore),
+            IMemberLore memberLore => new LoreDocument(memberLore),
+            _ => throw new NotSupportedException($"Lore type '{lore.GetType().FullName}' is not supported."),
+        };
+        var embeddingResult = await embeddingsService.GenerateAsync(document.Content, cancellationToken: cancellationToken);
+        return document with { Embedding = embeddingResult.Vector.ToArray() };
     }
 
     public async Task<IReadOnlyList<ILore>> SearchLoreAsync(float[] queryVector, uint max, CancellationToken cancellationToken = default)

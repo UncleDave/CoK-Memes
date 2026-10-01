@@ -131,18 +131,19 @@ var guildLore = apiGroup.MapGroup("guild-lore").RequireAuthorization(adminPolicy
 
 guildLore.MapPut(
     "{name}",
-    async (string name, UpdateGuildLoreContract contract, IUpdateLore loreUpdater) =>
+    async (string name, UpdateGuildLoreContract contract, IUpdateLore loreUpdater, CancellationToken cancellationToken) =>
     {
-        await loreUpdater.UpdateLoreAsync(new GuildLore(name, contract.Content));
-        return Results.NoContent();
+        var updated = await loreUpdater.UpdateLoreAsync(new GuildLore(name, contract.Content), cancellationToken);
+        return updated ? Results.NoContent() : Results.NotFound();
     }
 );
 
 guildLore.MapPost(
     "",
-    async (CreateGuildLoreContract contract, ICreateLore loreCreator) =>
+    async (CreateGuildLoreContract contract, ICreateLore loreCreator, CancellationToken cancellationToken) =>
     {
-        await loreCreator.CreateLoreAsync(new GuildLore(contract.Name, contract.Content));
+        if (!await loreCreator.CreateLoreAsync(new GuildLore(contract.Name, contract.Content), cancellationToken))
+            return Results.Conflict(new { message = "Lore with this name already exists." });
         return Results.Created($"/api/lore/{Uri.EscapeDataString(contract.Name)}", null);
     }
 );
@@ -151,30 +152,34 @@ var memberLore = apiGroup.MapGroup("member-lore").RequireAuthorization(adminPoli
 
 memberLore.MapPut(
     "{name}",
-    async (string name, UpdateMemberLoreContract contract, IUpdateLore loreUpdater) =>
+    async (string name, UpdateMemberLoreContract contract, IUpdateLore loreUpdater, CancellationToken cancellationToken) =>
     {
-        await loreUpdater.UpdateLoreAsync(
+        var updated = await loreUpdater.UpdateLoreAsync(
             new MemberLore(name, contract.Pronouns, contract.Nationality, contract.MainCharacter, contract.Biography)
             {
                 Aliases = contract.Aliases ?? [],
                 Roles = contract.Roles ?? [],
-            }
+            },
+            cancellationToken
         );
-        return Results.NoContent();
+        return updated ? Results.NoContent() : Results.NotFound();
     }
 );
 
 memberLore.MapPost(
     "",
-    async (CreateMemberLoreContract contract, ICreateLore loreCreator) =>
+    async (CreateMemberLoreContract contract, ICreateLore loreCreator, CancellationToken cancellationToken) =>
     {
-        await loreCreator.CreateLoreAsync(
+        var created = await loreCreator.CreateLoreAsync(
             new MemberLore(contract.Name, contract.Pronouns, contract.Nationality, contract.MainCharacter, contract.Biography)
             {
                 Aliases = contract.Aliases ?? [],
                 Roles = contract.Roles ?? [],
-            }
+            },
+            cancellationToken
         );
+        if (!created)
+            return Results.Conflict(new { message = "Lore with this name already exists." });
         return Results.Created($"/api/lore/{Uri.EscapeDataString(contract.Name)}", null);
     }
 );

@@ -9,4 +9,9 @@
     <ProjectReference Include="..\ChampionsOfKhazad.Bot.Lore\ChampionsOfKhazad.Bot.Lore.csproj" />
     <ProjectReference Include="..\ChampionsOfKhazad.Bot.Mongo\ChampionsOfKhazad.Bot.Mongo.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="ChampionsOfKhazad.Bot.Tests" />
+    <!-- DispatchProxy generates test doubles for collections of internal documents in this assembly. -->
+    <InternalsVisibleTo Include="ProxyBuilder" />
+  </ItemGroup>
 </Project>

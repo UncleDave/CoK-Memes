@@ -12,4 +12,7 @@
   <ItemGroup>
     <ProjectReference Include="..\ChampionsOfKhazad.Bot.Core\ChampionsOfKhazad.Bot.Core.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="ChampionsOfKhazad.Bot.Tests" />
+  </ItemGroup>
 </Project>

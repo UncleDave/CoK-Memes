@@ -14,10 +14,9 @@ internal class WordOfTheDayService(IWordOfTheDayStore wordOfTheDayStore, ILogger
     {
         var today = DateOnly.FromDateTime(DateTime.Now);
 
+        await _lock.WaitAsync(cancellationToken);
         try
         {
-            await _lock.WaitAsync(cancellationToken);
-
             var wordOfTheDay = await wordOfTheDayStore.GetWordOfTheDayAsync(today, cancellationToken);
 
             if (wordOfTheDay is null)
@@ -42,10 +41,9 @@ internal class WordOfTheDayService(IWordOfTheDayStore wordOfTheDayStore, ILogger
     {
         var today = DateOnly.FromDateTime(DateTime.Now);
 
+        await _lock.WaitAsync();
         try
         {
-            await _lock.WaitAsync();
-
             var wordOfTheDay = await wordOfTheDayStore.GetWordOfTheDayAsync(today);
 
             if (wordOfTheDay is null)

@@ -10,6 +10,7 @@ Use .NET 10 and Node.js 24. Run backend commands from `bot/`:
 
 - `dotnet tool restore` installs the pinned CSharpier formatter.
 - `dotnet build ChampionsOfKhazad.Bot.slnx` restores and builds all .NET projects.
+- `dotnet test --solution ChampionsOfKhazad.Bot.slnx --no-build --minimum-expected-tests 1` runs the backend tests after building.
 - `dotnet csharpier check .` verifies C# formatting; use `dotnet csharpier format .` to fix it.
 
 Run frontend commands from `bot/src/ChampionsOfKhazad.Bot.Portal/frontend/`:
@@ -17,6 +18,7 @@ Run frontend commands from `bot/src/ChampionsOfKhazad.Bot.Portal/frontend/`:
 - `npm ci` installs the lockfile-defined dependencies.
 - `npm run dev` starts Vite at `http://localhost:5173`.
 - `npm run build` type-checks and produces the production bundle.
+- `npm test` runs the frontend request and action tests with Node's built-in test runner.
 - `npm run lint` runs ESLint and Prettier checks.
 
 The full bot requires Discord, MongoDB, OpenAI, Auth0, and Azure configuration; builds do not.
@@ -27,7 +29,7 @@ C# is formatted by CSharpier with a 150-column width. Preserve nullable referenc
 
 ## Testing Guidelines
 
-There is currently no automated test framework or coverage threshold. Validate every change with the relevant build and lint commands. For UI work, also exercise the changed flow with `npm run dev`. If adding tests, create clearly named `*.Tests` projects, add them to the solution, and make `dotnet test` part of validation.
+Backend tests use xUnit in clearly named `*.Tests` projects included in the solution. Frontend request and action tests use Node's built-in test runner in `frontend/tests/`. There is no coverage threshold. Validate every change with the relevant tests, build, and lint commands. For UI work, also exercise the changed flow with `npm run dev`. Add regression tests for behavior changes, and include new backend test projects in the solution.
 
 ## Commit & Publishing Guidelines
 

@@ -40,8 +40,11 @@ Run frontend commands from `bot/src/ChampionsOfKhazad.Bot.Portal/frontend/`:
 ```sh
 npm ci
 npm run build
+npm test
 npm run lint
 ```
+
+The frontend request and action tests use Node's built-in test runner and do not require service credentials.
 
 ## Local configuration
 

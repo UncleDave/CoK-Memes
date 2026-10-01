@@ -1,30 +1,49 @@
-import { Button, Stack } from "@mui/joy";
+import { Alert, Button, Stack } from "@mui/joy";
 import { PropsWithChildren } from "react";
-import { Form, Link } from "react-router";
+import { Form, Link, useActionData, useNavigation } from "react-router";
 
-const LoreForm = ({ children }: PropsWithChildren) => (
-  <Form method="put">
-    <Stack spacing={1}>
-      {children}
-      <Stack direction="row" justifyContent="space-between">
-        <Stack direction="row" spacing={1}>
-          <Button component={Link} to="/lore">
-            Cancel
-          </Button>
-          <Button
-            type="submit"
-            name="intent"
-            value="delete"
-            color="danger"
-            formMethod="delete"
-          >
-            Delete
+const LoreForm = ({
+  children,
+  isCreating = false,
+}: PropsWithChildren<{ isCreating?: boolean }>) => {
+  const actionData = useActionData<{ error?: string }>();
+  const navigation = useNavigation();
+  const isSubmitting = navigation.state === "submitting";
+
+  return (
+    <Form method={isCreating ? "post" : "put"}>
+      <Stack spacing={1}>
+        {actionData?.error && (
+          <Alert color="danger" role="alert">
+            {actionData.error}
+          </Alert>
+        )}
+        {children}
+        <Stack direction="row" justifyContent="space-between">
+          <Stack direction="row" spacing={1}>
+            <Button component={Link} to="/lore">
+              Cancel
+            </Button>
+            {!isCreating && (
+              <Button
+                type="submit"
+                name="intent"
+                value="delete"
+                color="danger"
+                formMethod="delete"
+                disabled={isSubmitting}
+              >
+                Delete
+              </Button>
+            )}
+          </Stack>
+          <Button type="submit" disabled={isSubmitting}>
+            Save
           </Button>
         </Stack>
-        <Button type="submit">Save</Button>
       </Stack>
-    </Stack>
-  </Form>
-);
+    </Form>
+  );
+};
 
 export default LoreForm;

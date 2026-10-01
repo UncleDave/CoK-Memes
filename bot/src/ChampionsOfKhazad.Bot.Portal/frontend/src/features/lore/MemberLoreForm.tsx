@@ -10,7 +10,7 @@ interface MemberLoreFormProps {
 }
 
 const MemberLoreForm = ({ lore, isCreating = false }: MemberLoreFormProps) => (
-  <LoreForm>
+  <LoreForm isCreating={isCreating}>
     <FormInput
       label="Name"
       name="name"

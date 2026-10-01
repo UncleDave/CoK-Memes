@@ -26,7 +26,7 @@ const LorePage = () => {
         <List>
           {lore.map((x) => (
             <ListItem key={x.name}>
-              <ListItemButton component={Link} to={x.name}>
+              <ListItemButton component={Link} to={encodeURIComponent(x.name)}>
                 <ListItemContent>{x.name}</ListItemContent>
                 &gt;
               </ListItemButton>

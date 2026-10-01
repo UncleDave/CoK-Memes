@@ -9,7 +9,7 @@ interface GuildLoreFormProps {
 }
 
 const GuildLoreForm = ({ lore, isCreating = false }: GuildLoreFormProps) => (
-  <LoreForm>
+  <LoreForm isCreating={isCreating}>
     <FormInput
       label="Name"
       name="name"

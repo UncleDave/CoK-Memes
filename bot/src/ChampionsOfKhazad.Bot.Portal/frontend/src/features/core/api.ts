@@ -1,3 +1,5 @@
+import requestApi from "./request-api.ts";
+
 const buildGuildLoreBody = (formData: FormData, includeName = false) => ({
   ...(includeName && { name: formData.get("name") }),
   content: formData.get("content"),
@@ -15,31 +17,31 @@ const buildMemberLoreBody = (formData: FormData, includeName = false) => ({
 
 const api = {
   createGuildLore: async (formData: FormData) =>
-    fetch("/api/guild-lore", {
+    requestApi("/api/guild-lore", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(buildGuildLoreBody(formData, true)),
     }),
   updateGuildLore: async (name: string, formData: FormData) =>
-    fetch(`/api/guild-lore/${name}`, {
+    requestApi(`/api/guild-lore/${encodeURIComponent(name)}`, {
       method: "PUT",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(buildGuildLoreBody(formData)),
     }),
   createMemberLore: async (formData: FormData) =>
-    fetch("/api/member-lore", {
+    requestApi("/api/member-lore", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(buildMemberLoreBody(formData, true)),
     }),
   updateMemberLore: async (name: string, formData: FormData) =>
-    fetch(`/api/member-lore/${name}`, {
+    requestApi(`/api/member-lore/${encodeURIComponent(name)}`, {
       method: "PUT",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(buildMemberLoreBody(formData)),
     }),
   deleteLore: async (name: string) =>
-    fetch(`/api/lore/${name}`, {
+    requestApi(`/api/lore/${encodeURIComponent(name)}`, {
       method: "DELETE",
     }),
 };

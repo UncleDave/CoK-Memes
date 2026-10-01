@@ -7,7 +7,9 @@ on:
     paths:
       - bot/**
       - global.json
+      - .gitattributes
       - .github/workflows/bot-deploy.yml
+      - .github/workflows/frontend-checks.yml
 
 permissions:
   contents: read
@@ -15,8 +17,13 @@ permissions:
 concurrency: deploy
 
 jobs:
+  check-frontend:
+    name: Check Frontend
+    uses: ./.github/workflows/frontend-checks.yml
+
   deploy:
     name: Deploy
+    needs: check-frontend
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7

@@ -1,4 +1,4 @@
-﻿FROM node:22 AS build-frontend
+﻿FROM node:24 AS build-frontend
 WORKDIR /src
 COPY ./ChampionsOfKhazad.Bot.Portal/frontend .
 RUN npm ci --no-audit

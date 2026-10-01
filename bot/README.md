@@ -113,6 +113,7 @@ The included launch profiles select Development, so local user secrets are loade
 ## Deployment
 
 Deployment is managed by Pulumi in `src/ChampionsOfKhazad.Bot.Infrastructure/`.
+Frontend tests, lint and the production build run on Node.js 24 and must pass before deployment starts.
 The [deployment workflow](../.github/workflows/bot-deploy.yml) builds, tests and deploys
 the production stack on matching pushes to `main`. Supply deployment credentials through
 Pulumi configuration and GitHub secrets, not committed application settings.

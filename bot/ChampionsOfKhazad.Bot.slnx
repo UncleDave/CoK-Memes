@@ -12,6 +12,7 @@
   <Folder Name="/Solution Items/">
     <File Path=".gitignore" />
     <File Path="README.md" />
+    <File Path="src\Directory.Build.props" />
     <File Path="src\bot.Dockerfile.dockerignore" />
     <File Path="src\bot.Dockerfile" />
     <File Path=".csharpierrc.json" />

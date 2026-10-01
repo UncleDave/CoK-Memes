@@ -16,6 +16,7 @@ Building and running the default test suite does not require service credentials
 ## Project layout
 
 - `ChampionsOfKhazad.Bot.slnx` — the .NET solution
+- `src/Directory.Build.props` — shared .NET framework, nullable and implicit-using defaults
 - `src/ChampionsOfKhazad.Bot/` — the Discord host
 - `src/ChampionsOfKhazad.Bot.Portal/` — the portal backend and `frontend/` React client
 - Other `src/ChampionsOfKhazad.Bot.*` projects — feature libraries, persistence and tests

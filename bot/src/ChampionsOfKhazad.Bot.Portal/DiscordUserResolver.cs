@@ -1,4 +1,6 @@
 ﻿using Discord;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Internal;
 
 namespace ChampionsOfKhazad.Bot.Portal;
 
@@ -6,13 +8,10 @@ public record DiscordUserResolverOptions(ulong GuildId);
 
 public class DiscordUserResolver(IDiscordClientProvider discordClientProvider, DiscordUserResolverOptions options, TimeProvider clock) : IDisposable
 {
-    private const int MaximumCachedProfiles = 500;
     private static readonly TimeSpan CacheLifetime = TimeSpan.FromMinutes(15);
-    private readonly Lock _profilesLock = new();
-    private readonly Dictionary<ulong, CachedProfile> _profiles = [];
-    private readonly SemaphoreSlim _guildLock = new(1, 1);
-    private IGuild? _guild;
-    private DateTimeOffset _guildExpiresAt;
+    private readonly Lock _cacheLock = new();
+    private readonly MemoryCache _profiles = new(new MemoryCacheOptions { SizeLimit = 500, Clock = new CacheClock(clock) });
+    private readonly MemoryCache _guildMetadata = new(new MemoryCacheOptions { SizeLimit = 1, Clock = new CacheClock(clock) });
 
     public async Task<IGuildUser?> GetGuildUserAsync(ulong userId)
     {
@@ -21,36 +20,7 @@ public class DiscordUserResolver(IDiscordClientProvider discordClientProvider, D
         return await guild.GetUserAsync(userId);
     }
 
-    public async Task<IUser> GetUserAsync(ulong userId)
-    {
-        CachedProfile profile;
-        lock (_profilesLock)
-        {
-            var now = clock.GetUtcNow();
-            if (!_profiles.TryGetValue(userId, out profile!) || profile.ExpiresAt <= now)
-            {
-                if (_profiles.Count >= MaximumCachedProfiles && !_profiles.ContainsKey(userId))
-                    _profiles.Remove(_profiles.MinBy(entry => entry.Value.ExpiresAt).Key);
-                // Sharing the task also coalesces concurrent display lookups for the same author.
-                profile = new CachedProfile(LoadProfileAsync(userId), now + CacheLifetime);
-                _profiles[userId] = profile;
-            }
-        }
-
-        try
-        {
-            return await profile.User;
-        }
-        catch
-        {
-            lock (_profilesLock)
-            {
-                if (_profiles.TryGetValue(userId, out var current) && ReferenceEquals(current, profile))
-                    _profiles.Remove(userId);
-            }
-            throw;
-        }
-    }
+    public Task<IUser> GetUserAsync(ulong userId) => GetCachedAsync(_profiles, userId, () => LoadProfileAsync(userId));
 
     private async Task<IUser> LoadProfileAsync(ulong userId)
     {
@@ -62,29 +32,54 @@ public class DiscordUserResolver(IDiscordClientProvider discordClientProvider, D
         return await discordClient.GetUserAsync(userId) ?? throw new InvalidOperationException($"Discord user {userId} was not found.");
     }
 
-    private async Task<IGuild> GetGuildAsync()
-    {
-        await _guildLock.WaitAsync();
-        try
-        {
-            if (_guild is null || _guildExpiresAt <= clock.GetUtcNow())
+    private Task<IGuild> GetGuildAsync() =>
+        GetCachedAsync(
+            _guildMetadata,
+            options.GuildId,
+            async () =>
             {
                 var discordClient = await discordClientProvider.GetClientAsync();
-                var guild =
-                    await discordClient.GetGuildAsync(options.GuildId)
+                return await discordClient.GetGuildAsync(options.GuildId)
                     ?? throw new InvalidOperationException("The configured Discord guild was not found.");
-                _guild = guild;
-                _guildExpiresAt = clock.GetUtcNow() + CacheLifetime;
             }
-            return _guild;
-        }
-        finally
+        );
+
+    private async Task<T> GetCachedAsync<T>(MemoryCache cache, object key, Func<Task<T>> load)
+    {
+        Lazy<Task<T>> value;
+        lock (_cacheLock)
         {
-            _guildLock.Release();
+            if (!cache.TryGetValue(key, out value!))
+            {
+                // Lazy starts the shared fetch outside the lock; MemoryCache owns expiry and eviction.
+                value = new Lazy<Task<T>>(load);
+                cache.Set(key, value, new MemoryCacheEntryOptions { Size = 1, AbsoluteExpirationRelativeToNow = CacheLifetime });
+            }
+        }
+
+        try
+        {
+            return await value.Value;
+        }
+        catch
+        {
+            lock (_cacheLock)
+            {
+                if (cache.TryGetValue(key, out Lazy<Task<T>>? current) && ReferenceEquals(current, value))
+                    cache.Remove(key);
+            }
+            throw;
         }
     }
 
-    public void Dispose() => _guildLock.Dispose();
+    public void Dispose()
+    {
+        _profiles.Dispose();
+        _guildMetadata.Dispose();
+    }
 
-    private sealed record CachedProfile(Task<IUser> User, DateTimeOffset ExpiresAt);
+    private sealed class CacheClock(TimeProvider timeProvider) : ISystemClock
+    {
+        public DateTimeOffset UtcNow => timeProvider.GetUtcNow();
+    }
 }

@@ -77,6 +77,7 @@ builder
     )
     .AddSingleton<IDiscordClientProvider, DiscordClientProvider>()
     .AddSingleton(new DiscordUserResolverOptions(guildId))
+    .AddSingleton(TimeProvider.System)
     .AddSingleton<DiscordUserResolver>();
 
 var app = builder.Build();

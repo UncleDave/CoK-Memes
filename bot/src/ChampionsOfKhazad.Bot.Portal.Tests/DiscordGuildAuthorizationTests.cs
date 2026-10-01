@@ -9,7 +9,7 @@ public class DiscordGuildAuthorizationTests
     [Fact]
     public async Task LeavingGuildRevokesAccessAfterAnEarlierSuccessfulLookup()
     {
-        var fixture = new ResolverFixture();
+        using var fixture = new DiscordResolverFixture();
         var handler = new DiscordGuildAuthorizationHandler(fixture.Resolver);
 
         Assert.Same(fixture.Member, await fixture.Resolver.GetUserAsync(42));
@@ -30,7 +30,7 @@ public class DiscordGuildAuthorizationTests
     [Fact]
     public async Task DisplayProfilesStillResolveForFormerMembers()
     {
-        var fixture = new ResolverFixture { IsMember = false };
+        using var fixture = new DiscordResolverFixture { IsMember = false };
 
         Assert.Same(fixture.Profile, await fixture.Resolver.GetUserAsync(42));
         Assert.Null(await fixture.Resolver.GetGuildUserAsync(42));
@@ -38,13 +38,27 @@ public class DiscordGuildAuthorizationTests
     }
 
     [Fact]
-    public async Task ConcurrentLookupsDoNotShareMutableUserCache()
+    public async Task ConcurrentLookupsShareOneProfileLookup()
     {
-        var fixture = new ResolverFixture();
-        var users = await Task.WhenAll(Enumerable.Range(0, 20).Select(_ => fixture.Resolver.GetUserAsync(42)));
+        using var fixture = new DiscordResolverFixture();
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        fixture.BeforeMembershipRead = () => release.Task.WaitAsync(TestContext.Current.CancellationToken);
+        var requests = Enumerable.Range(0, 20).Select(_ => fixture.Resolver.GetUserAsync(42)).ToArray();
+        IUser[] users;
+        try
+        {
+            Assert.Equal(1, fixture.MembershipLookups);
+            Assert.All(requests, request => Assert.False(request.IsCompleted));
+        }
+        finally
+        {
+            release.SetResult();
+            users = await Task.WhenAll(requests);
+        }
 
         Assert.All(users, user => Assert.Same(fixture.Member, user));
-        Assert.Equal(20, fixture.MembershipLookups);
+        Assert.Equal(1, fixture.GuildLookups);
+        Assert.Equal(1, fixture.MembershipLookups);
     }
 
     [Theory]
@@ -53,7 +67,7 @@ public class DiscordGuildAuthorizationTests
     [InlineData("oauth2|discord|not-a-number")]
     public async Task InvalidIdentityFailsWithoutCallingDiscord(string? identity)
     {
-        var fixture = new ResolverFixture();
+        using var fixture = new DiscordResolverFixture();
         var context = CreateContext(identity);
 
         await new DiscordGuildAuthorizationHandler(fixture.Resolver).HandleAsync(context);
@@ -68,56 +82,4 @@ public class DiscordGuildAuthorizationTests
             new ClaimsPrincipal(new ClaimsIdentity(identity is null ? [] : [new Claim(ClaimTypes.NameIdentifier, identity)], "test")),
             null
         );
-
-    private sealed class ResolverFixture
-    {
-        private int _membershipLookups;
-        private int _profileLookups;
-        public bool IsMember { get; set; } = true;
-        public int MembershipLookups => _membershipLookups;
-        public int ProfileLookups => _profileLookups;
-        public IGuildUser Member { get; } =
-            DiscordTestProxy.Create<IGuildUser>(
-                (method, _) =>
-                    method.Name switch
-                    {
-                        "get_Id" => 42UL,
-                        "get_GuildId" => 1UL,
-                        _ => throw new NotSupportedException(method.Name),
-                    }
-            );
-        public IUser Profile { get; } =
-            DiscordTestProxy.Create<IUser>((method, _) => method.Name == "get_Id" ? 42UL : throw new NotSupportedException(method.Name));
-        public DiscordUserResolver Resolver { get; }
-
-        public ResolverFixture()
-        {
-            var guild = DiscordTestProxy.Create<IGuild>(
-                (method, _) =>
-                {
-                    if (method.Name != "GetUserAsync")
-                        throw new NotSupportedException(method.Name);
-                    Interlocked.Increment(ref _membershipLookups);
-                    return Task.FromResult(IsMember ? Member : null!);
-                }
-            );
-            var client = DiscordTestProxy.Create<IDiscordClient>(
-                (method, _) =>
-                {
-                    if (method.Name == "GetGuildAsync")
-                        return Task.FromResult(guild);
-                    if (method.Name != "GetUserAsync")
-                        throw new NotSupportedException(method.Name);
-                    Interlocked.Increment(ref _profileLookups);
-                    return Task.FromResult(Profile);
-                }
-            );
-            Resolver = new DiscordUserResolver(new ClientProvider(client), new(1));
-        }
-    }
-
-    private sealed class ClientProvider(IDiscordClient client) : IDiscordClientProvider
-    {
-        public Task<IDiscordClient> GetClientAsync() => Task.FromResult(client);
-    }
 }

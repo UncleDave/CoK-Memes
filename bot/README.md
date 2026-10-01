@@ -11,7 +11,7 @@ and generated images.
 - For execution: Discord, MongoDB, OpenAI, Azure Storage and Raid Helper configuration;
   the portal also requires Auth0
 
-Building and running tests does not require service credentials.
+Building and running the default test suite does not require service credentials, MongoDB, or Docker.
 
 ## Project layout
 
@@ -34,6 +34,11 @@ dotnet csharpier check .
 ```
 
 Use `dotnet csharpier format .` to format C# changes.
+
+CI tests check HTTP/service contracts and the commands sent by the Mongo adapter using narrow test doubles.
+They do not simulate or prove MongoDB index, collation, or concurrency behavior; validate those separately
+against a disposable local MongoDB instance when changing persistence behavior. Live database checks are
+opt-in and are not part of the default test command or CI.
 
 Run frontend commands from `bot/src/ChampionsOfKhazad.Bot.Portal/frontend/`:
 

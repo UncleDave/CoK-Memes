@@ -1,3 +1,5 @@
+using Microsoft.Extensions.AI;
+
 namespace ChampionsOfKhazad.Bot.GenAi;
 
 public interface ICompletionService
@@ -11,4 +13,6 @@ public interface ICompletionService
     IPersonality StonerBro { get; }
 
     Task<string> InvokeAsync(ChatHistory chatHistory, CancellationToken cancellationToken = default);
+
+    Task<string> InvokeAsync(ChatHistory chatHistory, ReasoningEffort reasoningEffort, CancellationToken cancellationToken = default);
 }

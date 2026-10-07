@@ -18,6 +18,11 @@ Privacy checks, per-request limits, and rolling daily budgets remain enforced in
 of the model's selection policy. Source bodies and mention mappings are transient review
 evidence, not archived memories. Lookups recheck channel access and source integrity.
 
+Independent model review explicitly uses high reasoning effort on the shared Luna text model.
+This does not relax deterministic evidence, privacy, budget, or activation checks, and the
+existing two-minute write/review deadline remains unchanged. Interactive personality replies
+continue to use medium effort.
+
 ## Diagnostics and review
 
 The configured admin can DM `notebook` for status, evaluation budget usage in the last

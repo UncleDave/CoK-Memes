@@ -67,7 +67,12 @@ internal class NotebookEvaluator(IChatClient chatClient, IGetRelatedLore loreGet
         var response = await chatClient
             .GetResponseAsync(
                 [new ChatMessage(ChatRole.System, Policy), new ChatMessage(ChatRole.User, data)],
-                new ChatOptions { ResponseFormat = ChatResponseFormat.Json, Tools = [] },
+                new ChatOptions
+                {
+                    Reasoning = new ReasoningOptions { Effort = ReasoningEffort.High },
+                    ResponseFormat = ChatResponseFormat.Json,
+                    Tools = [],
+                },
                 cancellationToken
             )
             .WaitAsync(cancellationToken);

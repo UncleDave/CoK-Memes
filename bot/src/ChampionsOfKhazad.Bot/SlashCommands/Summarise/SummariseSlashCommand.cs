@@ -2,6 +2,7 @@
 using ChampionsOfKhazad.Bot.GenAi;
 using Discord;
 using MediatR;
+using Microsoft.Extensions.AI;
 
 namespace ChampionsOfKhazad.Bot;
 
@@ -48,6 +49,7 @@ public class SummariseSlashCommand(BotContext botContext, ICompletionService com
                     formattedMessages
                 )
             ),
+            ReasoningEffort.High,
             cancellationToken
         );
 

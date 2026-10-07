@@ -68,6 +68,7 @@ public class PersonalityBaseTests
         await personality.InvokeAsync(new ChatHistory(), new TestMessageContext(), TestContext.Current.CancellationToken);
 
         Assert.Contains(chatClient.Options!.Tools!, tool => tool is HostedWebSearchTool);
+        Assert.Equal(ReasoningEffort.Medium, chatClient.Options.Reasoning?.Effort);
         Assert.Contains(chatClient.Options.Tools!, tool => tool.Name == "find_discord_channels");
         Assert.Contains(chatClient.Options.Tools!, tool => tool.Name == "search_discord_messages");
         Assert.Contains(chatClient.Options.Tools!, tool => tool.Name == "read_discord_messages");
@@ -86,6 +87,7 @@ public class PersonalityBaseTests
         await personality.InvokeAsync(new ChatHistory(), new TestMessageContext(), TestContext.Current.CancellationToken);
 
         Assert.DoesNotContain(chatClient.Options!.Tools!, tool => tool is HostedWebSearchTool);
+        Assert.Equal(ReasoningEffort.Medium, chatClient.Options.Reasoning?.Effort);
         Assert.DoesNotContain(chatClient.Options.Tools!, tool => tool.Name == "find_discord_channels");
         Assert.DoesNotContain(chatClient.Options.Tools!, tool => tool.Name == "search_discord_messages");
         Assert.DoesNotContain(chatClient.Options.Tools!, tool => tool.Name == "read_discord_messages");

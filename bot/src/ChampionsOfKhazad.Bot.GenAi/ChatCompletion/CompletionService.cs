@@ -27,4 +27,12 @@ internal class CompletionService(
 
         return response.Text;
     }
+
+    public async Task<string> InvokeAsync(ChatHistory chatHistory, ReasoningEffort reasoningEffort, CancellationToken cancellationToken = default)
+    {
+        var options = new ChatOptions { Reasoning = new ReasoningOptions { Effort = reasoningEffort } };
+        var response = await chatClient.GetResponseAsync(chatHistory, options, cancellationToken);
+
+        return response.Text;
+    }
 }

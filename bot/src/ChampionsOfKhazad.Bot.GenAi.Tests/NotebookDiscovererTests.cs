@@ -83,6 +83,7 @@ public class NotebookDiscovererTests
         await new NotebookDiscoverer(client).DiscoverAsync([source], 4, TestContext.Current.CancellationToken);
 
         Assert.Empty(client.Options!.Tools!);
+        Assert.Equal(ReasoningEffort.High, client.Options.Reasoning?.Effort);
         Assert.Equal(ChatResponseFormat.Json, client.Options.ResponseFormat);
         Assert.InRange(client.Options.MaxOutputTokens!.Value, 1, 8192);
         Assert.Equal(2, client.Messages!.Count);

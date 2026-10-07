@@ -9,7 +9,6 @@ internal class CompletionService(
     ContrarianPersonality contrarianPersonality,
     DisappointedTeacherPersonality disappointedTeacherPersonality,
     CondescendingTeacherPersonality condescendingTeacherPersonality,
-    NoNutNovemberExpertPersonality noNutNovemberExpertPersonality,
     RatExpertPersonality ratExpertPersonality,
     StonerBroPersonality stonerBroPersonality
 ) : ICompletionService
@@ -19,7 +18,6 @@ internal class CompletionService(
     public IPersonality Contrarian => contrarianPersonality;
     public IPersonality DisappointedTeacher => disappointedTeacherPersonality;
     public IPersonality CondescendingTeacher => condescendingTeacherPersonality;
-    public IPersonality NoNutNovemberExpert => noNutNovemberExpertPersonality;
     public IPersonality RatExpert => ratExpertPersonality;
     public IPersonality StonerBro => stonerBroPersonality;
 

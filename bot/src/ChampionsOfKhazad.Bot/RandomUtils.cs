@@ -16,10 +16,10 @@ public static class RandomUtils
         return value.ToOrdinal();
     }
 
-    public static (bool Success, int Roll) Roll(ushort chance, ushort max = 100)
+    public static (bool Success, double Roll) Roll(double chance, ushort max = 100, Random? random = null)
     {
-        var roll = Random.Shared.Next(1, max + 1);
-        var success = roll <= chance;
+        var roll = (random ?? Random.Shared).NextDouble() * max;
+        var success = roll < chance;
 
         return (success, roll);
     }

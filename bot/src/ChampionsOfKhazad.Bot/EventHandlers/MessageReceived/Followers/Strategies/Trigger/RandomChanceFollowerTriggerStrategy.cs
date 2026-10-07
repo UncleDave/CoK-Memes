@@ -2,7 +2,7 @@
 
 namespace ChampionsOfKhazad.Bot;
 
-public class RandomChanceFollowerTriggerStrategy(ushort chance, ILogger<RandomChanceFollowerTriggerStrategy> logger) : IFollowerTriggerStrategy
+public class RandomChanceFollowerTriggerStrategy(double chance, ILogger<RandomChanceFollowerTriggerStrategy> logger) : IFollowerTriggerStrategy
 {
     public bool ShouldTrigger(MessageReceived notification)
     {

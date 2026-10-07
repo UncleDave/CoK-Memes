@@ -7,7 +7,6 @@ public interface ICompletionService
     IPersonality Contrarian { get; }
     IPersonality DisappointedTeacher { get; }
     IPersonality CondescendingTeacher { get; }
-    IPersonality NoNutNovemberExpert { get; }
     IPersonality RatExpert { get; }
     IPersonality StonerBro { get; }
 

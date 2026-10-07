@@ -104,12 +104,8 @@ host.Services.AddOptionsWithEagerValidation<EmoteStreakHandlerOptions>(host.Conf
     .AddOptionsWithEagerValidation<RaidsSlashCommandOptions>(host.Configuration.GetSlashCommandSection(RaidsSlashCommandOptions.Key))
     .AddOptionsWithEagerValidation<SuggestSlashCommandOptions>(host.Configuration.GetSlashCommandSection(SuggestSlashCommandOptions.Key))
     .AddOptionsWithEagerValidation<AllFollowersOptions>(host.Configuration.GetSection(AllFollowersOptions.Key))
-    .AddOptionsWithEagerValidation<SycophantFollowerOptions>(host.Configuration.GetFollowerSection(SycophantFollowerOptions.Key))
-    .AddOptionsWithEagerValidation<StonerBroFollowerOptions>(host.Configuration.GetFollowerSection(StonerBroFollowerOptions.Key))
-    .AddOptionsWithEagerValidation<NoNutNovemberExpertFollowerOptions>(host.Configuration.GetFollowerSection(NoNutNovemberExpertFollowerOptions.Key))
+    .AddOptionsWithEagerValidation<ConversationFollowerOptions>(host.Configuration.GetFollowerSection(ConversationFollowerOptions.Key))
     .AddOptionsWithEagerValidation<RatFactsFollowerOptions>(host.Configuration.GetFollowerSection(RatFactsFollowerOptions.Key))
-    .AddOptionsWithEagerValidation<TeacherFollowerOptions>(host.Configuration.GetFollowerSection(TeacherFollowerOptions.Key))
-    .AddOptionsWithEagerValidation<GermanyBisFollowerOptions>(host.Configuration.GetFollowerSection(GermanyBisFollowerOptions.Key))
     .AddOptionsWithEagerValidation<DirectMessageHandlerOptions>(host.Configuration.GetEventHandlerSection(DirectMessageHandlerOptions.Key));
 
 // Hosted services stop in reverse order: disconnect Discord before draining the notification queue.

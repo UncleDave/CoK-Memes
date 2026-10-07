@@ -78,6 +78,9 @@ public static class MessageExtensions
                     }
                 }
 
+                if (content.Count == 0 && m == message)
+                    content.Add(new TextContent("The current Discord message contains no text or supported image content."));
+
                 if (content.Count != 0)
                 {
                     history.Add(

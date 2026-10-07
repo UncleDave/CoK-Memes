@@ -11,6 +11,11 @@ public record ConversationFollowerOptions
 
     [Range(0.0, 100.0)]
     public double Chance { get; init; }
+
+    public ulong? TargetRoleId { get; init; }
+
+    [Range(0.0, 100.0)]
+    public double TargetRoleChance { get; init; } = 1;
 }
 
 public class ConversationFollower(
@@ -22,7 +27,13 @@ public class ConversationFollower(
 )
     : StrategyFollower(
         allFollowersOptions.Value.IgnoreBotMentionsInChannelId,
-        new RandomChanceFollowerTriggerStrategy(options.Value.Chance, triggerStrategyLogger),
+        options.Value.TargetRoleId is { } targetRoleId
+            ? new ConditionalFollowerTriggerStrategy(
+                new TargetRoleFollowerTriggerStrategy(targetRoleId),
+                new RandomChanceFollowerTriggerStrategy(options.Value.TargetRoleChance, triggerStrategyLogger),
+                new RandomChanceFollowerTriggerStrategy(options.Value.Chance, triggerStrategyLogger)
+            )
+            : new RandomChanceFollowerTriggerStrategy(options.Value.Chance, triggerStrategyLogger),
         new SplitPersonalityFollowerResponseStrategy(
             [
                 completionService.Sycophant,

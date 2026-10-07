@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Reflection;
 using ChampionsOfKhazad.Bot.GenAi;
 using Discord;
 using Microsoft.Extensions.AI;
@@ -25,6 +26,57 @@ public class ConversationFollowerTests
             fixture.Replies,
             reply => Assert.Contains(reply, new[] { "Sycophant", "Contrarian", "DisappointedTeacher", "CondescendingTeacher", "StonerBro" })
         );
+    }
+
+    [Theory]
+    [InlineData(0, 100, 123UL)]
+    [InlineData(100, 0, 456UL)]
+    public async Task TargetRoleChanceReplacesTheDefaultChanceWithoutAnExtraRoll(double chance, double targetRoleChance, ulong respondingAuthorId)
+    {
+        var fixture = new FollowerFixture();
+        var follower = fixture.CreateFollower(chance, targetRoleId: FollowerFixture.TargetRoleId, targetRoleChance: targetRoleChance);
+
+        await follower.Handle(
+            new MessageReceived(fixture.CreateMessage(123, roleIds: [7, FollowerFixture.TargetRoleId, 8])),
+            TestContext.Current.CancellationToken
+        );
+        await follower.Handle(new MessageReceived(fixture.CreateMessage(456, roleIds: [7, 8])), TestContext.Current.CancellationToken);
+
+        Assert.Equal(new[] { respondingAuthorId }, fixture.RespondedTo);
+        Assert.Single(fixture.Replies);
+    }
+
+    [Theory]
+    [InlineData(0, 100, false)]
+    [InlineData(100, 0, true)]
+    public async Task AuthorsWithoutGuildRoleMetadataUseTheDefaultChance(double chance, double targetRoleChance, bool shouldRespond)
+    {
+        var fixture = new FollowerFixture();
+        var follower = fixture.CreateFollower(chance, targetRoleId: FollowerFixture.TargetRoleId, targetRoleChance: targetRoleChance);
+
+        await follower.Handle(new MessageReceived(fixture.CreateMessage(123)), TestContext.Current.CancellationToken);
+
+        Assert.Equal(shouldRespond ? 1 : 0, fixture.Replies.Count);
+    }
+
+    [Fact]
+    public async Task AddingAndRemovingTheTargetRoleChangesEligibility()
+    {
+        var fixture = new FollowerFixture();
+        var follower = fixture.CreateFollower(0, targetRoleId: FollowerFixture.TargetRoleId, targetRoleChance: 100);
+        var roles = new List<ulong>();
+        var notification = new MessageReceived(fixture.CreateMessage(123, roleIds: roles));
+
+        await follower.Handle(notification, TestContext.Current.CancellationToken);
+        Assert.Empty(fixture.Replies);
+
+        roles.Add(FollowerFixture.TargetRoleId);
+        await follower.Handle(notification, TestContext.Current.CancellationToken);
+        Assert.Single(fixture.Replies);
+
+        roles.Clear();
+        await follower.Handle(notification, TestContext.Current.CancellationToken);
+        Assert.Single(fixture.Replies);
     }
 
     [Fact]
@@ -130,7 +182,7 @@ public class ConversationFollowerTests
     }
 
     [Fact]
-    public void FractionalChanceBindsWithoutATargetUser()
+    public void FractionalChanceBindsWithoutATargetRole()
     {
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?> { ["Followers:Conversation:Chance"] = "0.1" })
@@ -140,6 +192,30 @@ public class ConversationFollowerTests
 
         Assert.NotNull(options);
         Assert.Equal(0.1, options.Chance);
+        Assert.Null(options.TargetRoleId);
+        Validator.ValidateObject(options, new ValidationContext(options), validateAllProperties: true);
+    }
+
+    [Fact]
+    public void TargetRoleOverrideBindsAlongsideTheDefaultChance()
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(
+                new Dictionary<string, string?>
+                {
+                    ["Followers:Conversation:Chance"] = "0.1",
+                    ["Followers:Conversation:TargetRoleId"] = "819778028576964618",
+                    ["Followers:Conversation:TargetRoleChance"] = "1",
+                }
+            )
+            .Build();
+
+        var options = configuration.GetFollowerSection(ConversationFollowerOptions.Key).Get<ConversationFollowerOptions>();
+
+        Assert.NotNull(options);
+        Assert.Equal(0.1, options.Chance);
+        Assert.Equal(819778028576964618UL, options.TargetRoleId);
+        Assert.Equal(1, options.TargetRoleChance);
         Validator.ValidateObject(options, new ValidationContext(options), validateAllProperties: true);
     }
 
@@ -153,19 +229,42 @@ public class ConversationFollowerTests
         Assert.Throws<ValidationException>(() => Validator.ValidateObject(options, new ValidationContext(options), validateAllProperties: true));
     }
 
+    [Theory]
+    [InlineData(-0.1)]
+    [InlineData(100.1)]
+    public void TargetRoleChanceMustBeAValidPercentage(double chance)
+    {
+        var options = new ConversationFollowerOptions { TargetRoleChance = chance };
+
+        Assert.Throws<ValidationException>(() => Validator.ValidateObject(options, new ValidationContext(options), validateAllProperties: true));
+    }
+
     private sealed class FollowerFixture
     {
         public const ulong ChannelId = 100;
         public const ulong BotId = 9;
+        public const ulong TargetRoleId = 819778028576964618;
         public List<string> Replies { get; } = [];
         public List<ulong> RespondedTo { get; } = [];
         public List<IMessage> History { get; } = [];
         public List<ChatHistory> ReceivedHistories { get; } = [];
 
-        public ConversationFollower CreateFollower(double chance, ulong ignoreBotMentionsInChannelId = 0) =>
+        public ConversationFollower CreateFollower(
+            double chance,
+            ulong ignoreBotMentionsInChannelId = 0,
+            ulong? targetRoleId = null,
+            double targetRoleChance = 1
+        ) =>
             new(
                 Options.Create(new AllFollowersOptions { IgnoreBotMentionsInChannelId = ignoreBotMentionsInChannelId }),
-                Options.Create(new ConversationFollowerOptions { Chance = chance }),
+                Options.Create(
+                    new ConversationFollowerOptions
+                    {
+                        Chance = chance,
+                        TargetRoleId = targetRoleId,
+                        TargetRoleChance = targetRoleChance,
+                    }
+                ),
                 DiscordConversationFixture.Stub<ICompletionService>(
                     (method, _) =>
                         method.Name switch
@@ -187,18 +286,21 @@ public class ConversationFollowerTests
             bool mentionBot = false,
             IMessageChannel? channel = null,
             string content = "A message from anyone",
-            IReadOnlyCollection<IAttachment>? attachments = null
+            IReadOnlyCollection<IAttachment>? attachments = null,
+            IReadOnlyCollection<ulong>? roleIds = null
         )
         {
-            var author = DiscordConversationFixture.Stub<IUser>(
-                (method, _) =>
-                    method.Name switch
-                    {
-                        "get_Id" => authorId,
-                        "get_GlobalName" or "get_Username" => "Raider",
-                        _ => throw new NotSupportedException(method.Name),
-                    }
-            );
+            object? AuthorCall(MethodInfo method, object?[]? _) =>
+                method.Name switch
+                {
+                    "get_Id" => authorId,
+                    "get_GlobalName" or "get_Username" or "get_DisplayName" => "Raider",
+                    "get_RoleIds" => roleIds,
+                    _ => throw new NotSupportedException(method.Name),
+                };
+            IUser author = roleIds is null
+                ? DiscordConversationFixture.Stub<IUser>(AuthorCall)
+                : DiscordConversationFixture.Stub<IGuildUser>(AuthorCall);
             channel ??= DiscordConversationFixture.Stub<ITextChannel>(
                 (method, args) =>
                     method.Name switch

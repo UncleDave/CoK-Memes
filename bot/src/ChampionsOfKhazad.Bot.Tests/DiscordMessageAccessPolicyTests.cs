@@ -3,6 +3,23 @@ namespace ChampionsOfKhazad.Bot.Tests;
 public class DiscordMessageAccessPolicyTests
 {
     [Fact]
+    public void BackgroundAccessRequiresNormalMemberAndBotReadabilityWithoutARequesterOrEveryoneAudience()
+    {
+        var channels = new[]
+        {
+            new DiscordMessageAccessPolicy.ChannelCandidate(1, true, false, false, true),
+            new DiscordMessageAccessPolicy.ChannelCandidate(2, false, false, true, true),
+            new DiscordMessageAccessPolicy.ChannelCandidate(3, true, true, true, false),
+            new DiscordMessageAccessPolicy.ChannelCandidate(4, true, true, false, true),
+        };
+
+        var result = DiscordMessageAccessPolicy.GetBackgroundSourceChannelIds(channels);
+
+        Assert.Equal(new ulong[] { 1, 4 }, result.Order());
+        Assert.Equal(3UL, Assert.Single(DiscordMessageAccessPolicy.GetAllowedSourceChannelIds(channels, invokingChannelEveryoneCanRead: true)));
+    }
+
+    [Fact]
     public void OfficerOnlyChannelsAreExcluded()
     {
         var channels = new[]

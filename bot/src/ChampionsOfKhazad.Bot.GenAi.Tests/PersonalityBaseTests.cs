@@ -34,6 +34,14 @@ public class PersonalityBaseTests
             Assert.Contains("The current author's Discord user ID is 1.", chatClient.Messages[0].Text);
             Assert.Contains("respond only to the message marked currentRequest", chatClient.Messages[0].Text);
             Assert.Contains("do not reconstruct that closed conversation with tools", chatClient.Messages[0].Text);
+            Assert.Contains("consider whether the conversation contains a useful new", chatClient.Messages[0].Text);
+            Assert.Contains("it need not already be a running joke", chatClient.Messages[0].Text);
+            Assert.Contains("Attribute firsthand reports as reports", chatClient.Messages[0].Text);
+            Assert.Contains("even if it happened only once", chatClient.Messages[0].Text);
+            Assert.Contains(
+                "single clear human message or one-off incident",
+                chatClient.Options.Tools!.Single(tool => tool.Name == "remember_note").Description
+            );
             Assert.Equal("Earlier angry reply", chatClient.Messages[1].Text);
         }
     }

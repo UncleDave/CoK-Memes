@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace ChampionsOfKhazad.Bot.GenAi;
 
@@ -9,9 +10,12 @@ public class NotebookService(
     INotebookEvaluator evaluator,
     INotebookReviewer reviewer,
     TimeProvider clock,
-    ILogger<NotebookService> logger
+    ILogger<NotebookService> logger,
+    INotebookBackgroundSourceReader? backgroundSourceReader = null,
+    IOptions<NotebookObserverOptions>? observerOptions = null
 )
 {
+    private readonly NotebookObserverOptions _observerOptions = observerOptions?.Value ?? new();
     public const int MaximumActiveNotes = 100;
     public const int DailyGuildLimit = 10;
     public const int DailyMemberLimit = 3;
@@ -21,8 +25,10 @@ public class NotebookService(
     public const int MaximumSearchCandidates = 10;
     public const int MaximumSearchResults = 5;
     public const int MaximumSearchesPerRequest = 3;
+    public const int MaximumDiagnosticAttempts = 100;
     public static readonly TimeSpan SearchTimeout = TimeSpan.FromSeconds(10);
     public static readonly TimeSpan WriteTimeout = TimeSpan.FromMinutes(2);
+    public static readonly TimeSpan DiagnosticTimeout = TimeSpan.FromSeconds(2);
 
     public async Task<string> RememberAsync(
         string subject,
@@ -34,8 +40,74 @@ public class NotebookService(
         CancellationToken cancellationToken
     )
     {
-        if (context.ChannelId is null)
-            return "Notebook writes are only available in guild chat.";
+        var result = await RememberWithDiagnosticsAsync(
+            subject,
+            kind,
+            content,
+            reason,
+            sourceUrls,
+            context,
+            NotebookOrigin.Interactive,
+            null,
+            cancellationToken
+        );
+        return result.Message;
+    }
+
+    public Task<NotebookWriteResult> RememberObservedAsync(NotebookProposal proposal, string scanId, CancellationToken cancellationToken) =>
+        RememberWithDiagnosticsAsync(
+            proposal.Subject,
+            proposal.Kind,
+            proposal.Content,
+            proposal.Reason,
+            proposal.SourceUrls,
+            null,
+            NotebookOrigin.Background,
+            scanId,
+            cancellationToken
+        );
+
+    private async Task<NotebookWriteResult> RememberWithDiagnosticsAsync(
+        string subject,
+        string kind,
+        string content,
+        string reason,
+        string[] sourceUrls,
+        IMessageContext? context,
+        NotebookOrigin origin,
+        string? scanId,
+        CancellationToken cancellationToken
+    )
+    {
+        try
+        {
+            var result = await RememberCoreAsync(subject, kind, content, reason, sourceUrls, context, origin, scanId, cancellationToken);
+            await RecordWriteAttemptAsync(result.Outcome, result.RejectionCategory, origin);
+            return new NotebookWriteResult(result.Message, result.Outcome, result.RejectionCategory);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            await RecordWriteAttemptAsync(NotebookWriteOutcome.Cancelled, null, origin);
+            throw;
+        }
+    }
+
+    private async Task<(string Message, NotebookWriteOutcome Outcome, NotebookRejectionCategory? RejectionCategory)> RememberCoreAsync(
+        string subject,
+        string kind,
+        string content,
+        string reason,
+        string[] sourceUrls,
+        IMessageContext? context,
+        NotebookOrigin origin,
+        string? scanId,
+        CancellationToken cancellationToken
+    )
+    {
+        if (origin == NotebookOrigin.Interactive && context?.ChannelId is null)
+            return ("Notebook writes are only available in guild chat.", NotebookWriteOutcome.InvalidInput, null);
+        if (origin == NotebookOrigin.Background && backgroundSourceReader is null)
+            return ("Background notebook evidence reading is unavailable.", NotebookWriteOutcome.WriteBlocked, null);
         if (
             string.IsNullOrWhiteSpace(subject)
             || subject.Length > 80
@@ -48,20 +120,28 @@ public class NotebookService(
             || sourceUrls.Length is < 1 or > 3
             || sourceUrls.Any(url => string.IsNullOrWhiteSpace(url) || url.Length > 200)
         )
-            return "Invalid note. Use a subject up to 80 characters, observation/joke, content up to 400, reason up to 300, and 1–3 Discord message URLs.";
+            return (
+                "Invalid note. Use a subject up to 80 characters, observation/joke, content up to 400, reason up to 300, and 1–3 Discord message URLs.",
+                NotebookWriteOutcome.InvalidInput,
+                null
+            );
 
         using var deadline = new CancellationTokenSource(WriteTimeout, clock);
         using var operationCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, deadline.Token);
         var operationToken = operationCancellation.Token;
         try
         {
-            var now = clock.GetUtcNow().UtcDateTime;
             var state = await store.GetAsync(operationToken);
-            var limit = GetLimitError(state, context.UserId, now);
+            var now = clock.GetUtcNow().UtcDateTime;
+            var userId = context?.UserId ?? 0;
+            var limit = GetOwnershipError(state, origin, scanId, now) ?? GetLimitError(state, userId, origin, now);
             if (limit is not null)
-                return limit;
+                return (limit, NotebookWriteOutcome.WriteBlocked, null);
 
-            var sources = await sourceReader.ReadSourcesAsync(sourceUrls, context, operationToken).WaitAsync(operationToken);
+            var sources =
+                origin == NotebookOrigin.Background
+                    ? await backgroundSourceReader!.ReadSourcesAsync(sourceUrls, operationToken).WaitAsync(operationToken)
+                    : await sourceReader.ReadSourcesAsync(sourceUrls, context!, operationToken).WaitAsync(operationToken);
             if (
                 sources is null
                 || sources.Count == 0
@@ -76,11 +156,15 @@ public class NotebookService(
                     || !source.ViewHash.All(Uri.IsHexDigit)
                 )
             )
-                return "Not saved: sources must be verifiable human Discord messages from safe channels within the last seven days, with complete text up to 4,000 characters each.";
+                return (
+                    "Not saved: sources must be verifiable human Discord messages from safe channels within the last seven days, with complete text up to 4,000 characters each.",
+                    NotebookWriteOutcome.InvalidSources,
+                    null
+                );
 
             var candidate = new NotebookNote(
                 Guid.NewGuid().ToString("N"),
-                context.UserId,
+                userId,
                 subject.Trim(),
                 kind,
                 content.Trim(),
@@ -88,14 +172,17 @@ public class NotebookService(
                 sources,
                 now,
                 now.AddDays(LifetimeDays)
-            );
+            )
+            {
+                Origin = origin,
+            };
             if (IsDuplicate(state, candidate, now))
-                return "Not saved: this note or its source is already in the notebook audit history.";
+                return ("Not saved: this note or its source is already in the notebook audit history.", NotebookWriteOutcome.Duplicate, null);
 
             // Charge the evaluation before making AI calls. Rejections, failures and stale reviews still use the budget.
-            var reservation = await ReserveEvaluationAsync(candidate, operationToken);
+            var reservation = await ReserveEvaluationAsync(candidate, scanId, operationToken);
             if (reservation.Error is not null)
-                return reservation.Error;
+                return (reservation.Error, NotebookWriteOutcome.WriteBlocked, null);
             state = reservation.State!;
 
             // Pending notes may activate later, and discarded memories must not be reintroduced as paraphrases.
@@ -104,26 +191,41 @@ public class NotebookService(
                 .WaitAsync(operationToken);
             if (!assessment.Accept)
                 // The reviewer sees existing notes from multiple channel audiences. Its explanation is not public chat data.
-                return "Not saved: independent review rejected this candidate. Do not retry or rephrase it.";
+                return (
+                    "Not saved: independent review rejected this candidate. Do not retry or rephrase it.",
+                    NotebookWriteOutcome.ReviewRejected,
+                    assessment.RejectionCategory
+                );
 
             candidate = candidate with { ReviewReason = assessment.Reason };
-            var commitError = await CommitReviewedNoteAsync(candidate, state.ReviewRevision, operationToken);
+            var commitError = await CommitReviewedNoteAsync(candidate, state.ReviewRevision, scanId, operationToken);
             if (commitError is not null)
-                return commitError;
+                return (commitError, NotebookWriteOutcome.CommitRejected, null);
+
+            if (origin == NotebookOrigin.Background)
+            {
+                var current = await store.GetAsync(operationToken).WaitAsync(operationToken);
+                var ownershipError = GetOwnershipError(current, origin, scanId, clock.GetUtcNow().UtcDateTime);
+                if (ownershipError is not null)
+                    return (ownershipError, NotebookWriteOutcome.CommitRejected, null);
+            }
 
             // Fail closed: an undelivered review never becomes a usable memory.
             if (!await reviewer.NotifyAsync(candidate, operationToken).WaitAsync(operationToken))
-                return "The review DM could not be delivered. The note is audit-only and will not be used as memory.";
+                return (
+                    "The review DM could not be delivered. The note is audit-only and will not be used as memory.",
+                    NotebookWriteOutcome.ReviewDeliveryFailed,
+                    null
+                );
 
-            await UpdateAsync(
-                current =>
-                    current with
-                    {
-                        Notes = current.Notes.Select(note => note.Id == candidate.Id ? note with { ReviewDelivered = true } : note).ToArray(),
-                    },
-                operationToken
+            var activationError = await ActivateReviewedNoteAsync(candidate, scanId, operationToken);
+            if (activationError is not null)
+                return (activationError, NotebookWriteOutcome.CommitRejected, null);
+            return (
+                $"Notebook entry {candidate.Id} recorded for {LifetimeDays} days and DM'd to the admin for review. It is tentative, not canon.",
+                NotebookWriteOutcome.Saved,
+                null
             );
-            return $"Notebook entry {candidate.Id} recorded for {LifetimeDays} days and DM'd to the admin for review. It is tentative, not canon.";
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -131,12 +233,51 @@ public class NotebookService(
         }
         catch (OperationCanceledException) when (deadline.IsCancellationRequested)
         {
-            return "Notebook write/review reached its two-minute time limit. No success is confirmed; do not use this candidate as memory without a successful lookup.";
+            return (
+                "Notebook write/review reached its two-minute time limit. No success is confirmed; do not use this candidate as memory without a successful lookup.",
+                NotebookWriteOutcome.TimedOut,
+                null
+            );
         }
         catch (Exception exception)
         {
-            logger.LogError(exception, "Notebook write/review failed for user {UserId}", context.UserId);
-            return "Notebook write or review failed. Do not claim the note was saved or use it as memory without a successful lookup.";
+            logger.LogError(exception, "Notebook {Origin} write/review failed for user {UserId}", origin, context?.UserId);
+            return (
+                "Notebook write or review failed. Do not claim the note was saved or use it as memory without a successful lookup.",
+                NotebookWriteOutcome.Failed,
+                null
+            );
+        }
+    }
+
+    private async Task RecordWriteAttemptAsync(
+        NotebookWriteOutcome outcome,
+        NotebookRejectionCategory? rejectionCategory = null,
+        NotebookOrigin origin = NotebookOrigin.Interactive
+    )
+    {
+        using var deadline = new CancellationTokenSource(DiagnosticTimeout, clock);
+        try
+        {
+            var now = clock.GetUtcNow().UtcDateTime;
+            await UpdateAsync(
+                    state =>
+                        state with
+                        {
+                            WriteAttempts = state
+                                .WriteAttempts.Append(new NotebookWriteAttempt(now, outcome, rejectionCategory) { Origin = origin })
+                                .Where(attempt => attempt.CompletedAtUtc > now.AddDays(-1))
+                                .OrderBy(attempt => attempt.CompletedAtUtc)
+                                .TakeLast(MaximumDiagnosticAttempts)
+                                .ToArray(),
+                        },
+                    deadline.Token
+                )
+                .WaitAsync(deadline.Token);
+        }
+        catch (Exception exception)
+        {
+            logger.LogWarning(exception, "Notebook diagnostic outcome {Outcome} could not be recorded", outcome);
         }
     }
 
@@ -247,7 +388,22 @@ public class NotebookService(
     public Task<NotebookState> GetAsync(CancellationToken cancellationToken) => store.GetAsync(cancellationToken);
 
     public Task SetPausedAsync(bool paused, CancellationToken cancellationToken) =>
-        UpdateAsync(state => state with { Paused = paused, ReviewRevision = state.ReviewRevision + 1 }, cancellationToken);
+        UpdateAsync(
+            state =>
+                state with
+                {
+                    Paused = paused,
+                    ReviewRevision = state.ReviewRevision + 1,
+                    Observer =
+                        paused && state.Observer.ActiveScanId is not null
+                            ? state.Observer with
+                            {
+                                LeaseExpiresAtUtc = clock.GetUtcNow().UtcDateTime,
+                            }
+                            : state.Observer,
+                },
+            cancellationToken
+        );
 
     public async Task<bool> DiscardAsync(string id, CancellationToken cancellationToken)
     {
@@ -278,13 +434,17 @@ public class NotebookService(
         throw new InvalidOperationException("Notebook is busy; update could not be applied.");
     }
 
-    private async Task<(NotebookState? State, string? Error)> ReserveEvaluationAsync(NotebookNote candidate, CancellationToken cancellationToken)
+    private async Task<(NotebookState? State, string? Error)> ReserveEvaluationAsync(
+        NotebookNote candidate,
+        string? scanId,
+        CancellationToken cancellationToken
+    )
     {
         for (var attempt = 0; attempt < 10; attempt++)
         {
-            var now = clock.GetUtcNow().UtcDateTime;
             var state = await store.GetAsync(cancellationToken);
-            var limit = GetLimitError(state, candidate.RequestedBy, now);
+            var now = clock.GetUtcNow().UtcDateTime;
+            var limit = GetOwnershipError(state, candidate.Origin, scanId, now) ?? GetLimitError(state, candidate.RequestedBy, candidate.Origin, now);
             if (limit is not null)
                 return (null, limit);
             if (IsDuplicate(state, candidate, now))
@@ -296,7 +456,7 @@ public class NotebookService(
                 EvaluationAttempts =
                 [
                     .. state.EvaluationAttempts.Where(attempt => attempt.AttemptedAtUtc > now.AddDays(-1)),
-                    new NotebookEvaluationAttempt(candidate.RequestedBy, now),
+                    new NotebookEvaluationAttempt(candidate.RequestedBy, now) { Origin = candidate.Origin },
                 ],
             };
             if (await store.TrySaveAsync(reserved, cancellationToken))
@@ -305,7 +465,12 @@ public class NotebookService(
         return (null, "Not saved: the notebook is busy; an evaluation slot could not be reserved.");
     }
 
-    private async Task<string?> CommitReviewedNoteAsync(NotebookNote candidate, long reviewRevision, CancellationToken cancellationToken)
+    private async Task<string?> CommitReviewedNoteAsync(
+        NotebookNote candidate,
+        long reviewRevision,
+        string? scanId,
+        CancellationToken cancellationToken
+    )
     {
         for (var attempt = 0; attempt < 10; attempt++)
         {
@@ -313,9 +478,12 @@ public class NotebookService(
             if (current.ReviewRevision != reviewRevision)
                 return "Not saved: the notebook changed during review. Try again on a later request.";
             var now = clock.GetUtcNow().UtcDateTime;
+            var ownershipError = GetOwnershipError(current, candidate.Origin, scanId, now);
+            if (ownershipError is not null)
+                return ownershipError;
             if (candidate.ExpiresAtUtc <= now || candidate.Sources.Any(source => source.TimestampUtc < now.AddDays(-7)))
                 return "Not saved: the candidate or its sources expired before the review could be committed.";
-            var limit = GetWriteLimitError(current, candidate.RequestedBy, now);
+            var limit = GetWriteLimitError(current, candidate.RequestedBy, candidate.Origin, now);
             if (limit is not null)
                 return limit;
             // Merge with the latest quota ledger without accepting a review based on changed notes or controls.
@@ -338,23 +506,88 @@ public class NotebookService(
         return "Not saved: the notebook is busy; the reviewed note could not be committed.";
     }
 
-    private static string? GetLimitError(NotebookState state, ulong userId, DateTime now)
+    private async Task<string?> ActivateReviewedNoteAsync(NotebookNote candidate, string? scanId, CancellationToken cancellationToken)
     {
-        var writeLimit = GetWriteLimitError(state, userId, now);
+        for (var retry = 0; retry < 10; retry++)
+        {
+            var current = await store.GetAsync(cancellationToken).WaitAsync(cancellationToken);
+            var ownershipError = GetOwnershipError(current, candidate.Origin, scanId, clock.GetUtcNow().UtcDateTime);
+            if (ownershipError is not null)
+                return "The note is audit-only: background observation stopped before activation could be confirmed.";
+            var updated = current with
+            {
+                Notes = current.Notes.Select(note => note.Id == candidate.Id ? note with { ReviewDelivered = true } : note).ToArray(),
+            };
+            if (await store.TrySaveAsync(updated, cancellationToken).WaitAsync(cancellationToken))
+                return null;
+        }
+        return "The note is audit-only: review delivery succeeded but activation could not be confirmed.";
+    }
+
+    private static string? GetOwnershipError(NotebookState state, NotebookOrigin origin, string? scanId, DateTime now)
+    {
+        if (origin != NotebookOrigin.Background)
+            return null;
+        if (state.Paused)
+            return "Not saved: background observation is paused by the admin.";
+        return (
+            string.IsNullOrWhiteSpace(scanId)
+            || state.Observer.ActiveScanId != scanId
+            || state.Observer.LeaseExpiresAtUtc is not { } expiry
+            || expiry <= now
+        )
+            ? "Not saved: background observation scan expired or was replaced."
+            : null;
+    }
+
+    public bool CanRememberBackground(NotebookState state, DateTime now) => GetLimitError(state, 0, NotebookOrigin.Background, now) is null;
+
+    public int GetRemainingBackgroundReviews(NotebookState state, DateTime now)
+    {
+        var evaluations = state.EvaluationAttempts.Where(attempt => attempt.AttemptedAtUtc > now.AddDays(-1)).ToArray();
+        return Math.Max(
+            0,
+            Math.Min(
+                DailyGuildEvaluationLimit - evaluations.Length,
+                _observerOptions.DailyReviewLimit - evaluations.Count(attempt => attempt.Origin == NotebookOrigin.Background)
+            )
+        );
+    }
+
+    private string? GetLimitError(NotebookState state, ulong userId, NotebookOrigin origin, DateTime now)
+    {
+        var writeLimit = GetWriteLimitError(state, userId, origin, now);
         if (writeLimit is not null)
             return writeLimit;
         var evaluations = state.EvaluationAttempts.Where(attempt => attempt.AttemptedAtUtc > now.AddDays(-1)).ToArray();
-        if (evaluations.Length >= DailyGuildEvaluationLimit || evaluations.Count(attempt => attempt.UserId == userId) >= DailyMemberEvaluationLimit)
+        if (
+            evaluations.Length >= DailyGuildEvaluationLimit
+            || (
+                origin == NotebookOrigin.Background
+                    ? evaluations.Count(attempt => attempt.Origin == NotebookOrigin.Background) >= _observerOptions.DailyReviewLimit
+                    : evaluations.Count(attempt => attempt.Origin == NotebookOrigin.Interactive && attempt.UserId == userId)
+                        >= DailyMemberEvaluationLimit
+            )
+        )
             return "Notebook evaluation limit reached. Rejections and failed evaluations still count towards the rolling 24-hour budget.";
         return null;
     }
 
-    private static string? GetWriteLimitError(NotebookState state, ulong userId, DateTime now)
+    private string? GetWriteLimitError(NotebookState state, ulong userId, NotebookOrigin origin, DateTime now)
     {
         if (state.Paused)
             return "Notebook writes are paused by the admin.";
+        if (origin == NotebookOrigin.Background && !_observerOptions.Enabled)
+            return "Background notebook observation is disabled.";
         var recent = state.Notes.Where(note => note.CreatedAtUtc > now.AddDays(-1)).ToArray();
-        if (recent.Length >= DailyGuildLimit || recent.Count(note => note.RequestedBy == userId) >= DailyMemberLimit)
+        if (
+            recent.Length >= DailyGuildLimit
+            || (
+                origin == NotebookOrigin.Background
+                    ? recent.Count(note => note.Origin == NotebookOrigin.Background) >= _observerOptions.DailyNoteLimit
+                    : recent.Count(note => note.Origin == NotebookOrigin.Interactive && note.RequestedBy == userId) >= DailyMemberLimit
+            )
+        )
             return "Notebook write limit reached. Discarding a note does not reset the rolling 24-hour budget.";
         if (state.Notes.Count(note => note.DiscardedAtUtc is null && note.ExpiresAtUtc > now) >= MaximumActiveNotes)
             return "The notebook is full. Wait for expiry or admin review; do not replace other notes.";

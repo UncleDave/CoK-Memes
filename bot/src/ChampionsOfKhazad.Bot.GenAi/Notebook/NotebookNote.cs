@@ -12,6 +12,7 @@ public record NotebookNote(
     DateTime ExpiresAtUtc
 )
 {
+    public NotebookOrigin Origin { get; init; }
     public bool ReviewDelivered { get; init; }
     public string ReviewReason { get; init; } = string.Empty;
     public DateTime? DiscardedAtUtc { get; init; }

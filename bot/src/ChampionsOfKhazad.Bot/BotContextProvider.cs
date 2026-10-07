@@ -3,4 +3,5 @@
 public class BotContextProvider
 {
     public BotContext? BotContext { get; set; }
+    public bool IsReady { get; set; }
 }

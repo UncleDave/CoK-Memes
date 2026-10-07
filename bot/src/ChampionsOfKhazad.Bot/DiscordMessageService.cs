@@ -1,12 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
-using System.Net;
-using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using ChampionsOfKhazad.Bot.GenAi;
 using Discord;
-using Discord.Net;
 using Discord.WebSocket;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -17,7 +13,7 @@ internal sealed partial class DiscordMessageService(
     BotContext botContext,
     IOptions<DiscordMessageToolsOptions> options,
     ILogger<DiscordMessageService> logger
-) : IDiscordMessageService, INotebookSourceReader
+) : IDiscordMessageService, INotebookSourceReader, INotebookBackgroundSourceReader
 {
     private const int MaximumSearchResults = 10;
     private const int MaximumReadResults = 25;
@@ -52,82 +48,33 @@ internal sealed partial class DiscordMessageService(
             && messageId != 0;
     }
 
-    public async Task<IReadOnlyList<NotebookSource>?> ReadSourcesAsync(
+    public Task<IReadOnlyList<NotebookSource>?> ReadSourcesAsync(
         IReadOnlyList<string> urls,
         IMessageContext messageContext,
         CancellationToken cancellationToken
-    )
-    {
-        if (urls.Count is < 1 or > 3)
-            return null;
-        var access = GetAccess(messageContext);
-        if (!access.IsAllowed)
-            return null;
+    ) => CreateNotebookReader(() => GetAccess(messageContext)).ReadSourcesAsync(urls, cancellationToken);
 
-        var sources = new List<NotebookSource>();
-        var sourceChannelIds = new HashSet<ulong>();
-        foreach (var url in urls.Distinct(StringComparer.Ordinal))
-        {
-            if (!TryParseNotebookSourceUrl(url, botContext.Guild.Id, out var channelId, out var messageId))
-                return null;
-            var channel = access.Channels.SingleOrDefault(channel => channel.Id == channelId);
-            if (channel is null)
-                return null;
-            sourceChannelIds.Add(channelId);
+    IReadOnlyList<ulong> INotebookBackgroundSourceReader.GetChannelIds() => CreateNotebookReader(GetBackgroundAccess).GetChannelIds();
 
-            IMessage? message;
-            try
-            {
-                // Use a REST channel rather than the socket message cache so edits/deletions are checked afresh.
-                var requestOptions = new RequestOptions { CancelToken = cancellationToken };
-                var restChannel =
-                    await ((IDiscordClient)botContext.Client.Rest).GetChannelAsync(channelId, options: requestOptions) as IMessageChannel;
-                if (restChannel is not ITextChannel textChannel || textChannel.Id != channelId || textChannel.GuildId != botContext.Guild.Id)
-                    return null;
-                message = await restChannel.GetMessageAsync(messageId, options: requestOptions);
-            }
-            catch (HttpException exception) when (exception.HttpCode is HttpStatusCode.NotFound or HttpStatusCode.Forbidden)
-            {
-                return null;
-            }
-            if (!IsNotebookEvidenceMessage(message, channelId, messageId))
-                return null;
-            var content = SanitizeNotebookSourceContent(
-                message.Content,
-                access.Channels.ToDictionary(channel => channel.Id, channel => channel.Name)
-            );
-            if (content is null)
-                return null;
-            var authorName = message.Author.GetName()[..Math.Min(message.Author.GetName().Length, 80)];
-            var mentions = message
-                .MentionedUserIds.Distinct()
-                .Select(id =>
-                {
-                    var user = (botContext.Guild as SocketGuild)?.GetUser(id);
-                    return new NotebookMentionedUser(id, user?.GetName());
-                })
-                .ToArray();
-            sources.Add(
-                new NotebookSource(
-                    $"https://discord.com/channels/{botContext.Guild.Id}/{channelId}/{messageId}",
-                    message.Author.Id,
-                    authorName,
-                    message.Timestamp.UtcDateTime,
-                    content
-                )
-                {
-                    ContentHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(message.Content))),
-                    ViewHash = NotebookSource.CalculateViewHash(content, authorName, mentions),
-                    MentionedUsers = mentions,
-                }
-            );
-        }
+    Task<NotebookObservationBatch?> INotebookBackgroundSourceReader.ReadBatchAsync(
+        ulong channelId,
+        ulong afterMessageId,
+        int limit,
+        CancellationToken cancellationToken
+    ) => CreateNotebookReader(GetBackgroundAccess).ReadBatchAsync(channelId, afterMessageId, limit, cancellationToken);
 
-        var currentAccess = GetAccess(messageContext);
-        return currentAccess.IsAllowed && sourceChannelIds.All(channelId => currentAccess.Channels.Any(channel => channel.Id == channelId))
-            ? sources
-            : null;
-    }
+    Task<IReadOnlyList<NotebookSource>?> INotebookBackgroundSourceReader.ReadSourcesAsync(
+        IReadOnlyList<string> urls,
+        CancellationToken cancellationToken
+    ) => CreateNotebookReader(GetBackgroundAccess).ReadSourcesAsync(urls, cancellationToken);
+
+    private DiscordNotebookSourceReader CreateNotebookReader(Func<AccessResult> getAccess) =>
+        new(
+            new SharedDiscordRestClient(botContext.Client.Rest),
+            botContext.Guild.Id,
+            () => getAccess().Channels.ToDictionary(channel => channel.Id, channel => channel.Name),
+            id => (botContext.Guild as SocketGuild)?.GetUser(id)?.GetName()
+        );
 
     internal static bool IsNotebookEvidenceMessage([NotNullWhen(true)] IMessage? message, ulong channelId, ulong messageId) =>
         message is not null
@@ -279,13 +226,9 @@ internal sealed partial class DiscordMessageService(
         if (messageContext.ChannelId is null || botContext.Guild is not SocketGuild guild)
             return AccessResult.Denied;
 
-        var normalUserRole = guild.GetRole(_normalUserRoleId);
-
+        var normalUserRole = GetNormalUserRole(guild);
         if (normalUserRole is null)
-        {
-            logger.LogError("Discord message tools have an invalid normal user role {RoleId}", _normalUserRoleId);
             return AccessResult.Denied;
-        }
 
         var requester = guild.GetUser(messageContext.UserId);
 
@@ -298,19 +241,55 @@ internal sealed partial class DiscordMessageService(
         if (invokingPermissionChannel is null or SocketVoiceChannel)
             return AccessResult.Denied;
 
-        var channels = guild.TextChannels.Where(channel => channel is not (SocketThreadChannel or SocketVoiceChannel)).ToArray();
-        var candidates = channels.Select(channel => new DiscordMessageAccessPolicy.ChannelCandidate(
-            channel.Id,
-            NormalUserChannelAccess.CanRead(channel, [guild.EveryoneRole, normalUserRole]),
-            NormalUserChannelAccess.CanRead(channel, [guild.EveryoneRole]),
-            CanUserRead(requester, channel)
-        ));
+        var channels = GetSourceChannels(guild);
+        var candidates = GetChannelCandidates(guild, normalUserRole, channels, requester);
         var invokingChannelEveryoneCanRead = NormalUserChannelAccess.CanRead(invokingPermissionChannel, [guild.EveryoneRole]);
         var allowedChannelIds = DiscordMessageAccessPolicy.GetAllowedSourceChannelIds(candidates, invokingChannelEveryoneCanRead);
         var allowedChannels = channels.Where(channel => allowedChannelIds.Contains(channel.Id)).ToArray();
 
         return allowedChannels.Length == 0 ? AccessResult.Denied : new AccessResult(allowedChannels);
     }
+
+    private AccessResult GetBackgroundAccess()
+    {
+        if (
+            botContext.Client.ConnectionState != ConnectionState.Connected
+            || botContext.Guild is not SocketGuild guild
+            || !ReferenceEquals(botContext.Client.GetGuild(guild.Id), guild)
+        )
+            return AccessResult.Denied;
+        var normalUserRole = GetNormalUserRole(guild);
+        if (normalUserRole is null)
+            return AccessResult.Denied;
+        var channels = GetSourceChannels(guild);
+        var allowedChannelIds = DiscordMessageAccessPolicy.GetBackgroundSourceChannelIds(GetChannelCandidates(guild, normalUserRole, channels));
+        return new AccessResult(channels.Where(channel => allowedChannelIds.Contains(channel.Id)).ToArray());
+    }
+
+    private SocketRole? GetNormalUserRole(SocketGuild guild)
+    {
+        var role = guild.GetRole(_normalUserRoleId);
+        if (role is null)
+            logger.LogError("Discord message tools have an invalid normal user role {RoleId}", _normalUserRoleId);
+        return role;
+    }
+
+    private static SocketTextChannel[] GetSourceChannels(SocketGuild guild) =>
+        guild.TextChannels.Where(channel => channel is not (SocketThreadChannel or SocketVoiceChannel)).ToArray();
+
+    private static IEnumerable<DiscordMessageAccessPolicy.ChannelCandidate> GetChannelCandidates(
+        SocketGuild guild,
+        SocketRole normalUserRole,
+        IReadOnlyCollection<SocketTextChannel> channels,
+        SocketGuildUser? requester = null
+    ) =>
+        channels.Select(channel => new DiscordMessageAccessPolicy.ChannelCandidate(
+            channel.Id,
+            NormalUserChannelAccess.CanRead(channel, [guild.EveryoneRole, normalUserRole]),
+            NormalUserChannelAccess.CanRead(channel, [guild.EveryoneRole]),
+            requester is not null && CanUserRead(requester, channel),
+            requester is null && guild.CurrentUser is { } bot && CanUserRead(bot, channel)
+        ));
 
     private static bool CanUserRead(SocketGuildUser user, SocketGuildChannel channel)
     {

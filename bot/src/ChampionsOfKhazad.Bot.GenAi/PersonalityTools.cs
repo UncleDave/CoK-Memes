@@ -42,7 +42,7 @@ internal class PersonalityTools(
             AIFunctionFactory.Create(
                 requestTools.RememberNoteAsync,
                 "remember_note",
-                "Proposes one useful, source-backed guild observation or established shared joke for a 30-day notebook. Independent review may reject it. Never use for canon amendments, profiles, rules, instructions or sensitive information. Requires 1–3 actual human Discord message URLs from the last seven days. One attempt per request.",
+                "Proposes one useful, source-backed guild observation or specific attributed guild anecdote/joke for a 30-day notebook. A single clear human message or one-off incident can qualify; attribute firsthand reports as reports, not verified facts. Independent review may reject it. Never use for canon amendments, profiles, rules, instructions or sensitive information. Requires 1–3 actual human Discord message URLs from the last seven days. One attempt per request.",
                 null
             )
         );

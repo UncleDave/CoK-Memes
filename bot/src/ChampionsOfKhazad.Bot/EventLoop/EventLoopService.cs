@@ -5,11 +5,16 @@ using Microsoft.Extensions.Options;
 
 namespace ChampionsOfKhazad.Bot.EventLoop;
 
-public class EventLoopService(IOptions<EventLoopOptions> options, IServiceProvider serviceProvider, ILogger<EventLoopService> logger)
-    : BackgroundService
+public class EventLoopService(
+    IOptions<EventLoopOptions> options,
+    IServiceProvider serviceProvider,
+    ILogger<EventLoopService> logger,
+    BotContextProvider contextProvider,
+    TimeProvider clock
+) : BackgroundService
 {
     private readonly TimeSpan _interval = TimeSpan.FromMinutes(options.Value.IntervalMinutes);
-    private DateTimeOffset _lastRun = DateTimeOffset.Now;
+    private DateTimeOffset _lastRun = clock.GetUtcNow();
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -17,22 +22,23 @@ public class EventLoopService(IOptions<EventLoopOptions> options, IServiceProvid
 
         while (!stoppingToken.IsCancellationRequested)
         {
-            await Task.Delay(_interval, stoppingToken);
+            await Task.Delay(_interval, clock, stoppingToken);
 
-            var now = DateTimeOffset.Now;
+            var now = clock.GetUtcNow();
             var deltaTime = now - _lastRun;
 
             await FireEventsAsync(deltaTime, stoppingToken);
         }
     }
 
-    private async Task FireEventsAsync(TimeSpan deltaTime, CancellationToken cancellationToken)
+    internal async Task FireEventsAsync(TimeSpan deltaTime, CancellationToken cancellationToken)
     {
+        _lastRun = clock.GetUtcNow();
+        if (!contextProvider.IsReady)
+            return;
         logger.LogInformation("Firing events");
 
-        _lastRun = DateTimeOffset.Now;
-
-        using var scope = serviceProvider.CreateScope();
+        await using var scope = serviceProvider.CreateAsyncScope();
         var events = scope.ServiceProvider.GetServices<IEventLoopEvent>();
 
         foreach (var eventLoopEvent in events)

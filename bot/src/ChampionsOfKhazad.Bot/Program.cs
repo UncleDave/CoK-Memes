@@ -117,6 +117,7 @@ host.Services.AddHostedService<BotService>()
     .AddScoped<NotebookDirectMessageCommand>()
     .AddScoped<INotebookReviewer, DiscordNotebookReviewer>()
     .AddScoped<INotebookSourceReader, DiscordMessageService>()
+    .AddScoped<INotebookBackgroundSourceReader, DiscordMessageService>()
     .AddScoped<LorekeeperChatHistoryBuilder>()
     .AddSingleton(serviceProvider => new SharedDiscordRestClient(serviceProvider.GetRequiredService<DiscordSocketClient>().Rest))
     .AddSingleton<BotContextProvider>()
@@ -132,6 +133,8 @@ host.Services.AddHostedService<EventLoopService>()
     .AddScoped<IEventLoopEvent, WordOfTheDayHintEvent>()
     .AddOptionsWithEagerValidation<WordOfTheDayHintEventOptions>(host.Configuration.GetEventLoopSection(WordOfTheDayHintEventOptions.Key))
     .AddScoped<IEventLoopEvent, WeekCheckEvent>()
-    .AddOptionsWithEagerValidation<WeekCheckEventOptions>(host.Configuration.GetEventLoopSection(WeekCheckEventOptions.Key));
+    .AddOptionsWithEagerValidation<WeekCheckEventOptions>(host.Configuration.GetEventLoopSection(WeekCheckEventOptions.Key))
+    .AddScoped<IEventLoopEvent, NotebookObservationEvent>()
+    .AddOptionsWithEagerValidation<NotebookObserverOptions>(host.Configuration.GetEventLoopSection(NotebookObserverOptions.Key));
 
 host.Build().Run();

@@ -1,10 +1,17 @@
 using ChampionsOfKhazad.Bot.GenAi;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace ChampionsOfKhazad.Bot;
 
-public class NotebookDirectMessageCommand(NotebookService notebook, TimeProvider clock, ILogger<NotebookDirectMessageCommand> logger)
+public class NotebookDirectMessageCommand(
+    NotebookService notebook,
+    TimeProvider clock,
+    ILogger<NotebookDirectMessageCommand> logger,
+    IOptions<NotebookObserverOptions>? observerOptions = null
+)
 {
+    private readonly NotebookObserverOptions _observerOptions = observerOptions?.Value ?? new();
     private const string Help =
         "Notebook commands: `notebook`, `notebook list [page]`, `notebook history [page]`, `notebook show <id>`, `notebook discard <id>`, `notebook pause`, `notebook resume`.";
 
@@ -48,9 +55,25 @@ public class NotebookDirectMessageCommand(NotebookService notebook, TimeProvider
         var state = await notebook.GetAsync(cancellationToken);
         var now = clock.GetUtcNow().UtcDateTime;
         if (parts.Length == 1)
+        {
+            var evaluations = state.EvaluationAttempts.Count(attempt => attempt.AttemptedAtUtc > now.AddDays(-1));
+            var attempts = state.WriteAttempts.Where(attempt => attempt.CompletedAtUtc > now.AddDays(-1)).ToArray();
+            var outcomes = attempts
+                .GroupBy(attempt => (attempt.Origin, attempt.Outcome, attempt.RejectionCategory))
+                .OrderBy(group => group.Key.Origin)
+                .ThenBy(group => group.Key.Outcome)
+                .ThenBy(group => group.Key.RejectionCategory)
+                .Select(group =>
+                    $"{group.Key.Origin}/{group.Key.Outcome}{(group.Key.RejectionCategory is { } category ? $"/{category}" : "")}: {group.Count()}"
+                );
             return $"Notebook writes: {(state.Paused ? "paused" : "enabled")}. {state.Notes.Count(note => note.IsActive(now))}/{NotebookService.MaximumActiveNotes} active notes. "
                 + $"Expiry: {NotebookService.LifetimeDays} days. Rolling daily saved-note limits: {NotebookService.DailyGuildLimit}/guild, {NotebookService.DailyMemberLimit}/member. "
-                + $"Evaluation attempts: {NotebookService.DailyGuildEvaluationLimit}/guild, {NotebookService.DailyMemberEvaluationLimit}/member (rejections and failures count).\n{Help}";
+                + $"Evaluation budget used in the last 24 hours: {evaluations}/{NotebookService.DailyGuildEvaluationLimit} guild limit; {NotebookService.DailyMemberEvaluationLimit}/member (rejections and failures count).\n"
+                + $"Recent completed proposals (last 24 hours, newest {NotebookService.MaximumDiagnosticAttempts} at most): {attempts.Length}. "
+                + (attempts.Length == 0 ? "No diagnostic outcomes recorded." : string.Join(", ", outcomes))
+                + $"\n{FormatObserver(state, now)}"
+                + $"\n{Help}";
+        }
         if (parts.Length == 3 && parts[1].Equals("show", StringComparison.OrdinalIgnoreCase))
         {
             var note = state.Notes.SingleOrDefault(note => note.Id.Equals(parts[2], StringComparison.OrdinalIgnoreCase));
@@ -75,5 +98,26 @@ public class NotebookDirectMessageCommand(NotebookService notebook, TimeProvider
                 + "\nInspect with `notebook show <id>`.";
         }
         return Help;
+    }
+
+    private string FormatObserver(NotebookState state, DateTime now)
+    {
+        var observer = state.Observer;
+        var discovery = observer.DiscoveryAttempts.Count(attempt => attempt > now.AddDays(-1));
+        var reviews = state.EvaluationAttempts.Count(attempt =>
+            attempt.Origin == NotebookOrigin.Background && attempt.AttemptedAtUtc > now.AddDays(-1)
+        );
+        var notes = state.Notes.Count(note => note.Origin == NotebookOrigin.Background && note.CreatedAtUtc > now.AddDays(-1));
+        var latest = observer.Scans.MaxBy(scan => scan.CompletedAtUtc);
+        var active = observer.ActiveScanId is not null && observer.LeaseExpiresAtUtc > now;
+        return $"Background observer: {(!_observerOptions.Enabled ? "disabled" : state.Paused ? "paused" : "enabled")}. "
+            + $"MTTH {_observerOptions.MeanTimeToHappenMinutes}m; cooldown {_observerOptions.CooldownMinutes}m; lookback {_observerOptions.LookbackMinutes}m. "
+            + $"Rolling 24-hour usage: discovery {discovery}/{_observerOptions.DailyDiscoveryLimit}, reviews {reviews}/{_observerOptions.DailyReviewLimit}, saved notes {notes}/{_observerOptions.DailyNoteLimit} (reviews/notes share guild limits). "
+            + $"{observer.Checkpoints.Count} channel checkpoints. Scan {(active ? "in progress" : "idle")}.\n"
+            + (
+                latest is null
+                    ? "No completed observer scans recorded."
+                    : $"Last observer scan: {latest.CompletedAtUtc:u}, {latest.Outcome}; messages {latest.Messages}, proposed {latest.Proposed}, attempted {latest.Attempted}, saved {latest.Saved}, read failures {latest.ReadFailures}."
+            );
     }
 }

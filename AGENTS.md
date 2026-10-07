@@ -23,6 +23,13 @@ Run frontend commands from `bot/src/ChampionsOfKhazad.Bot.Portal/frontend/`:
 
 The full bot requires Discord, MongoDB, OpenAI, Auth0, and Azure configuration; builds do not.
 
+## Documentation
+
+Keep README files focused on operational information: prerequisites, configuration, build/test commands, running, and deployment. Document feature behavior, policies, design decisions, and durable engineering knowledge in nearby `docs/` pages instead. Read relevant feature documentation before changing behavior and update it when those constraints change.
+
+- `bot/docs/notebook.md` — temporary notebook selection, evidence/review requirements, privacy, and diagnostic semantics.
+- `bot/docs/background-notebook-observer.md` — background observation, shared channel scope, event scheduling, budgets, and checkpoint semantics.
+
 ## Coding Style & Naming Conventions
 
 C# is formatted by CSharpier with a 150-column width. Preserve nullable reference types and implicit usings. Use four-space indentation, PascalCase for types and members, `I`-prefixed interfaces, and one primary type per matching file. Keep domain code in its existing feature project. TypeScript uses Prettier and ESLint, two-space indentation, PascalCase React components, and camelCase functions/hooks. Follow existing names such as `GeneratedImages.page.tsx` and `use-generated-images.ts`.

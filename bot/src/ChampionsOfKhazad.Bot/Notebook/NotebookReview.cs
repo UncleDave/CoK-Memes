@@ -15,7 +15,7 @@ internal static class NotebookReview
             .AddField("Expires", $"<t:{new DateTimeOffset(note.ExpiresAtUtc, TimeSpan.Zero).ToUnixTimeSeconds()}:R>", true)
             .AddField("Why he chose to remember it", DisplayText(note.Reason))
             .AddField("Independent review", DisplayText(note.ReviewReason))
-            .AddField("Requested during a response to", $"Discord user {note.RequestedBy}")
+            .AddField("Origin", GetOrigin(note))
             .AddField("Review", $"Discard: `notebook discard {note.Id}`\nInspect: `notebook show {note.Id}`\nPause new notes: `notebook pause`")
             .WithFooter(
                 $"Note {note.Id}. Delivery and activation are recorded separately; inspect its status with notebook show. Not an approval request."
@@ -39,7 +39,7 @@ internal static class NotebookReview
 
     public static string Format(NotebookNote note, DateTime now) =>
         $"**{DisplayText(note.Subject, singleLine: true)}** ({note.Kind}; {Status(note, now)})\n{DisplayText(note.Content)}\n\n"
-        + $"Why he chose it: {DisplayText(note.Reason)}\nIndependent review: {DisplayText(note.ReviewReason)}\nRequested by: {note.RequestedBy}\nCreated: {note.CreatedAtUtc:u}\nExpires: {note.ExpiresAtUtc:u}\n"
+        + $"Why he chose it: {DisplayText(note.Reason)}\nIndependent review: {DisplayText(note.ReviewReason)}\nOrigin: {GetOrigin(note)}\nCreated: {note.CreatedAtUtc:u}\nExpires: {note.ExpiresAtUtc:u}\n"
         + $"Sources:\n{string.Join('\n', note.Sources.Select(source => $"- {DisplayText(source.AuthorName, singleLine: true)}: <{source.Url}>"))}\n"
         + $"Discard: `notebook discard {note.Id}`";
 
@@ -48,6 +48,9 @@ internal static class NotebookReview
         : note.ExpiresAtUtc <= now ? "expired"
         : note.ReviewDelivered ? "active"
         : "audit-only; review/activation not confirmed";
+
+    private static string GetOrigin(NotebookNote note) =>
+        note.Origin == NotebookOrigin.Background ? "Background observation (no member request)" : $"Response to Discord user {note.RequestedBy}";
 
     internal static string DisplayText(string text, bool singleLine = false) =>
         Discord

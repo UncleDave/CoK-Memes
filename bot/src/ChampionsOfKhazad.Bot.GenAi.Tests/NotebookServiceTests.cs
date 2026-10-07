@@ -19,6 +19,7 @@ public class NotebookServiceTests
         Assert.Equal("Useful raid anecdote", note.Reason);
         Assert.Equal("Supported by sources", note.ReviewReason);
         Assert.Equal(note.Id, Assert.Single(fixture.Reviewer.Notes).Id);
+        Assert.Equal(NotebookWriteOutcome.Saved, Assert.Single(fixture.Store.State.WriteAttempts).Outcome);
         var search = await fixture.Service.SearchAsync("raid", fixture.Context, TestContext.Current.CancellationToken);
         Assert.Contains("NOT canon", search);
         Assert.Contains(note.Content, search);
@@ -32,6 +33,7 @@ public class NotebookServiceTests
         fixture.Reviewer.Deliver = false;
         Assert.Contains("audit-only", await fixture.RememberAsync());
         Assert.False(Assert.Single(fixture.Store.State.Notes).ReviewDelivered);
+        Assert.Equal(NotebookWriteOutcome.ReviewDeliveryFailed, Assert.Single(fixture.Store.State.WriteAttempts).Outcome);
         Assert.Contains("No accessible", await fixture.Service.SearchAsync("raid", fixture.Context, TestContext.Current.CancellationToken));
     }
 
@@ -39,10 +41,16 @@ public class NotebookServiceTests
     public async Task RejectedAssessmentDoesNotWriteOrDm()
     {
         var fixture = new Fixture();
-        fixture.Evaluator.Assessment = new NotebookAssessment(false, "Conflicts with canon");
+        fixture.Evaluator.Assessment = new NotebookAssessment(false, "Conflicts with canon")
+        {
+            RejectionCategory = NotebookRejectionCategory.DuplicateOrConflict,
+        };
         Assert.Contains("independent review rejected", await fixture.RememberAsync());
         Assert.Empty(fixture.Store.State.Notes);
         Assert.Empty(fixture.Reviewer.Notes);
+        var attempt = Assert.Single(fixture.Store.State.WriteAttempts);
+        Assert.Equal(NotebookWriteOutcome.ReviewRejected, attempt.Outcome);
+        Assert.Equal(NotebookRejectionCategory.DuplicateOrConflict, attempt.RejectionCategory);
     }
 
     [Theory]
@@ -56,6 +64,8 @@ public class NotebookServiceTests
         Assert.Contains("verifiable human", await fixture.RememberAsync());
         Assert.Equal(0, fixture.Evaluator.Calls);
         Assert.Empty(fixture.Store.State.Notes);
+        Assert.Equal(NotebookWriteOutcome.InvalidSources, Assert.Single(fixture.Store.State.WriteAttempts).Outcome);
+        Assert.Empty(fixture.Store.State.EvaluationAttempts);
     }
 
     [Fact]
@@ -69,6 +79,8 @@ public class NotebookServiceTests
         Assert.Contains("Invalid note", await fixture.RememberAsync(content: new string('a', 401)));
         Assert.Empty(fixture.Store.State.Notes);
         Assert.Equal(0, fixture.Evaluator.Calls);
+        Assert.Equal(3, fixture.Store.State.WriteAttempts.Count);
+        Assert.All(fixture.Store.State.WriteAttempts, attempt => Assert.Equal(NotebookWriteOutcome.InvalidInput, attempt.Outcome));
     }
 
     [Fact]
@@ -180,6 +192,7 @@ public class NotebookServiceTests
         Assert.True(fixture.Store.State.Paused);
         Assert.Empty(fixture.Store.State.Notes);
         Assert.Empty(fixture.Reviewer.Notes);
+        Assert.Equal(NotebookWriteOutcome.CommitRejected, Assert.Single(fixture.Store.State.WriteAttempts).Outcome);
     }
 
     [Fact]
@@ -309,6 +322,7 @@ public class NotebookServiceTests
         Assert.Single(fixture.Store.State.EvaluationAttempts);
         Assert.Empty(fixture.Store.State.Notes);
         Assert.Empty(fixture.Reviewer.Notes);
+        Assert.Equal(NotebookWriteOutcome.Failed, Assert.Single(fixture.Store.State.WriteAttempts).Outcome);
     }
 
     [Fact]
@@ -334,16 +348,23 @@ public class NotebookServiceTests
         );
         Assert.Single(fixture.Store.State.EvaluationAttempts);
         Assert.Empty(fixture.Store.State.Notes);
+        Assert.Equal(NotebookWriteOutcome.Cancelled, Assert.Single(fixture.Store.State.WriteAttempts).Outcome);
     }
 
     [Fact]
     public async Task RejectionDoesNotExposeReviewerExplanationsDerivedFromOtherChannelAudiences()
     {
         var fixture = new Fixture();
-        fixture.Evaluator.Assessment = new NotebookAssessment(false, "Conflicts with a restricted-source note: private quoted detail");
+        fixture.Evaluator.Assessment = new NotebookAssessment(false, "Conflicts with a restricted-source note: private quoted detail")
+        {
+            RejectionCategory = NotebookRejectionCategory.PrivacyOrSafety,
+        };
         var result = await fixture.RememberAsync();
         Assert.DoesNotContain("private quoted detail", result);
         Assert.Contains("independent review rejected", result);
+        var attempt = Assert.Single(fixture.Store.State.WriteAttempts);
+        Assert.Equal(NotebookRejectionCategory.PrivacyOrSafety, attempt.RejectionCategory);
+        Assert.DoesNotContain("private quoted detail", attempt.ToString());
     }
 
     [Fact]
@@ -803,6 +824,7 @@ public class NotebookServiceTests
         Assert.Empty(fixture.Store.State.Notes);
         Assert.Empty(fixture.Reviewer.Notes);
         Assert.Single(fixture.Store.State.EvaluationAttempts);
+        Assert.Equal(NotebookWriteOutcome.TimedOut, Assert.Single(fixture.Store.State.WriteAttempts).Outcome);
     }
 
     [Fact]
@@ -831,6 +853,85 @@ public class NotebookServiceTests
         fixture.Clock.FireTimers();
         Assert.Contains("time limit", await search);
         release.SetResult();
+    }
+
+    [Fact]
+    public async Task DiagnosticHistoryKeepsOnlyTheNewestBoundedDayOfOutcomesWithoutChangingReviewRevision()
+    {
+        var fixture = new Fixture();
+        fixture.Store.State = new NotebookState
+        {
+            ReviewRevision = 7,
+            WriteAttempts =
+            [
+                new NotebookWriteAttempt(fixture.Clock.Now.AddDays(-1), NotebookWriteOutcome.Failed),
+                .. Enumerable
+                    .Range(1, NotebookService.MaximumDiagnosticAttempts)
+                    .Select(i => new NotebookWriteAttempt(fixture.Clock.Now.AddSeconds(-i), NotebookWriteOutcome.InvalidInput)),
+            ],
+        };
+        fixture.Reader.Available = false;
+        Assert.Contains("verifiable human", await fixture.RememberAsync());
+        Assert.Equal(NotebookService.MaximumDiagnosticAttempts, fixture.Store.State.WriteAttempts.Count);
+        Assert.DoesNotContain(fixture.Store.State.WriteAttempts, attempt => attempt.Outcome == NotebookWriteOutcome.Failed);
+        Assert.DoesNotContain(fixture.Store.State.WriteAttempts, attempt => attempt.CompletedAtUtc == fixture.Clock.Now.AddSeconds(-100));
+        Assert.Contains(fixture.Store.State.WriteAttempts, attempt => attempt.CompletedAtUtc == fixture.Clock.Now.AddSeconds(-1));
+        Assert.Equal(fixture.Store.State.WriteAttempts.OrderBy(attempt => attempt.CompletedAtUtc), fixture.Store.State.WriteAttempts);
+        Assert.Equal(NotebookWriteOutcome.InvalidSources, fixture.Store.State.WriteAttempts[^1].Outcome);
+        Assert.Equal(7, fixture.Store.State.ReviewRevision);
+        Assert.Empty(fixture.Store.State.EvaluationAttempts);
+    }
+
+    [Fact]
+    public async Task DiagnosticPersistenceFailureDoesNotTurnASavedNoteIntoAFailure()
+    {
+        var fixture = new Fixture();
+        fixture.Store.BeforeSave = proposed =>
+            proposed.WriteAttempts.Count > 0 ? throw new InvalidOperationException("Diagnostics unavailable") : Task.CompletedTask;
+        Assert.Contains("recorded", await fixture.RememberAsync());
+        Assert.True(Assert.Single(fixture.Store.State.Notes).ReviewDelivered);
+        Assert.Single(fixture.Store.State.EvaluationAttempts);
+        Assert.Empty(fixture.Store.State.WriteAttempts);
+    }
+
+    [Fact]
+    public async Task DiagnosticDeadlineBoundsAnUncooperativeStoreWithoutChangingWriteSuccess()
+    {
+        var fixture = new Fixture();
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        fixture.Store.BeforeSave = proposed => proposed.WriteAttempts.Count > 0 ? release.Task : Task.CompletedTask;
+        var remember = fixture.RememberAsync();
+        Assert.False(remember.IsCompleted);
+        Assert.True(Assert.Single(fixture.Store.State.Notes).ReviewDelivered);
+        fixture.Clock.FireTimers();
+        Assert.Contains("recorded", await remember);
+        release.SetResult();
+    }
+
+    [Fact]
+    public async Task DiagnosticUpdateRetriesCasConflictWithoutLosingConcurrentOutcomes()
+    {
+        var fixture = new Fixture();
+        var injected = false;
+        fixture.Store.BeforeSave = proposed =>
+        {
+            if (!injected && proposed.WriteAttempts.Count > 0)
+            {
+                injected = true;
+                fixture.Store.State = fixture.Store.State with
+                {
+                    Revision = fixture.Store.State.Revision + 1,
+                    WriteAttempts = [new NotebookWriteAttempt(fixture.Clock.Now, NotebookWriteOutcome.InvalidInput)],
+                };
+            }
+            return Task.CompletedTask;
+        };
+        Assert.Contains("recorded", await fixture.RememberAsync());
+        Assert.True(injected);
+        Assert.Equal(2, fixture.Store.State.WriteAttempts.Count);
+        Assert.Contains(fixture.Store.State.WriteAttempts, attempt => attempt.Outcome == NotebookWriteOutcome.InvalidInput);
+        Assert.Contains(fixture.Store.State.WriteAttempts, attempt => attempt.Outcome == NotebookWriteOutcome.Saved);
+        Assert.Equal(1, fixture.Store.State.ReviewRevision);
     }
 
     private sealed class Fixture

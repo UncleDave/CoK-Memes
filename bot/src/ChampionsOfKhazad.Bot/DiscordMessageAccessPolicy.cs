@@ -9,5 +9,8 @@ internal static class DiscordMessageAccessPolicy
             .Select(channel => channel.Id)
             .ToHashSet();
 
-    internal sealed record ChannelCandidate(ulong Id, bool NormalUserCanRead, bool EveryoneCanRead, bool RequesterCanRead);
+    public static IReadOnlySet<ulong> GetBackgroundSourceChannelIds(IEnumerable<ChannelCandidate> channels) =>
+        channels.Where(channel => channel.NormalUserCanRead && channel.BotCanRead).Select(channel => channel.Id).ToHashSet();
+
+    internal sealed record ChannelCandidate(ulong Id, bool NormalUserCanRead, bool EveryoneCanRead, bool RequesterCanRead, bool BotCanRead = false);
 }

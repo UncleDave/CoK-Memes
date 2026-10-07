@@ -10,4 +10,6 @@ public record NotebookState
     public bool Paused { get; init; }
     public IReadOnlyList<NotebookNote> Notes { get; init; } = [];
     public IReadOnlyList<NotebookEvaluationAttempt> EvaluationAttempts { get; init; } = [];
+    public IReadOnlyList<NotebookWriteAttempt> WriteAttempts { get; init; } = [];
+    public NotebookObserverState Observer { get; init; } = new();
 }

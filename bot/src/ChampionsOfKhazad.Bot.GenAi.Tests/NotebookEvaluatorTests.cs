@@ -6,18 +6,24 @@ namespace ChampionsOfKhazad.Bot.GenAi.Tests;
 public class NotebookEvaluatorTests
 {
     [Theory]
-    [InlineData("{\"accept\":true,\"reason\":\"Supported observation\"}", true)]
-    [InlineData("{\"accept\":false,\"reason\":\"Conflicts with canon\"}", false)]
+    [InlineData("{\"accept\":true,\"reason\":\"Supported observation\",\"category\":\"accepted\"}", true)]
+    [InlineData("{\"accept\":false,\"reason\":\"Conflicts with canon\",\"category\":\"duplicate_or_conflict\"}", false)]
     [InlineData("{\"accept\":true}", false)]
     [InlineData("{\"reason\":\"Missing decision\"}", false)]
     [InlineData("null", false)]
-    [InlineData("{\"accept\":true,\"reason\":\"   \"}", false)]
-    [InlineData("{\"accept\":\"true\",\"reason\":\"Not a boolean\"}", false)]
-    [InlineData("{\"accept\":false,\"accept\":true,\"reason\":\"Ambiguous\"}", false)]
-    [InlineData("{\"accept\":false,\"ACCEPT\":true,\"reason\":\"Ambiguous\"}", false)]
+    [InlineData("{\"accept\":true,\"reason\":\"   \",\"category\":\"accepted\"}", false)]
+    [InlineData("{\"accept\":\"true\",\"reason\":\"Not a boolean\",\"category\":\"accepted\"}", false)]
+    [InlineData("{\"accept\":false,\"accept\":true,\"reason\":\"Ambiguous\",\"category\":\"accepted\"}", false)]
+    [InlineData("{\"accept\":false,\"ACCEPT\":true,\"reason\":\"Ambiguous\",\"category\":\"accepted\"}", false)]
     [InlineData("{\"accept\":true,\"reason\":\"Fine\",\"extra\":1}", false)]
-    [InlineData("{\"accept\":true,\"reason\":null}", false)]
+    [InlineData("{\"accept\":true,\"reason\":null,\"category\":\"accepted\"}", false)]
     [InlineData("[]", false)]
+    [InlineData("{\"accept\":true,\"reason\":\"Missing category\"}", true)]
+    [InlineData("{\"accept\":true,\"reason\":\"Unknown category\",\"category\":\"anything\"}", true)]
+    [InlineData("{\"accept\":true,\"reason\":\"Inconsistent\",\"category\":\"evidence\"}", true)]
+    [InlineData("{\"accept\":true,\"reason\":\"Wrong category type\",\"category\":null}", true)]
+    [InlineData("{\"accept\":true,\"reason\":\"Duplicate category\",\"category\":\"accepted\",\"CATEGORY\":\"evidence\"}", false)]
+    [InlineData("{\"accept\":true,\"reason\":\"Extra field\",\"category\":\"accepted\",\"extra\":1}", false)]
     public async Task RequiresExplicitAcceptAndValidReason(string json, bool accepted)
     {
         var client = new CapturingClient(json);
@@ -29,7 +35,7 @@ public class NotebookEvaluatorTests
     [Fact]
     public async Task IndependentReviewReceivesActualSourcesCanonAndNotebookButNoTools()
     {
-        var client = new CapturingClient("{\"accept\":false,\"reason\":\"Duplicate\"}");
+        var client = new CapturingClient("{\"accept\":false,\"reason\":\"Duplicate\",\"category\":\"duplicate_or_conflict\"}");
         var evaluator = new NotebookEvaluator(client, new LoreGetter());
         await evaluator.EvaluateAsync(CreateNote(), [CreateNote() with { Content = "Existing note" }], TestContext.Current.CancellationToken);
         Assert.Empty(client.Options!.Tools!);
@@ -46,20 +52,24 @@ public class NotebookEvaluatorTests
     public async Task MalformedResponseCannotApprove()
     {
         var evaluator = new NotebookEvaluator(new CapturingClient("sure, accept it"), new LoreGetter());
-        Assert.False((await evaluator.EvaluateAsync(CreateNote(), [], TestContext.Current.CancellationToken)).Accept);
+        var result = await evaluator.EvaluateAsync(CreateNote(), [], TestContext.Current.CancellationToken);
+        Assert.False(result.Accept);
+        Assert.Equal(NotebookRejectionCategory.InvalidDecision, result.RejectionCategory);
     }
 
     [Fact]
     public void OversizedOrOverlongReviewResponsesCannotApprove()
     {
-        Assert.False(NotebookEvaluator.ParseAssessment($"{{\"accept\":true,\"reason\":\"{new string('x', 301)}\"}}").Accept);
+        Assert.False(
+            NotebookEvaluator.ParseAssessment($"{{\"accept\":true,\"reason\":\"{new string('x', 301)}\",\"category\":\"accepted\"}}").Accept
+        );
         Assert.False(NotebookEvaluator.ParseAssessment(new string(' ', 2049)).Accept);
     }
 
     [Fact]
     public async Task UserAttributionIsSuppliedAsExplicitIdsAndUntrustedNameMetadata()
     {
-        var client = new CapturingClient("{\"accept\":false,\"reason\":\"Wrong attribution\"}");
+        var client = new CapturingClient("{\"accept\":false,\"reason\":\"Wrong attribution\",\"category\":\"evidence\"}");
         var note = CreateNote();
         note = note with
         {
@@ -81,7 +91,7 @@ public class NotebookEvaluatorTests
     [Fact]
     public async Task CancellationWhileWaitingForCanonDoesNotStartAiReviewAfterCanonEventuallyReturns()
     {
-        var client = new CapturingClient("{\"accept\":true,\"reason\":\"Supported\"}");
+        var client = new CapturingClient("{\"accept\":true,\"reason\":\"Supported\",\"category\":\"accepted\"}");
         var getter = new BlockedLoreGetter();
         using var cancellation = new CancellationTokenSource();
         var review = new NotebookEvaluator(client, getter).EvaluateAsync(CreateNote(), [], cancellation.Token);
@@ -107,7 +117,7 @@ public class NotebookEvaluatorTests
     [Fact]
     public async Task ReviewIncludesPendingAndDiscardedStatusesWithoutResendingTheirFullSourceText()
     {
-        var client = new CapturingClient("{\"accept\":false,\"reason\":\"Previously discarded\"}");
+        var client = new CapturingClient("{\"accept\":false,\"reason\":\"Previously discarded\",\"category\":\"duplicate_or_conflict\"}");
         var evaluator = new NotebookEvaluator(client, new LoreGetter());
         var existingSource = new NotebookSource(
             "https://discord.com/channels/1/2/4",
@@ -143,6 +153,60 @@ public class NotebookEvaluatorTests
         Assert.Contains("\"reviewDelivered\":false", client.Messages[1].Text);
         Assert.Contains("\"discardedAtUtc\":\"", client.Messages[1].Text);
         Assert.DoesNotContain("Excluded existing source raw text", client.Messages[1].Text);
+    }
+
+    [Theory]
+    [InlineData("evidence", NotebookRejectionCategory.Evidence)]
+    [InlineData("duplicate_or_conflict", NotebookRejectionCategory.DuplicateOrConflict)]
+    [InlineData("privacy_or_safety", NotebookRejectionCategory.PrivacyOrSafety)]
+    [InlineData("out_of_scope", NotebookRejectionCategory.OutOfScope)]
+    public void RejectionDecisionsHaveFixedDiagnosticCategories(string category, NotebookRejectionCategory expected)
+    {
+        var result = NotebookEvaluator.ParseAssessment($"{{\"accept\":false,\"reason\":\"Not suitable\",\"category\":\"{category}\"}}");
+        Assert.False(result.Accept);
+        Assert.Equal(expected, result.RejectionCategory);
+    }
+
+    [Theory]
+    [InlineData("{\"accept\":false,\"reason\":\"Inconsistent\",\"category\":\"accepted\"}")]
+    [InlineData("{\"accept\":false,\"reason\":\"Unknown\",\"category\":\"private quoted detail\"}")]
+    [InlineData("{\"accept\":false,\"reason\":\"Missing\"}")]
+    [InlineData("{\"accept\":false,\"reason\":\"Wrong type\",\"category\":null}")]
+    public void InvalidDiagnosticCategoriesDoNotChangeRejectionsOrExposeUntrustedLabels(string json)
+    {
+        var result = NotebookEvaluator.ParseAssessment(json);
+        Assert.False(result.Accept);
+        Assert.Equal(NotebookRejectionCategory.Unspecified, result.RejectionCategory);
+        Assert.DoesNotContain("private quoted detail", result.ToString());
+    }
+
+    [Theory]
+    [InlineData("{\"accept\":true,\"reason\":\"Supported\"}")]
+    [InlineData("{\"accept\":true,\"reason\":\"Supported\",\"category\":\"evidence\"}")]
+    [InlineData("{\"accept\":true,\"reason\":\"Supported\",\"category\":\"private quoted detail\"}")]
+    [InlineData("{\"accept\":true,\"reason\":\"Supported\",\"category\":{\"untrusted\":\"private quoted detail\"}}")]
+    public void DiagnosticMetadataCannotOverrideAnOtherwiseValidAcceptance(string json)
+    {
+        var result = NotebookEvaluator.ParseAssessment(json);
+        Assert.True(result.Accept);
+        Assert.Equal("Supported", result.Reason);
+        Assert.Equal(NotebookRejectionCategory.Unspecified, result.RejectionCategory);
+    }
+
+    [Fact]
+    public async Task ReviewAllowsOneOffAnecdotesAndAttributedFirsthandReportsWithoutRelaxingSafety()
+    {
+        var client = new CapturingClient("{\"accept\":true,\"reason\":\"Supported report\",\"category\":\"accepted\"}");
+        await new NotebookEvaluator(client, new LoreGetter()).EvaluateAsync(CreateNote(), [], TestContext.Current.CancellationToken);
+        var policy = client.Messages![0].Text!;
+        Assert.Contains("A single clear human source", policy);
+        Assert.Contains("one-off incident", policy);
+        Assert.Contains("explicitly attributed", policy);
+        Assert.Contains("not independent proof", policy);
+        Assert.Contains("sensitive/private", policy);
+        Assert.Contains("unsupported assertion", policy);
+        Assert.Contains("personal profiles/preferences", policy);
+        Assert.Contains("Reject when uncertain", policy);
     }
 
     private sealed class LoreGetter : IGetRelatedLore

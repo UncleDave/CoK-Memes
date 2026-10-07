@@ -29,6 +29,9 @@ public class BotService : IHostedService
         _botContextProvider = botContextProvider;
 
         _client.Ready += ReadyAsync;
+        _client.Connected += ConnectedAsync;
+        _client.GuildAvailable += GuildAvailableAsync;
+        _client.Disconnected += DisconnectedAsync;
         _client.MessageReceived += MessageReceivedAsync;
         _client.ReactionAdded += ReactionAddedAsync;
         _client.SlashCommandExecuted += SlashCommandExecutedAsync;
@@ -37,6 +40,7 @@ public class BotService : IHostedService
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
+        _botContextProvider.IsReady = false;
         _logger.LogInformation("Starting Bot");
 
         await _client.LoginAsync(TokenType.Bot, _options.Token);
@@ -48,6 +52,7 @@ public class BotService : IHostedService
 
     public async Task StopAsync(CancellationToken cancellationToken)
     {
+        _botContextProvider.IsReady = false;
         await _client.StopAsync();
     }
 
@@ -59,6 +64,7 @@ public class BotService : IHostedService
         _logger.LogDebug("Guild: {Guild}, channels: {Channels}", guild.Name, guild.Channels.Select(x => x.Name));
 
         _botContextProvider.BotContext = new BotContext(_client.CurrentUser.Id, guild, _client);
+        _botContextProvider.IsReady = true;
 
         foreach (var slashCommand in SlashCommands.GuildCommands)
             await guild.CreateApplicationCommandAsync(slashCommand.Properties);
@@ -67,6 +73,30 @@ public class BotService : IHostedService
             await _client.CreateGlobalApplicationCommandAsync(slashCommand.Properties);
 
         _logger.LogInformation("Bot started");
+    }
+
+    internal Task DisconnectedAsync(Exception exception)
+    {
+        _botContextProvider.IsReady = false;
+        return Task.CompletedTask;
+    }
+
+    private Task ConnectedAsync() => RestoreReadinessAsync(_client.GetGuild(_options.GuildId));
+
+    private Task GuildAvailableAsync(SocketGuild guild) => RestoreReadinessAsync(guild);
+
+    private Task RestoreReadinessAsync(SocketGuild? guild) =>
+        RestoreReadinessAsync(guild, _client.ConnectionState == ConnectionState.Connected && guild is { IsConnected: true });
+
+    internal Task RestoreReadinessAsync(IGuild? guild, bool connectionUsable)
+    {
+        if (connectionUsable && guild?.Id == _options.GuildId && _botContextProvider.BotContext is { } previous)
+        {
+            // RESUMED can raise guild availability before restoring CurrentUser.
+            _botContextProvider.BotContext = new BotContext(previous.BotId, guild, _client);
+            _botContextProvider.IsReady = true;
+        }
+        return Task.CompletedTask;
     }
 
     private Task MessageReceivedAsync(SocketMessage message)

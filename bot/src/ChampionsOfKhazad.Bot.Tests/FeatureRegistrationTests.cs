@@ -58,6 +58,11 @@ public class FeatureRegistrationTests
 
         Assert.Equal(ServiceLifetime.Scoped, Assert.Single(services, descriptor => descriptor.ServiceType == typeof(ICompletionService)).Lifetime);
         Assert.Equal(ServiceLifetime.Scoped, Assert.Single(services, descriptor => descriptor.ServiceType == typeof(IEmojiHandler)).Lifetime);
+        Assert.Equal(ServiceLifetime.Scoped, Assert.Single(services, descriptor => descriptor.ServiceType == typeof(INotebookDiscoverer)).Lifetime);
+        Assert.Equal(
+            ServiceLifetime.Scoped,
+            Assert.Single(services, descriptor => descriptor.ServiceType == typeof(NotebookObserverService)).Lifetime
+        );
         AssertSingleton<TimeProvider>(services);
     }
 

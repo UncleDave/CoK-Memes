@@ -17,7 +17,9 @@ internal class DiscordNotebookReviewer(BotContext context, IOptions<DirectMessag
             if (admin is null)
                 return false;
             await admin.SendMessageAsync(
-                "The Lorekeeper chose a new notebook entry. Established lore is unchanged.",
+                note.Origin == NotebookOrigin.Background
+                    ? "The Lorekeeper noticed a new notebook entry during background observation. Established lore is unchanged."
+                    : "The Lorekeeper chose a new notebook entry. Established lore is unchanged.",
                 embed: NotebookReview.CreateEmbed(note),
                 allowedMentions: AllowedMentions.None,
                 options: requestOptions

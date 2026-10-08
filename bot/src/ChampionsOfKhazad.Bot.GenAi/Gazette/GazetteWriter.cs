@@ -55,6 +55,9 @@ internal sealed class GazetteWriter(IChatClient chatClient) : IGazetteWriter
         Do not stop searching after finding the headline event. Re-read the rest of the sample for small exchanges, minor admissions,
         spelling mishaps, useful discoveries, amusing opinions and good news. Inside pieces have a LOWER newsworthiness bar
         than the lead; a funny handful of messages can sustain a short dispatch. Do not require a major incident for every story.
+        Prefer member/game/hobby happenings and recognisable guild banter over bot administration or memory/context housekeeping.
+        A discussion about an expired role in a bot's temporary context is usually maintenance chatter, not a news story.
+        Include bot troubleshooting only when it has a genuinely standalone guild joke, not merely to fill the third article.
         A newspaper needs variety, not three retellings of one incident. Secondary pieces may be shorter than the lead.
         If the evidence truly supports only one or two stories, keep that smaller issue; never invent events or pad with unrelated facts.
         The first article is the front-page lead; remaining articles are printed in full on page 2, with short front-page teasers.

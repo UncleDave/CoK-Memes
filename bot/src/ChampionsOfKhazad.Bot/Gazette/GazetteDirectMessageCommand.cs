@@ -265,8 +265,17 @@ public sealed partial class GazetteDirectMessageCommand(
             }
             catch (Exception exception)
             {
-                logger.LogWarning("Gazette illustration unavailable at {Stage} with {ExceptionType}", _stage, exception.GetType().Name);
-                artworkStatus = "Illustration was unavailable: generation failed or timed out; this edition has no image.";
+                var failure = GazetteImageFailure.FromException(exception);
+                logger.LogWarning(
+                    "Gazette illustration unavailable at {Stage} with {ExceptionType}; HTTP status {HttpStatus}; code {Code}; parameter {Parameter}; timed out {TimedOut}",
+                    _stage,
+                    exception.GetType().Name,
+                    failure.HttpStatus,
+                    failure.Code,
+                    failure.Parameter,
+                    failure.TimedOut
+                );
+                artworkStatus = $"Illustration was unavailable: {failure.Description}; this edition has no image.";
             }
         }
         GazettePrintEdition printEdition;

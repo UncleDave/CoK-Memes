@@ -25,7 +25,8 @@ internal sealed class GazetteIllustrator(ImageClient imageClient) : IGazetteIllu
     internal static ImageGenerationOptions CreateOptions() =>
         new()
         {
-            Quality = GeneratedImageQuality.High,
+            // The SDK's High constant is the legacy DALL·E value "hd". GPT Image expects the literal "high".
+            Quality = new GeneratedImageQuality("high"),
             Size = GeneratedImageSize.W1024xH1024,
             OutputFileFormat = GeneratedImageFileFormat.Png,
         };

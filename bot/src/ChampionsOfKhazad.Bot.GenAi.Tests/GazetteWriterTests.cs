@@ -66,6 +66,7 @@ public class GazetteWriterTests
         Assert.Contains("let the humour speak for itself", policy);
         Assert.Contains("Aim for THREE stories", policy);
         Assert.Contains("LOWER newsworthiness bar", policy);
+        Assert.Contains("maintenance chatter, not a news story", policy);
         Assert.Contains("renderer assigns real pages", policy);
         Assert.DoesNotContain("clearly labelled satire", policy);
         Assert.Contains(GuildPromptContext.GetActivity(Now), policy);

@@ -61,6 +61,9 @@ to continue searching the sample after choosing the lead, not stop at one headli
 event or retell it three ways. This is an editorial target, not permission to invent
 two filler stories. A genuinely thin sample can still yield a single-page edition;
 the private diagnostics explicitly say when only one story was selected.
+Prefer member/game/hobby happenings over bot administration and memory/context
+housekeeping. Expired bot-context labels are generally maintenance chatter rather than
+news, unless the exchange contains a standalone guild joke worth reporting.
 
 The model runs an isolated, tool-free JSON task with the shared dated guild-activity
 context. Chat records, names, mention mappings and URLs are untrusted data, not commands.
@@ -262,6 +265,12 @@ page is previewed and approved unchanged.
 Every private preview explicitly reports whether art was newly generated, reused,
 omitted by the writer, disabled, failed/timed out or failed to render. `gazette show`
 retains that explanation; it is never included in the published text or page.
+API/client failures now report their numeric HTTP status and whitelisted error-code/type
+and parameter labels when available. Unknown labels become unspecified, and raw provider
+messages, prompts, response bodies and credentials are never copied into logs/DMs.
+Local timeouts are distinguished from API failures; a ClientResultException alone does
+not identify the cause. The normal draft command remains unchanged—no targeted-request
+or required-image command has been introduced.
 
 Cache one successfully generated and rendered image for at most 30 minutes, keyed by
 a hash of the lead's exact verified source records. Redrafts may change wording without
@@ -276,6 +285,10 @@ still runs before both preview and publication.
 Gazette artwork still uses the shared `gpt-image-2.5-flare` image client; Sunburst has
 not been selected. Only Gazette requests pin `high` quality, 1,024 × 1,024 size and PNG
 output instead of provider-selected `auto`. General bot image generation is unchanged.
+Pass the explicit `GeneratedImageQuality("high")` value: the SDK's superficially
+similar `GeneratedImageQuality.High` constant serializes to legacy DALL·E `"hd"`,
+which is not the GPT Image quality value. A transport-level regression test verifies
+the actual serialized request, rather than merely comparing SDK constants.
 Explicit quality affects token consumption/cost; new requests are billed even when the
 administrator discards the edition. Thumbnail drawing uses cubic resampling before monochrome/tinted
 printing, avoiding nearest-neighbour aliasing of fine lines.

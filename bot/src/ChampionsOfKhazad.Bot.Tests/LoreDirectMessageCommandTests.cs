@@ -1,4 +1,4 @@
-using System.Text.Json;
+using System.Text;
 using System.Text.RegularExpressions;
 using ChampionsOfKhazad.Bot.GenAi;
 using ChampionsOfKhazad.Bot.Lore.Abstractions;
@@ -268,6 +268,140 @@ public class LoreDirectMessageCommandTests
         Assert.Contains("No changes needed", await fixture.Command.ExecuteAsync(1, "Set Grim's main to shaman", Token));
         Assert.Equal(0, fixture.Store.Saves);
     }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task LongTextAppendShowsTheEntireAdditionInSaveHistoryAndUndo(bool member)
+    {
+        var original = "Earlier history: " + new string('h', 600) + ".";
+        var addition = " The guild has finished its MoP era. " + new string('n', 300) + " Horde PvE launch in November.";
+        var entry = member ? Member() with { Biography = original } : new LoreEntrySnapshot("History", "guild") { Content = original };
+        var changes = member ? new LoreEditChanges { Biography = original + addition } : new LoreEditChanges { Content = original + addition };
+        var fixture = new Fixture(new("update", entry.Name, entry.Kind, changes, "Append new history", false), entry);
+
+        var saved = await fixture.Command.ExecuteAsync(1, "Add the latest history", Token);
+        Assert.Contains(NotebookReview.DisplayText(addition), saved);
+        Assert.DoesNotContain(NotebookReview.DisplayText(original), saved);
+        Assert.Contains(NotebookReview.DisplayText(addition), await fixture.Command.ExecuteAsync(1, $"lore history {entry.Name}", Token));
+        Assert.Contains(NotebookReview.DisplayText(original + addition), await fixture.Command.ExecuteAsync(1, $"lore show {entry.Name}", Token));
+
+        var undone = await fixture.Command.ExecuteAsync(1, "undo", Token);
+        Assert.Contains(NotebookReview.DisplayText(addition), undone);
+        Assert.DoesNotContain(NotebookReview.DisplayText(original), undone);
+        Assert.Equal(entry, fixture.Store.State.Entry);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task LongTextInsertionShowsNewTextAtTheBeginningOrInTheMiddle(bool prepend)
+    {
+        var prefix = new string('p', 500);
+        var suffix = new string('s', 500);
+        var addition = " Newly recorded incident. ";
+        var original = prefix + suffix;
+        var updated = prepend ? addition + original : prefix + addition + suffix;
+        var fixture = GuildTextUpdate(original, updated);
+
+        var reply = await fixture.Command.ExecuteAsync(1, "Add the incident", Token);
+        Assert.Contains(NotebookReview.DisplayText(addition), reply);
+        Assert.DoesNotContain(prefix, reply);
+        Assert.DoesNotContain(suffix, reply);
+        Assert.Equal(updated, fixture.Store.State.Entry!.Content);
+    }
+
+    [Fact]
+    public async Task LongTextReplacementShowsBothChangedSpansWithoutDistantUnchangedText()
+    {
+        var prefix = new string('p', 500) + " The guild plays ";
+        var suffix = " together. " + new string('s', 500);
+        var oldText = "Mists of Pandaria";
+        var newText = "World of Warcraft Forever " + new string('n', 250) + " with a final new detail";
+        var fixture = GuildTextUpdate(prefix + oldText + suffix, prefix + newText + suffix);
+
+        var reply = await fixture.Command.ExecuteAsync(1, "Correct the current game", Token);
+        Assert.Contains(oldText, reply);
+        Assert.Contains(newText, reply);
+        Assert.DoesNotContain(prefix, reply);
+        Assert.DoesNotContain(suffix, reply);
+        Assert.Contains("The guild plays", reply);
+    }
+
+    [Fact]
+    public async Task LongTextRemovalShowsWhatWasRemoved()
+    {
+        var prefix = new string('p', 500);
+        var suffix = new string('s', 500);
+        var removed = " Old claim to remove. ";
+        var fixture = GuildTextUpdate(prefix + removed + suffix, prefix + suffix);
+
+        var reply = await fixture.Command.ExecuteAsync(1, "Remove the old claim", Token);
+        Assert.Contains(NotebookReview.DisplayText(removed), reply);
+        Assert.DoesNotContain(prefix, reply);
+        Assert.DoesNotContain(suffix, reply);
+        Assert.Equal(prefix + suffix, fixture.Store.State.Entry!.Content);
+    }
+
+    [Theory]
+    [InlineData("😀", "😁")]
+    [InlineData("😀", "\U0001FA00")]
+    public async Task ChangeBoundariesDoNotSplitEmojiThatShareASurrogate(string oldEmoji, string newEmoji)
+    {
+        var prefix = new string('p', 500);
+        var suffix = new string('s', 500);
+        var fixture = GuildTextUpdate(prefix + oldEmoji + suffix, prefix + newEmoji + suffix);
+
+        var reply = await fixture.Command.ExecuteAsync(1, "Correct the emoji", Token);
+        Assert.Contains(oldEmoji, reply);
+        Assert.Contains(newEmoji, reply);
+        // Strict encoding rejects any unpaired UTF-16 surrogate in the rendered excerpts.
+        new UTF8Encoding(false, true).GetByteCount(reply!);
+    }
+
+    [Fact]
+    public async Task ConfirmationStillShowsFullBeforeAndAfterWhileSavedSummaryFocusesOnTheChange()
+    {
+        var original = new string('p', 500);
+        var addition = " A new final detail.";
+        var fixture = GuildTextUpdate(original, original + addition);
+        fixture.Planner.Plan = fixture.Planner.Plan with { RequiresConfirmation = true };
+
+        var preview = await fixture.Command.ExecuteAsync(1, "Update the entry", Token);
+        Assert.Contains(original, preview);
+        Assert.Contains(NotebookReview.DisplayText(original + addition), preview);
+        Assert.Equal(0, fixture.Store.Saves);
+        var saved = await fixture.Command.ExecuteAsync(1, Confirmation(preview!), Token);
+        Assert.Contains(NotebookReview.DisplayText(addition), saved);
+        Assert.DoesNotContain(original, saved);
+    }
+
+    [Fact]
+    public async Task NearbyContextAndLargeAdditionsRemainIntactThroughDisplayAndChunking()
+    {
+        var prefix = new string('p', 459) + "😀" + new string('p', 39);
+        var suffix = new string('s', 39) + "😁" + new string('s', 459);
+        var fixture = GuildTextUpdate(prefix + "old" + suffix, prefix + "new" + suffix);
+        var changed = await fixture.Command.ExecuteAsync(1, "Correct the middle word", Token);
+        Assert.Contains("😀", changed);
+        Assert.Contains("😁", changed);
+        new UTF8Encoding(false, true).GetByteCount(changed!);
+
+        var addition = " New chapter: " + new string('a', 2500) + " Final detail.";
+        fixture.Planner.Plan = fixture.Planner.Plan with { Changes = new() { Content = prefix + "new" + suffix + addition } };
+        var appended = await fixture.Command.ExecuteAsync(1, "Append the new chapter", Token);
+        Assert.Contains(NotebookReview.DisplayText(addition), appended);
+        var chunks = MessageExtensions.SplitMessageContent(appended!);
+        Assert.True(chunks.Count > 1);
+        Assert.All(chunks, chunk => Assert.InRange(chunk.Length, 1, 2000));
+        Assert.Equal(appended, string.Concat(chunks));
+    }
+
+    private static Fixture GuildTextUpdate(string before, string after) =>
+        new(
+            new("update", "History", "guild", new() { Content = after }, "Update history", false),
+            new LoreEntrySnapshot("History", "guild") { Content = before }
+        );
 
     private sealed class BlockingPlanner : ILoreEditPlanner
     {

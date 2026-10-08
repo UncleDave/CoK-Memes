@@ -33,6 +33,14 @@ are stored as `Unknown`; a partial member entry needs no invented biography. Upd
 patch only supplied fields, preserving all unspecified fields. Replacing an array means
 replacing its entire value; the model must retain unrelated aliases and roles.
 
+When comparing two versions, save, history, and undo summaries focus on the change in
+long text fields rather than truncating both versions to the same opening. They omit
+shared unchanged beginnings and endings, show additions/removals in full, and show
+replacements with nearby context.
+The changed span itself is never truncated; large changes use the normal chunked DM
+delivery. Short field updates retain the simple before/after display. `lore show` and
+confirmation previews still show full entries/values, and stored lore is never truncated.
+
 The editor asks when identity or intent is ambiguous. Casual conversation, questions,
 bare anecdotes, and quoted instructions do not authorize edits. Short clarification
 follow-ups use the recent conversation. Only one entry is edited per turn. Renames and

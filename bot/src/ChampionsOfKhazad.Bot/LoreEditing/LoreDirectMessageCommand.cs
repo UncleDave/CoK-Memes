@@ -282,11 +282,49 @@ public class LoreDirectMessageCommand(
             return before is null ? "Entry remains deleted." : $"Delete entry. Previous lore:\n{Describe(before, compact)}";
         if (before is null)
             return $"Create entry:\n{Describe(after, compact)}";
-        return string.Join(
-            '\n',
-            ChangedFields(before, after).Select(field => $"{field.Name}: {Value(field.Before, compact)} → {Value(field.After, compact)}")
-        );
+        return string.Join('\n', ChangedFields(before, after).Select(field => FieldChange(field.Name, field.Before, field.After, compact)));
     }
+
+    private static string FieldChange(string name, string before, string after, bool compact)
+    {
+        if (!compact || Math.Max(before.Length, after.Length) <= 160)
+            return $"{name}: {Display(before)} → {Display(after)}";
+
+        var prefix = 0;
+        while (prefix < Math.Min(before.Length, after.Length) && before[prefix] == after[prefix])
+            prefix++;
+        if (InsideSurrogatePair(before, prefix) || InsideSurrogatePair(after, prefix))
+            prefix--;
+
+        var suffix = 0;
+        while (suffix < Math.Min(before.Length, after.Length) - prefix && before[^(suffix + 1)] == after[^(suffix + 1)])
+            suffix++;
+        if (InsideSurrogatePair(before, before.Length - suffix) || InsideSurrogatePair(after, after.Length - suffix))
+            suffix--;
+
+        var removed = before[prefix..(before.Length - suffix)];
+        var added = after[prefix..(after.Length - suffix)];
+        if (removed.Length == 0)
+            return $"{name} — added:\n{Display(added)}";
+        if (added.Length == 0)
+            return $"{name} — removed:\n{Display(removed)}";
+        return $"{name} — changed:\nBefore: {ChangeExcerpt(before, prefix, suffix)}\nAfter: {ChangeExcerpt(after, prefix, suffix)}";
+    }
+
+    private static string ChangeExcerpt(string text, int prefix, int suffix)
+    {
+        // Omit distant unchanged text, never the change itself. Include nearby context for partial-word edits.
+        var start = Math.Max(0, prefix - 40);
+        var end = text.Length - Math.Max(0, suffix - 40);
+        if (InsideSurrogatePair(text, start))
+            start--;
+        if (InsideSurrogatePair(text, end))
+            end++;
+        return (start > 0 ? "…" : "") + Display(text[start..end]) + (end < text.Length ? "…" : "");
+    }
+
+    private static bool InsideSurrogatePair(string text, int index) =>
+        index > 0 && index < text.Length && char.IsHighSurrogate(text[index - 1]) && char.IsLowSurrogate(text[index]);
 
     private static string Describe(LoreEntrySnapshot entry, bool compact = false) =>
         entry.Kind == "guild"

@@ -5,6 +5,26 @@ namespace ChampionsOfKhazad.Bot.Tests;
 
 public class GazettePageRendererTests
 {
+    [Fact]
+    public void FineImageDetailIsResampledAtThumbnailSizeInsteadOfNearestNeighbourAliasing()
+    {
+        using var art = new SKBitmap(1024, 1024);
+        using (var canvas = new SKCanvas(art))
+        {
+            canvas.Clear(SKColors.White);
+            using var black = new SKPaint { Color = SKColors.Black, IsAntialias = false };
+            for (var x = 0; x < art.Width; x += 2)
+                canvas.DrawRect(x, 0, 1, art.Height, black);
+        }
+        using var image = SKImage.FromBitmap(art);
+        using var png = image.Encode(SKEncodedImageFormat.Png, 100);
+        var edition = new GazetteEdition([new("Short headline", "Short body.", ["source"])], "Ad");
+        var printEdition = new GazettePageRenderer().Render(edition, 1, "1–8 October 2026", png.ToArray());
+        using var result = SKBitmap.Decode(printEdition.Pages[0].Png);
+        var intermediateTones = Enumerable.Range(820, 260).Count(x => result.GetPixel(x, 500).Red is > 30 and < 220);
+        Assert.True(intermediateTones > 200, "Thin source-image lines should blend smoothly when reduced to the newspaper thumbnail.");
+    }
+
     [Theory]
     [InlineData(1, 1)]
     [InlineData(2, 2)]

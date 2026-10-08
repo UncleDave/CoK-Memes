@@ -26,10 +26,15 @@ and an optional lead-story illustration. Quiet or unsuitable conversation produc
 news or padding. No notebook entries are required or written; no lore is changed.
 Archival lore callbacks are not included in this first version.
 
-The editorial voice is deliberately sarcastic, pompous and disproportionate, not a dry
-summary of why chat was funny. Metaphorical newspaper departments and mock-official
-judgments are allowed framing; invented actions, witnesses or personal traits are not.
-Attribution is retained naturally where it matters without repetitive legal disclaimers.
+The editorial voice is deliberately sarcastic and disproportionate, not a chronological
+chat recap with a funny final sentence. Choose a comic angle first, lead with it, and
+weave it through the paragraph using only the essential supported facts. Vary the
+approach between stories. Imaginary Gazette departments/bureaus/inquiries are not the
+default punchline; at most one unusually apt metaphor per edition, preferably none.
+Such metaphors are framing, not evidence of actual guild institutions. Invented actions,
+witnesses or personal traits remain prohibited. Preserve necessary attribution and
+qualifications naturally without repetitive legal disclaimers. Prefer short, incisive
+35–65-character headlines in normal case, avoiding exhaustive summaries/software jargon.
 Every non-empty edition has one absurd fictional classified ad, not a real member's
 advert or a purported guild announcement.
 The published section is simply "Classifieds"; neither copy nor illustrations carry
@@ -187,8 +192,13 @@ the durable illustration budget; only one competing writer may claim a state rev
 ## Optional illustrations
 
 The writer may propose one small wordless visual joke for the lead story, or omit it
-when it adds nothing. Art is black-and-white woodcut/editorial-cartoon style, using
-objects/anonymous fantasy figures, not identifiable people or photographic evidence.
+when it adds nothing. Specify an actual visual punchline/contrast, not merely a dwarf
+holding the story's object. Art is a simple black-ink editorial cartoon with thick clean
+pen contours, large silhouettes, restrained shading and generous empty space: two or
+three essential props and at most one anonymous fantasy figure. Detailed workshops,
+busy backgrounds and dense engraving/crosshatching are discouraged. Design for the
+340-pixel printed thumbnail, not for detail that only reads in a full-size image.
+Use objects/anonymous fantasy figures, not identifiable people or photographic evidence.
 Illustrations are printed without an explanatory satire caption. Never generate a whole
 newspaper with the image model or ask it to typeset the articles.
 
@@ -202,6 +212,13 @@ layout, never prevent the stories/ad from being privately reviewed. The final fa
 page is previewed and approved unchanged.
 If the optional budget reservation cannot be confirmed, skip art rather than making
 an unreserved image request.
+
+Gazette artwork still uses the shared `gpt-image-2.5-flare` image client; Sunburst has
+not been selected. Only Gazette requests pin `high` quality, 1,024 × 1,024 size and PNG
+output instead of provider-selected `auto`. General bot image generation is unchanged.
+Explicit quality affects token consumption/cost; the existing rolling illustration
+budget still applies. Thumbnail drawing uses cubic resampling before monochrome/tinted
+printing, avoiding nearest-neighbour aliasing of fine lines.
 
 ## Configuration
 

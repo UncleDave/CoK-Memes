@@ -38,6 +38,14 @@ public class GazetteWriterTests
         Assert.Contains("No archival stories", policy);
         Assert.Contains("do not relentlessly target one person", policy);
         Assert.Contains("Be FUNNY, not dry", policy);
+        Assert.Contains("Choose ONE comic angle", policy);
+        Assert.Contains("funny throughout, not only in its final sentence", policy);
+        Assert.Contains("At most ONE such metaphor", policy);
+        Assert.Contains("normally 35–65 characters", policy);
+        Assert.Contains("Style example ONLY, not evidence", policy);
+        Assert.DoesNotContain("of Preventable Expenditure", policy);
+        Assert.Contains("visual PUNCHLINE", policy);
+        Assert.Contains("340-pixel newspaper thumbnail", policy);
         Assert.Contains("SERVER display names", policy);
         Assert.Contains("Always add ONE tiny fictional classified", policy);
         Assert.Contains("let the humour speak for itself", policy);

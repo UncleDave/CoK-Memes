@@ -106,7 +106,8 @@ internal sealed class GazettePageRenderer : IGazettePageRenderer
                     0,
                 ]),
             };
-            canvas.DrawBitmap(art, rect, monochrome);
+            using var artImage = SKImage.FromBitmap(art);
+            canvas.DrawImage(artImage, rect, new SKSamplingOptions(SKCubicResampler.Mitchell), monochrome);
             canvas.DrawRect(rect, rules);
         }
         y = bodyTop + leadBodyHeight + 35;

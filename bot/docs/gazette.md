@@ -26,15 +26,22 @@ and an optional lead-story illustration. Quiet or unsuitable conversation produc
 news or padding. No notebook entries are required or written; no lore is changed.
 Archival lore callbacks are not included in this first version.
 
-The editorial voice is deliberately sarcastic and disproportionate, not a chronological
-chat recap with a funny final sentence. Choose a comic angle first, lead with it, and
-weave it through the paragraph using only the essential supported facts. Vary the
-approach between stories. Imaginary Gazette departments/bureaus/inquiries are not the
+The editorial voice is straight-faced, disproportionate newspaper reporting, not a
+chronological chat recap with a funny final sentence. Choose a news/comic angle first,
+use an outcome-first inverted-pyramid lead, then attributed supporting details in two
+short paragraphs. Preserve uncertainty naturally, particularly for rumours. Let framing
+and word choice carry the humour; omit detachable concluding insults or morals. A wry
+ending is allowed when it completes the reporting angle, not obligatory or categorically
+banned. Vary the approach between stories. Imaginary Gazette departments/bureaus/inquiries are not the
 default punchline; at most one unusually apt metaphor per edition, preferably none.
 Such metaphors are framing, not evidence of actual guild institutions. Invented actions,
 witnesses or personal traits remain prohibited. Preserve necessary attribution and
 qualifications naturally without repetitive legal disclaimers. Prefer short, incisive
 35–65-character headlines in normal case, avoiding exhaustive summaries/software jargon.
+Endings stay in the reporter's voice: a current status, outlook, uncertainty or consequence,
+which may itself be funny. "For now, the fortress is built chiefly from maybes" fits;
+"That's less a repair saga than an expensive tutorial" is a detachable comedian's verdict.
+Do not mechanically repeat "For now" across all articles.
 Every non-empty edition has one absurd fictional classified ad, not a real member's
 advert or a purported guild announcement.
 The published section is simply "Classifieds"; neither copy nor illustrations carry
@@ -198,7 +205,14 @@ of that story's existing body rather than generating additional copy.
 The image model only supplies
 an illustration, never the text or newspaper layout. The Linux bot image installs
 DejaVu fonts; Windows rendering uses Georgia. PNGs are at most 1,200 by 4,000 pixels
-with an 8 MB total attachment budget, and complete text wrapping rather than silently clipping copy. Text remains
+with an 8 MB total attachment budget, and complete text wrapping rather than silently clipping copy.
+Paragraph breaks in article copy become visible paragraph spacing, included in height
+calculations rather than flattened into one block. Unsupported emoji/private-use
+display-name decorations are omitted from the PNG to avoid missing-glyph boxes; this
+operates on complete Unicode graphemes so joiners/variation selectors are not orphaned.
+Readable letters/accents and supported symbols are kept, and the approved text/source
+copy retains original display names and decorations unchanged. This does not switch
+identities to global usernames or alter stored source evidence. Text remains
 available privately through the button for accessibility/mobile reading, and source links remain
 clickable in Discord rather than embedded in the PNG.
 

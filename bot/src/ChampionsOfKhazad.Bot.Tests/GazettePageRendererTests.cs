@@ -6,6 +6,42 @@ namespace ChampionsOfKhazad.Bot.Tests;
 public class GazettePageRendererTests
 {
     [Fact]
+    public void NewspaperWrappingPreservesParagraphBreaksAndCountsTheirVerticalSpace()
+    {
+        using var font = new SKFont(SKTypeface.Default, 30);
+        using var paint = new SKPaint();
+        var lines = GazettePageRenderer.Wrap("Outcome-first lead.\n\nAttributed context follows.", font, 1000, paint);
+        Assert.Equal(new[] { "Outcome-first lead.", "", "Attributed context follows." }, lines);
+        Assert.Equal(3, lines.Count);
+    }
+
+    [Theory]
+    [InlineData("Beaverhausen🦫", "Beaverhausen")]
+    [InlineData("Beaverhausen👩‍🔧", "Beaverhausen")]
+    [InlineData("Beaverhausen\uE000", "Beaverhausen")]
+    [InlineData("Press 1️⃣, then 2️⃣", "Press 1, then 2")]
+    public void UnsupportedNameDecorationsDoNotPrintMissingGlyphBoxesOrOrphanedEmojiParts(string input, string expected)
+    {
+        using var typeface = OperatingSystem.IsWindows()
+            ? SKTypeface.FromFamilyName("Georgia")
+            : SKTypeface.FromFile("/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf");
+        using var font = new SKFont(typeface, 30);
+        Assert.Equal(expected, GazettePageRenderer.PreparePrintText(input, font));
+    }
+
+    [Fact]
+    public void PrintCleanupKeepsLettersAccentsAndSupportedSymbols()
+    {
+        using var typeface = OperatingSystem.IsWindows()
+            ? SKTypeface.FromFamilyName("Georgia")
+            : SKTypeface.FromFile("/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf");
+        using var font = new SKFont(typeface, 30);
+        const string text = "Béaverhausen — Ørjan Åse";
+        Assert.True(font.ContainsGlyphs(text));
+        Assert.Equal(text, GazettePageRenderer.PreparePrintText(text, font));
+    }
+
+    [Fact]
     public void FineImageDetailIsResampledAtThumbnailSizeInsteadOfNearestNeighbourAliasing()
     {
         using var art = new SKBitmap(1024, 1024);
@@ -71,18 +107,18 @@ public class GazettePageRendererTests
         var edition = new GazetteEdition(
             [
                 new(
-                    "Local man purchases replacement phone; original objects",
-                    "A handset previously declared beyond salvation returned to service following the radical intervention of pressing the correct buttons. The purchase of its replacement has been referred to the Gazette's Department of Preventable Expenditure.",
+                    "Phone returns to service after replacement bought",
+                    "A supposedly dead phone has returned to service after its owner had already bought a replacement. The recovery followed discovery of the correct restart buttons.\n\nThe owner reported that volume down and power revived the handset; an earlier attempt had used volume up.",
                     ["source"]
                 ),
                 new(
-                    "Boardroom crisis enters flooring phase",
-                    "A minor spelling incident acquired sufficient administrative weight to require two GIFs. Crabslog addressed the board; the board declined to comment, being made of wood.",
+                    "Agent merger awaits a romantic breakthrough",
+                    "An agent swarm acquired a matchmaking brief after a proposal to make its members kiss. Alexie said the task belonged to the code-merge agent.\n\nBeaverhausen🦫 made the suggestion during a discussion of the running agents. Crabslog drew attention to Alexie's declaration of being 'board'.",
                     ["source"]
                 ),
                 new(
-                    "Guild optimism remains dangerously unregulated",
-                    "The Gazette recommends that all expressions of confidence be accompanied by a refundable deposit. Investigations into the phrase 'surely this time' remain ongoing.",
+                    "Fortress-sized Lego rumour awaits foundations",
+                    "An 8,060-piece Helm's Deep rumour has reached the guild ahead of any listing Crabslog could find. A shared report attributed the claim to Brickmerge and gave a June 2027 date.\n\nCrabslog said the supposed set remained elusive. For now, the fortress is built chiefly from maybes.",
                     ["source"]
                 ),
             ],

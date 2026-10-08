@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Text;
 using ChampionsOfKhazad.Bot.GenAi;
 using SkiaSharp;
 
@@ -226,6 +228,21 @@ internal sealed class GazettePageRenderer : IGazettePageRenderer
     internal static IReadOnlyList<string> Wrap(string text, SKFont font, float width, SKPaint paint)
     {
         var lines = new List<string>();
+        var paragraphs = PreparePrintText(text, font)
+            .Replace("\r\n", "\n", StringComparison.Ordinal)
+            .Replace('\r', '\n')
+            .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        foreach (var paragraph in paragraphs)
+        {
+            if (lines.Count > 0)
+                lines.Add("");
+            WrapParagraph(paragraph, font, width, paint, lines);
+        }
+        return lines;
+    }
+
+    private static void WrapParagraph(string text, SKFont font, float width, SKPaint paint, List<string> lines)
+    {
         var line = "";
         foreach (var word in text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries))
         {
@@ -251,7 +268,32 @@ internal sealed class GazettePageRenderer : IGazettePageRenderer
         }
         if (line.Length > 0)
             lines.Add(line);
-        return lines;
+    }
+
+    internal static string PreparePrintText(string text, SKFont font)
+    {
+        var result = new StringBuilder();
+        var elements = StringInfo.GetTextElementEnumerator(text);
+        while (elements.MoveNext())
+        {
+            var element = elements.GetTextElement();
+            var decorative = element
+                .EnumerateRunes()
+                .Any(rune =>
+                    rune.Value is >= 0x1F000 and <= 0x1FFFF or >= 0x2600 and <= 0x27BF or 0xFE0F
+                    || Rune.GetUnicodeCategory(rune) == UnicodeCategory.PrivateUse
+                );
+            // Only unsupported pictographic/decorative graphemes are omitted in print. Keep letters, accents and the archived text intact.
+            if (!decorative || font.ContainsGlyphs(element))
+                result.Append(element);
+            else
+            {
+                // A keycap/emoji-style decoration can contain a meaningful base digit/letter; retain it rather than dropping the value.
+                foreach (var rune in element.EnumerateRunes().Where(Rune.IsLetterOrDigit))
+                    result.Append(rune);
+            }
+        }
+        return result.ToString();
     }
 
     private static float DrawLines(SKCanvas canvas, IReadOnlyList<string> lines, float x, float y, float spacing, SKFont font, SKPaint paint)

@@ -9,19 +9,33 @@ internal sealed class GazetteWriter(IChatClient chatClient) : IGazetteWriter
     private const string Policy = """
         Draft The Khazad Gazette: selected dispatches from Champions of Khazad, written by a self-important dwarven newspaper.
         Real guild happenings, wildly undeserved journalistic gravitas. This is NOT an exhaustive chat summary or a weekly roast.
-        Be FUNNY, not dry. The newspaper itself is the joke: disproportionate importance, sharp irony, comic comparisons,
-        mock-serious scrutiny and gleefully sarcastic headlines. Write satirical reporting, not a chat recap with a joke appended.
+        Be FUNNY, not dry. Write like a newspaper reporting absurdly small guild news with straight-faced importance,
+        not a comedian explaining the conversation or a chat recap with a joke appended.
         Choose ONE comic angle for each story BEFORE writing. Lead with that angle and sustain it through the paragraph.
         Select two or three essential facts that serve the angle; do not narrate every message, errand, clarification or chronological step.
-        Keep necessary attribution and qualifications, but the body should be funny throughout, not only in its final sentence.
+        Use an inverted-pyramid news structure: outcome/claim first, then attributed supporting details and context.
+        Each body has TWO short newspaper paragraphs, separated by a blank line (JSON \n\n), normally one or two sentences each.
+        Let the absurd framing, word choice and reported contrast carry the humour throughout, not only in its final sentence.
+        Keep necessary attribution and qualifications; do not start by listing who typed what in chronological order.
         Avoid the template "this happened, then this happened, then a Gazette bureau opened an inquiry".
         Do not default to inventing departments, bureaus, offices or investigations as punchlines. At most ONE such metaphor
         may appear in an entire edition, and only if unusually apt; prefer none. Vary the comic approach between stories.
-        Style example ONLY, not evidence: given verified facts that a replacement phone was bought before the old one's
-        correct restart buttons were discovered, a headline could be "Yoric outspends the power button" and the copy:
-        "Yoric's supposedly dead phone recovered shortly after its replacement was purchased, demonstrating an impressive
-        grasp of retail timing. Recovery required volume down and power, rather than volume up: a repair that, in hindsight,
-        needed neither a shop nor a second phone." Never copy this anecdote or name unless the actual supplied sources support it.
+        A wry final observation is allowed when it completes the reported angle, not obligatory in every article.
+        The distinction is voice, not whether the ending is funny: close in the reporter's voice with the current status,
+        outlook, uncertainty or consequence. "For now, the fortress is built chiefly from maybes" belongs to the report;
+        "That's less a repair saga than an expensive tutorial" steps outside it to deliver a comedian's verdict.
+        A status-style ending may be funny. Do not mechanically repeat "For now" in every story; vary newsroom phrasing.
+        Avoid detachable closing commentary such as "That's less a repair saga than an expensive tutorial", moral-of-the-story
+        sentences, "Even X now has Y" summaries, or an extra roast after the report has already finished. Often end on a fact,
+        attributed quote or unresolved point. Do not forbid every witty ending: integrated uncertainty can be part of the news.
+        Style examples ONLY, not evidence: "A supposedly dead phone has returned to service after its owner had already
+        purchased a replacement. The recovery followed discovery of the correct restart buttons.\n\nThe owner reported
+        that volume down and power revived the handset; an earlier attempt had used volume up." This leads with the news,
+        not the shopping itinerary, and does not bolt on a concluding insult.
+        A rumoured fortress-sized Lego set can be reported as a grand announcement with a small evidence base: attribute the
+        claimed listing/date, report a member's inability to find it, preserve uncertainty. A closing metaphor about building
+        the fortress from maybes fits that reporting angle; it need not be removed merely for being witty.
+        Never copy any example anecdote or claim unless the actual supplied sources support it.
         Keep headlines short and incisive, normally 35–65 characters rather than exhaustive factual summaries; use normal
         sentence/title case, not all caps (the renderer handles the lead). Avoid technical jargon such as "temporary context"
         in headlines; explain a necessary distinction naturally in the body without turning it into a software incident report.
@@ -144,7 +158,7 @@ internal sealed class GazetteWriter(IChatClient chatClient) : IGazetteWriter
                                     type = "string",
                                     minLength = 1,
                                     maxLength = 650,
-                                    description = "Nonblank story body, at most 650 characters. Preserve source attribution and uncertainty.",
+                                    description = "At most 650 characters: two short news paragraphs separated by a blank line. Outcome-first lead, attributed context; no obligatory closing quip.",
                                 },
                                 teaser = new
                                 {

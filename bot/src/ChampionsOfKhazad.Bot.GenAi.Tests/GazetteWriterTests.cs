@@ -44,10 +44,16 @@ public class GazetteWriterTests
         Assert.Contains("do not relentlessly target one person", policy);
         Assert.Contains("Be FUNNY, not dry", policy);
         Assert.Contains("Choose ONE comic angle", policy);
-        Assert.Contains("funny throughout, not only in its final sentence", policy);
+        Assert.Contains("inverted-pyramid news structure", policy);
+        Assert.Contains("TWO short newspaper paragraphs", policy);
+        Assert.Contains("not obligatory in every article", policy);
+        Assert.Contains("Do not forbid every witty ending", policy);
+        Assert.Contains("The distinction is voice", policy);
+        Assert.Contains("current status", policy);
+        Assert.Contains("Do not mechanically repeat", policy);
         Assert.Contains("At most ONE such metaphor", policy);
         Assert.Contains("normally 35–65 characters", policy);
-        Assert.Contains("Style example ONLY, not evidence", policy);
+        Assert.Contains("Style examples ONLY, not evidence", policy);
         Assert.DoesNotContain("of Preventable Expenditure", policy);
         Assert.Contains("visual PUNCHLINE", policy);
         Assert.Contains("340-pixel newspaper thumbnail", policy);

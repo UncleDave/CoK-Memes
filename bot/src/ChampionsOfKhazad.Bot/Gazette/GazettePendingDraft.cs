@@ -9,5 +9,5 @@ public sealed record GazettePendingDraft(
     IReadOnlyList<NotebookSource> Sources,
     DateTimeOffset ExpiresAtUtc,
     long IssueNumber,
-    GazettePage Page
+    GazettePrintEdition PrintEdition
 );

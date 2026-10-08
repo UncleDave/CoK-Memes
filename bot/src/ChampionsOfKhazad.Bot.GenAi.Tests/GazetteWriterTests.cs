@@ -41,11 +41,71 @@ public class GazetteWriterTests
         Assert.Contains("SERVER display names", policy);
         Assert.Contains("Always add ONE tiny fictional classified", policy);
         Assert.Contains("let the humour speak for itself", policy);
+        Assert.Contains("Aim for THREE stories", policy);
+        Assert.Contains("LOWER newsworthiness bar", policy);
+        Assert.Contains("renderer assigns real pages", policy);
         Assert.DoesNotContain("clearly labelled satire", policy);
         Assert.Contains(GuildPromptContext.GetActivity(Now), policy);
         Assert.DoesNotContain(Source.Content, policy);
         using var input = JsonDocument.Parse(client.Messages[1].Text!);
         Assert.Equal(Source.Content, input.RootElement.GetProperty("sources")[0].GetProperty("Content").GetString());
+    }
+
+    [Fact]
+    public async Task WriterAcceptsOneLeadAndTwoDistinctDispatchesWithFrontPageTeasers()
+    {
+        var client = new CapturingClient(
+            JsonSerializer.Serialize(
+                new
+                {
+                    articles = Enumerable
+                        .Range(1, 3)
+                        .Select(index => new
+                        {
+                            headline = $"Story {index}",
+                            body = $"Full story {index}",
+                            teaser = $"Preview {index}",
+                            sourceUrls = new[] { Url },
+                        }),
+                    editorial = "Wanted: a clock.",
+                    illustrationPrompt = (string?)null,
+                }
+            )
+        );
+        var edition = await new GazetteWriter(client).WriteAsync([Source], Now.AddDays(-7), Now, TestContext.Current.CancellationToken);
+        Assert.Equal(3, edition.Articles.Count);
+        Assert.Equal("Preview 2", edition.Articles[1].Teaser);
+        Assert.Equal("Full story 2", edition.Articles[1].Body);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("Preview\nwith a second line")]
+    [InlineData("Preview\rwith a second line")]
+    public async Task BlankOrMultilineTeasersFailClosed(string teaser)
+    {
+        var client = new CapturingClient(
+            JsonSerializer.Serialize(
+                new
+                {
+                    articles = new[]
+                    {
+                        new
+                        {
+                            headline = "Headline",
+                            body = "Story",
+                            teaser,
+                            sourceUrls = new[] { Url },
+                        },
+                    },
+                    editorial = "Ad",
+                    illustrationPrompt = (string?)null,
+                }
+            )
+        );
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            new GazetteWriter(client).WriteAsync([Source], Now.AddDays(-7), Now, TestContext.Current.CancellationToken)
+        );
     }
 
     [Fact]

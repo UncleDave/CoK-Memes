@@ -7,6 +7,48 @@ namespace ChampionsOfKhazad.Bot.Tests;
 public class GazetteDirectMessageCommandTests
 {
     [Fact]
+    public async Task AllPagesArePrivatelyPreviewedAndPublishedUnchangedWithOneApproval()
+    {
+        var fixture = new Fixture();
+        fixture.Writer.Edition = new(
+            [
+                new("Lead story", "Lead body", [Fixture.Url]),
+                new("Small dispatch", "Inside story body", [Fixture.Url]) { Teaser = "Inside story preview" },
+            ],
+            "Wanted: a clock."
+        );
+        await fixture.Run("gazette draft");
+        var pending = Assert.IsType<GazettePendingDraft>(fixture.Session.Pending);
+        Assert.Equal(2, fixture.Pages.Count);
+        Assert.Equal(pending.PrintEdition.Pages, fixture.Pages);
+        Assert.Contains(fixture.Replies, reply => reply.Contains("2 newspaper pages") && reply.Contains("Review all pages"));
+        await fixture.Run($"gazette approve {pending.Token}");
+        Assert.Single(fixture.Gateway.Publications);
+        Assert.Equal(pending.PrintEdition.Pages, fixture.Gateway.PublishedPages);
+        Assert.Contains("Inside story body", Assert.Single(fixture.Gateway.Publications).Text);
+        Assert.Equal(1, fixture.Writer.Calls);
+    }
+
+    [Fact]
+    public async Task FailedInsidePageDeliveryLeavesNoApprovalAndNoPublication()
+    {
+        var fixture = new Fixture();
+        fixture.Writer.Edition = new([new("Lead", "Body", [Fixture.Url]), new("Inside", "Body", [Fixture.Url])], "Ad");
+        var pageCalls = 0;
+        await fixture.Command.TryExecuteAsync(
+            1,
+            "gazette draft",
+            (_, _) => Task.CompletedTask,
+            TestContext.Current.CancellationToken,
+            sendPage: (_, _) =>
+                ++pageCalls == 2 ? Task.FromException(new InvalidOperationException("Second page delivery failed")) : Task.CompletedTask
+        );
+        Assert.Equal(2, pageCalls);
+        Assert.Null(fixture.Session.Pending);
+        Assert.Empty(fixture.Gateway.Publications);
+    }
+
+    [Fact]
     public async Task UnavailableArtworkBudgetDoesNotSpendAnUnreservedImageCallOrPreventThePrivatePage()
     {
         var fixture = new Fixture();
@@ -47,7 +89,7 @@ public class GazetteDirectMessageCommandTests
         await fixture.Run("gazette show");
         await fixture.Run($"gazette approve {pending.Token}");
         Assert.Equal(1, fixture.Illustrator.Calls);
-        Assert.Same(pending.Page, Assert.Single(fixture.Gateway.PublishedPages));
+        Assert.Same(Assert.Single(pending.PrintEdition.Pages), Assert.Single(fixture.Gateway.PublishedPages));
     }
 
     [Fact]
@@ -152,7 +194,7 @@ public class GazetteDirectMessageCommandTests
         var publication = Assert.Single(fixture.Gateway.Publications);
         Assert.Equal(pending.Destination.Id, publication.Destination);
         Assert.Equal(pending.Edition, publication.Text);
-        Assert.Same(pending.Page, Assert.Single(fixture.Gateway.PublishedPages));
+        Assert.Same(Assert.Single(pending.PrintEdition.Pages), Assert.Single(fixture.Gateway.PublishedPages));
         Assert.Equal(1, fixture.Writer.Calls);
         Assert.Equal(3, fixture.Gateway.Verifications);
         Assert.Null(fixture.Session.Pending);
@@ -441,13 +483,13 @@ public class GazetteDirectMessageCommandTests
         public Task<ulong> PublishAsync(
             ulong destinationId,
             string edition,
-            GazettePage page,
+            GazettePrintEdition printEdition,
             string publicationId,
             CancellationToken cancellationToken
         )
         {
             Publications.Add((destinationId, edition));
-            PublishedPages.Add(page);
+            PublishedPages.AddRange(printEdition.Pages);
             return SendFails ? Task.FromException<ulong>(new InvalidOperationException("Unknown send outcome")) : Task.FromResult(100UL);
         }
     }

@@ -62,7 +62,7 @@ public class DirectMessageHandlerTests
         public Task<ulong> PublishAsync(
             ulong destinationId,
             string edition,
-            GazettePage page,
+            GazettePrintEdition printEdition,
             string publicationId,
             CancellationToken cancellationToken
         ) => throw new NotSupportedException();

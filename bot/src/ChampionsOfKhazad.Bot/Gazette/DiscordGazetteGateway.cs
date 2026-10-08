@@ -192,7 +192,7 @@ internal sealed class DiscordGazetteGateway(
     public async Task<ulong> PublishAsync(
         ulong destinationId,
         string edition,
-        GazettePage page,
+        GazettePrintEdition printEdition,
         string publicationId,
         CancellationToken cancellationToken
     )
@@ -214,7 +214,7 @@ internal sealed class DiscordGazetteGateway(
         return await SendPublicationAsync(
             text,
             edition,
-            page,
+            printEdition,
             publicationId,
             () => GetDestination()?.Id == destinationId && GetPublicationError(destinationId) is null,
             cancellationToken
@@ -224,25 +224,47 @@ internal sealed class DiscordGazetteGateway(
     internal async Task<ulong> SendPublicationAsync(
         ITextChannel text,
         string edition,
-        GazettePage page,
+        GazettePrintEdition printEdition,
         string publicationId,
         Func<bool> canSend,
         CancellationToken cancellationToken
     )
     {
+        if (
+            printEdition.Pages.Count is < 1 or > 2
+            || printEdition.Pages.Select(page => page.FileName).Distinct().Count() != printEdition.Pages.Count
+            || printEdition.Pages.Sum(page => (long)page.Png.Length) > 8_000_000
+        )
+            throw new InvalidOperationException("Invalid Gazette page set.");
         var components = GazetteReadButton.Build(publicationId);
         await publishedEditions.SaveAsync(new(publicationId, text.GuildId, text.Id, edition, clock.GetUtcNow().UtcDateTime), cancellationToken);
         if (!canSend())
             throw new InvalidOperationException("Gazette destination changed while preparing publication.");
-        using var stream = new MemoryStream(page.Png, writable: false);
-        var message = await text.SendFileAsync(
-            stream,
-            page.FileName,
-            embed: new EmbedBuilder().WithTitle("The Khazad Gazette").WithImageUrl($"attachment://{page.FileName}").Build(),
-            components: components,
-            allowedMentions: AllowedMentions.None,
-            options: new RequestOptions { CancelToken = cancellationToken }
-        );
+        var streams = printEdition.Pages.Select(page => new MemoryStream(page.Png, writable: false)).ToArray();
+        IUserMessage message;
+        try
+        {
+            message = await text.SendFilesAsync(
+                printEdition.Pages.Select((page, index) => new FileAttachment(streams[index], page.FileName)).ToArray(),
+                embeds: printEdition
+                    .Pages.Select(
+                        (page, index) =>
+                            new EmbedBuilder()
+                                .WithTitle(index == 0 ? "The Khazad Gazette — front page" : $"The Khazad Gazette — page {index + 1}")
+                                .WithImageUrl($"attachment://{page.FileName}")
+                                .Build()
+                    )
+                    .ToArray(),
+                components: components,
+                allowedMentions: AllowedMentions.None,
+                options: new RequestOptions { CancelToken = cancellationToken }
+            );
+        }
+        finally
+        {
+            foreach (var stream in streams)
+                stream.Dispose();
+        }
         await publishedEditions.ConfirmMessageAsync(publicationId, message.Id, cancellationToken);
         return message.Id;
     }

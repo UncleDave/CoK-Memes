@@ -102,7 +102,13 @@ public sealed partial class GazetteDirectMessageCommand(
                     else
                     {
                         publishing = true;
-                        var messageId = await gateway.PublishAsync(pending.Destination.Id, pending.Edition, pending.Page, pending.Token, token);
+                        var messageId = await gateway.PublishAsync(
+                            pending.Destination.Id,
+                            pending.Edition,
+                            pending.PrintEdition,
+                            pending.Token,
+                            token
+                        );
                         await issues.MarkPublishedAsync(pending.IssueNumber, pending.Token, messageId, token);
                         await reply(
                             $"Gazette published to #{pending.Destination.Name} (message {messageId}). This approval cannot be reused.",
@@ -216,14 +222,14 @@ public sealed partial class GazetteDirectMessageCommand(
                 artworkStatus = " Illustration was unavailable; this edition uses the text-only newspaper layout.";
             }
         }
-        GazettePage page;
+        GazettePrintEdition printEdition;
         try
         {
-            page = renderer.Render(edition, issueNumber, FormatDates(since, until), artwork);
+            printEdition = renderer.Render(edition, issueNumber, FormatDates(since, until), artwork);
         }
         catch when (artwork is not null)
         {
-            page = renderer.Render(edition, issueNumber, FormatDates(since, until), null);
+            printEdition = renderer.Render(edition, issueNumber, FormatDates(since, until), null);
             artworkStatus = " Illustration could not be rendered; this edition uses the text-only newspaper layout.";
         }
         // Name/source verification happens again after optional image generation, before preview delivery.
@@ -239,10 +245,11 @@ public sealed partial class GazetteDirectMessageCommand(
             sources,
             clock.GetUtcNow().AddMinutes(30),
             issueNumber,
-            page
+            printEdition
         );
         await SendPreviewAsync(pending, reply, sendPage, cancellationToken);
-        await reply(Coverage(batch) + artworkStatus, cancellationToken);
+        var slimEdition = edition.Articles.Count == 1 ? " Only one supported story was selected; this is a slim, single-page edition." : "";
+        await reply(Coverage(batch) + artworkStatus + slimEdition, cancellationToken);
         // Only a successfully delivered private preview becomes approvable.
         cancellationToken.ThrowIfCancellationRequested();
         session.Pending = pending;
@@ -254,8 +261,8 @@ public sealed partial class GazetteDirectMessageCommand(
 
     private string Preview(GazettePendingDraft pending) =>
         $"PRIVATE DRAFT — not published. Destination: #{pending.Destination.Name}. "
-        + $"The guild post will show only the page and a Read text & sources button; this text opens privately on click.\n\n{pending.Edition}\n\n"
-        + $"Review the page, stories and source links. Reply `gazette approve {pending.Token}` within {Math.Max(0, (int)Math.Ceiling((pending.ExpiresAtUtc - clock.GetUtcNow()).TotalMinutes))} minutes "
+        + $"The guild post will show only the {pending.PrintEdition.Pages.Count} newspaper {(pending.PrintEdition.Pages.Count == 1 ? "page" : "pages")} and a Read text & sources button; this text opens privately on click.\n\n{pending.Edition}\n\n"
+        + $"Review all pages, stories and source links. Reply `gazette approve {pending.Token}` within {Math.Max(0, (int)Math.Ceiling((pending.ExpiresAtUtc - clock.GetUtcNow()).TotalMinutes))} minutes "
         + "to publish exactly the edition above, or `gazette discard`. No edits or regeneration happen during approval.";
 
     private async Task SendPreviewAsync(
@@ -267,7 +274,8 @@ public sealed partial class GazetteDirectMessageCommand(
     {
         if (sendPage is null)
             throw new InvalidOperationException("Private newspaper page delivery is unavailable.");
-        await sendPage(pending.Page, cancellationToken);
+        foreach (var page in pending.PrintEdition.Pages)
+            await sendPage(page, cancellationToken);
         await reply(Preview(pending), cancellationToken);
     }
 

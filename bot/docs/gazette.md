@@ -36,6 +36,14 @@ The published section is simply "Classifieds"; neither copy nor illustrations ca
 "fictional satire"/"satirical classified" disclaimers. Fictional framing remains an
 internal generation constraint, not a repetitive explanation printed next to jokes.
 
+Aim for one lead plus two distinct smaller dispatches when the sample supports them.
+The lead gets the strongest incident; secondary stories have a lower newsworthiness
+bar and can come from a funny handful of ordinary messages. The writer is instructed
+to continue searching the sample after choosing the lead, not stop at one headline
+event or retell it three ways. This is an editorial target, not permission to invent
+two filler stories. A genuinely thin sample can still yield a single-page edition;
+the private diagnostics explicitly say when only one story was selected.
+
 The model runs an isolated, tool-free JSON task with the shared dated guild-activity
 context. Chat records, names, mention mappings and URLs are untrusted data, not commands.
 Story citations must be exact supplied URLs. Quotes and factual claims must remain
@@ -103,12 +111,12 @@ approval; inspect `#ai-tavern` before requesting another draft. Concurrent/repea
 approvals cannot send the same pending draft twice. New drafts are not deduplicated
 against previously published editions.
 
-Publication is one Discord message containing a PNG newspaper page, a single image
-embed and a "Read text & sources" button. It does not also show the text edition in
+Publication is one Discord message containing one or two ordered PNG newspaper pages,
+matching image embeds and one "Read text & sources" button. It does not also show the text edition in
 the channel. The button returns the exact approved readable edition/source links in
 an ephemeral response visible only to the clicking member, never a public follow-up
 or DM. All sends use `AllowedMentions.None`. The private admin preview still delivers
-the PNG bytes and readable edition together for review. Both must be delivered
+all PNG pages and the readable edition together for review. Every page must be delivered
 successfully before approval is activated.
 `gazette show` reuses those assets; approval never regenerates text, layout or artwork.
 Only the edition is published; tokens, approval instructions
@@ -145,11 +153,20 @@ with buttons or archived text.
 
 ## Newspaper presentation and issue numbers
 
-Skia renders sharp text, a masthead, cream paper, dark ink, a lead story, up to two
-secondary columns, rules/borders and a classifieds box. The image model only supplies
+Skia renders sharp text, a masthead, cream paper, dark ink, rules/borders and a
+classifieds box. The lead is printed in full on page 1. When there are secondary
+stories, the front page also has an "Inside this issue" strip with their headlines,
+short previews and "Read more · page 2". Page 2 actually exists and contains those
+stories in full under "Around the guild", with up to two columns. A single-story
+edition has no invented inside page or page-number references. Page numbers and
+filenames are assigned deterministically by the renderer, never by the model.
+Teasers are single-line, at most 160 characters, and must preview the same sourced
+story without introducing new claims. If omitted, the renderer uses a bounded excerpt
+of that story's existing body rather than generating additional copy.
+The image model only supplies
 an illustration, never the text or newspaper layout. The Linux bot image installs
 DejaVu fonts; Windows rendering uses Georgia. PNGs are at most 1,200 by 4,000 pixels
-and 8 MB, with complete text wrapping rather than silently clipping copy. Text remains
+with an 8 MB total attachment budget, and complete text wrapping rather than silently clipping copy. Text remains
 available privately through the button for accessibility/mobile reading, and source links remain
 clickable in Discord rather than embedded in the PNG.
 
@@ -222,8 +239,9 @@ writer's tool-free prompt/JSON/citation contracts, server-name resolution, issue
 reservation/acknowledgement and image budgets. Reader tests cover private loading
 acknowledgement, ephemeral-only replies, message/audience binding, malformed IDs,
 missing snapshots, access revocation and database failures. Publication tests verify
-the public payload contains only the image/button and archives approved text before
-sending. Rendering tests exercise real PNG output
+the public payload contains only the ordered images/button and archives approved text before
+sending. Preview tests reject approval if even the inside-page delivery fails.
+Rendering tests exercise real PNG output, teaser selection and one/two-page composition
 and wrapping. Live Mongo compare-and-swap/concurrency checks require a disposable Mongo
 instance, and test doubles are not proof of server semantics. Live editorial quality and actual
 Discord permissions/delivery require an admin trial after deployment.

@@ -11,7 +11,9 @@ internal sealed class GazettePageRenderer : IGazettePageRenderer
     private static readonly SKColor Ink = new(42, 33, 25);
     private static readonly SKColor Paper = new(247, 239, 219);
 
-    public GazettePage Render(GazetteEdition edition, long issueNumber, string dates, byte[]? illustration)
+    internal const int InsidePageNumber = 2;
+
+    public GazettePrintEdition Render(GazetteEdition edition, long issueNumber, string dates, byte[]? illustration)
     {
         if (edition.Articles.Count is < 1 or > 3 || issueNumber < 1)
             throw new InvalidOperationException("Invalid newspaper layout input.");
@@ -26,6 +28,7 @@ internal sealed class GazettePageRenderer : IGazettePageRenderer
         using var body = new SKFont(regular, 30);
         using var headline = new SKFont(bold, 48);
         using var smallHeadline = new SKFont(bold, 36);
+        using var teaserFont = new SKFont(regular, 26);
         using var small = new SKFont(regular, 22);
         using var masthead = new SKFont(bold, 65);
         using var paint = new SKPaint { Color = Ink, IsAntialias = true };
@@ -49,11 +52,11 @@ internal sealed class GazettePageRenderer : IGazettePageRenderer
             .Select(article => new
             {
                 Title = Wrap(article.Headline, smallHeadline, secondaryWidth, paint),
-                Body = Wrap(article.Body, body, secondaryWidth, paint),
+                Body = Wrap(GetTeaser(article), teaserFont, secondaryWidth, paint),
             })
             .ToArray();
         var leadBodyHeight = Math.Max(leadBody.Count * 44, art is null ? 0 : 340);
-        var secondaryHeight = secondary.Length == 0 ? 0 : secondary.Max(article => article.Title.Count * 48 + article.Body.Count * 44 + 65);
+        var secondaryHeight = secondary.Length == 0 ? 0 : secondary.Max(article => article.Title.Count * 48 + article.Body.Count * 38 + 80) + 40;
         var advert = Wrap(edition.Editorial, body, contentWidth - 50, paint);
         var height = 330 + leadTitle.Count * 60 + leadBodyHeight + secondaryHeight + advert.Count * 44 + 300;
         if (height > 4000)
@@ -108,27 +111,104 @@ internal sealed class GazettePageRenderer : IGazettePageRenderer
         }
         y = bodyTop + leadBodyHeight + 35;
         canvas.DrawLine(Margin, y, Width - Margin, y, rules);
+        if (secondary.Length > 0)
+            canvas.DrawText("INSIDE THIS ISSUE", Margin, y + 38, small, paint);
         y += 60;
+        if (secondary.Length > 0)
+            y += 40;
         for (var index = 0; index < secondary.Length; index++)
         {
             var article = secondary[index];
             var x = Margin + index * (columnWidth + Gap);
             var articleY = DrawLines(canvas, article.Title, x, y, 48, smallHeadline, paint) + 20;
-            DrawLines(canvas, article.Body, x, articleY, 44, body, paint);
+            articleY = DrawLines(canvas, article.Body, x, articleY, 38, teaserFont, paint) + 5;
+            canvas.DrawText($"Read more · page {InsidePageNumber}", x, articleY, small, paint);
         }
         if (secondary.Length == 2)
-            canvas.DrawLine(Width / 2, y - 35, Width / 2, y + secondaryHeight - 40, rules);
-        y += secondaryHeight;
+            canvas.DrawLine(Width / 2, y - 35, Width / 2, y + secondaryHeight - 70, rules);
+        y += secondaryHeight - (secondary.Length > 0 ? 40 : 0);
         canvas.DrawRect(new SKRect(Margin, y, Width - Margin, y + 95 + advert.Count * 44), rules);
         canvas.DrawText("CLASSIFIEDS", Margin + 25, y + 43, small, paint);
         DrawLines(canvas, advert, Margin + 25, y + 92, 44, body, paint);
-        Center(canvas, "SELECTED DISPATCHES FROM CHAMPIONS OF KHAZAD", height - 55, small, paint);
+        var pageCount = secondary.Length > 0 ? 2 : 1;
+        Center(canvas, $"CHAMPIONS OF KHAZAD · PAGE 1 OF {pageCount}", height - 55, small, paint);
+        var pages = new List<GazettePage> { Encode(bitmap, issueNumber, 1) };
+        if (secondary.Length > 0)
+            pages.Add(RenderInsidePage(edition.Articles.Skip(1).ToArray(), issueNumber, dates, body, smallHeadline, small, paint, rules));
+        if (pages.Sum(page => page.Png.Length) > 8_000_000)
+            throw new InvalidOperationException("Printed issue exceeds the attachment budget.");
+        return new(pages);
+    }
+
+    private static GazettePage RenderInsidePage(
+        IReadOnlyList<GazetteArticle> articles,
+        long issueNumber,
+        string dates,
+        SKFont body,
+        SKFont headline,
+        SKFont small,
+        SKPaint paint,
+        SKPaint rules
+    )
+    {
+        var contentWidth = Width - 2 * Margin;
+        var columnWidth = articles.Count == 1 ? contentWidth : (contentWidth - Gap) / 2;
+        var columns = articles
+            .Select(article => new
+            {
+                Title = Wrap(article.Headline, headline, columnWidth, paint),
+                Body = Wrap(article.Body, body, columnWidth, paint),
+            })
+            .ToArray();
+        var columnHeight = columns.Max(column => column.Title.Count * 48 + column.Body.Count * 44 + 30);
+        var height = Math.Max(750, 340 + columnHeight + 110);
+        if (height > 4000)
+            throw new InvalidOperationException("Inside newspaper page is too tall.");
+        using var bitmap = new SKBitmap(Width, height);
+        using var canvas = new SKCanvas(bitmap);
+        canvas.Clear(Paper);
+        canvas.DrawRect(new SKRect(25, 25, Width - 25, height - 25), rules);
+        Center(canvas, "THE KHAZAD GAZETTE", 105, headline, paint);
+        Center(canvas, "AROUND THE GUILD", 160, small, paint);
+        canvas.DrawLine(Margin, 189, Width - Margin, 189, rules);
+        canvas.DrawText($"Issue No. {issueNumber} · Page {InsidePageNumber}", Margin, 225, small, paint);
+        canvas.DrawText(dates, Width - Margin - small.MeasureText(dates, paint), 225, small, paint);
+        canvas.DrawLine(Margin, 245, Width - Margin, 245, rules);
+        for (var index = 0; index < columns.Length; index++)
+        {
+            var x = Margin + index * (columnWidth + Gap);
+            var y = DrawLines(canvas, columns[index].Title, x, 310, 48, headline, paint) + 25;
+            DrawLines(canvas, columns[index].Body, x, y, 44, body, paint);
+        }
+        if (columns.Length == 2)
+            canvas.DrawLine(Width / 2, 275, Width / 2, height - 100, rules);
+        Center(canvas, $"CHAMPIONS OF KHAZAD · PAGE {InsidePageNumber} OF 2", height - 55, small, paint);
+        return Encode(bitmap, issueNumber, InsidePageNumber);
+    }
+
+    internal static string GetTeaser(GazetteArticle article)
+    {
+        if (!string.IsNullOrWhiteSpace(article.Teaser))
+            return article.Teaser;
+        // Older/tool-double editions can omit a teaser; quote their existing body rather than inventing a new claim.
+        var body = article.Body.Trim();
+        var sentenceEnd = body.IndexOfAny(['.', '!', '?']);
+        if (sentenceEnd >= 0 && sentenceEnd < 160)
+            return body[..(sentenceEnd + 1)];
+        if (body.Length <= 160)
+            return body;
+        var length = char.IsHighSurrogate(body[156]) ? 156 : 157;
+        return body[..length].TrimEnd() + "…";
+    }
+
+    private static GazettePage Encode(SKBitmap bitmap, long issueNumber, int pageNumber)
+    {
         using var image = SKImage.FromBitmap(bitmap);
         using var encoded = image.Encode(SKEncodedImageFormat.Png, 100);
         var bytes = encoded.ToArray();
         if (bytes.Length > 8_000_000)
             throw new InvalidOperationException("Newspaper image exceeds the attachment limit.");
-        return new($"khazad-gazette-{issueNumber}.png", bytes);
+        return new($"khazad-gazette-{issueNumber}-page-{pageNumber}.png", bytes);
     }
 
     private static SKBitmap? DecodeIllustration(byte[]? bytes)

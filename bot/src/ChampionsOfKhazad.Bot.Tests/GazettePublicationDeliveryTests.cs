@@ -8,10 +8,12 @@ namespace ChampionsOfKhazad.Bot.Tests;
 
 public class GazettePublicationDeliveryTests
 {
-    [Fact]
-    public async Task PublicMessageContainsOnlyPageAndButtonWithSnapshotSavedBeforeSend()
+    [Theory]
+    [InlineData(1)]
+    [InlineData(2)]
+    public async Task PublicMessageContainsOnlyOrderedPagesAndButtonWithSnapshotSavedBeforeSend(int pageCount)
     {
-        var fixture = new Fixture();
+        var fixture = new Fixture { PageCount = pageCount };
         await fixture.Run();
         Assert.Equal(new[] { "archive", "send", "confirm" }, fixture.Store.Stages);
         Assert.Equal("Exact approved text", fixture.Store.Edition!.Text);
@@ -50,17 +52,20 @@ public class GazettePublicationDeliveryTests
         public Store Store { get; } = new();
         public bool CanSend { get; set; } = true;
         public bool SendFails { get; set; }
+        public int PageCount { get; set; } = 1;
 
         public Task Run()
         {
-            var page = new GazettePage("issue.png", [1, 2, 3]);
+            var printEdition = new GazettePrintEdition(
+                Enumerable.Range(1, PageCount).Select(page => new GazettePage($"issue-page-{page}.png", [1, 2, 3])).ToArray()
+            );
             var channel = Stub<ITextChannel>(
                 (method, args) =>
                     method.Name switch
                     {
                         "get_GuildId" => 1UL,
                         "get_Id" => 8UL,
-                        "SendFileAsync" => Send(method, args!, page),
+                        "SendFilesAsync" => Send(method, args!, printEdition),
                         _ => throw new NotSupportedException(method.Name),
                     }
             );
@@ -75,24 +80,24 @@ public class GazettePublicationDeliveryTests
             return gateway.SendPublicationAsync(
                 channel,
                 "Exact approved text",
-                page,
+                printEdition,
                 "012345abcdef",
                 () => CanSend,
                 TestContext.Current.CancellationToken
             );
         }
 
-        private Task<IUserMessage> Send(MethodInfo method, object?[] args, GazettePage page)
+        private Task<IUserMessage> Send(MethodInfo method, object?[] args, GazettePrintEdition printEdition)
         {
             Store.Stages.Add("send");
             Assert.NotNull(Store.Edition);
             object? Argument(string name) => args[Array.FindIndex(method.GetParameters(), parameter => parameter.Name == name)];
-            Assert.Equal(page.FileName, Argument("filename"));
-            var embed = Assert.IsType<Embed>(Argument("embed"));
-            Assert.Null(embed.Description);
-            Assert.Equal("attachment://issue.png", embed.Image!.Value.Url);
-            var embeds = Argument("embeds") as Embed[];
-            Assert.True(embeds is null || embeds.Length == 0);
+            var files = Assert.IsAssignableFrom<IEnumerable<FileAttachment>>(Argument("attachments")).ToArray();
+            Assert.Equal(printEdition.Pages.Select(page => page.FileName), files.Select(file => file.FileName));
+            var embeds = Assert.IsType<Embed[]>(Argument("embeds"));
+            Assert.Equal(printEdition.Pages.Count, embeds.Length);
+            Assert.All(embeds, embed => Assert.Null(embed.Description));
+            Assert.Equal(printEdition.Pages.Select(page => $"attachment://{page.FileName}"), embeds.Select(embed => embed.Image!.Value.Url));
             var components = Assert.IsType<MessageComponent>(Argument("components"));
             Assert.Single(components.Components);
             Assert.Same(AllowedMentions.None, Argument("allowedMentions"));

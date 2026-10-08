@@ -33,6 +33,8 @@ public class DirectMessageHandlerTests
 
     private sealed class GazetteGateway : IGazetteGateway
     {
+        public string DestinationError => "The Gazette destination is unavailable.";
+
         public bool Called { get; private set; }
 
         public GazetteDestination? GetDestination()

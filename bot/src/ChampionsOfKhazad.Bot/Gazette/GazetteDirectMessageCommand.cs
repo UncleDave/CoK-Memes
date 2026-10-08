@@ -133,10 +133,7 @@ public sealed partial class GazetteDirectMessageCommand(
         var destination = gateway.GetDestination();
         if (destination is null)
         {
-            await reply(
-                "#ai-tavern is unavailable or ambiguous, or the bot lacks read/send/embed permissions. Nothing was published.",
-                cancellationToken
-            );
+            await reply($"{gateway.DestinationError} Nothing was published.", cancellationToken);
             return;
         }
         var since = until.AddDays(-7);

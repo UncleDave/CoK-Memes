@@ -18,36 +18,60 @@ internal sealed class DiscordGazetteGateway(
     internal const int MaximumInputCharacters = 40000;
     internal const int MaximumSources = 160;
 
+    public string DestinationError { get; private set; } = "The Gazette destination is unavailable.";
+
     public GazetteDestination? GetDestination()
     {
         var guild = GetGuild();
         if (guild is null)
-            return null;
+            return Unavailable("The bot's guild connection is not ready. Try again once it has connected.");
         var matches = guild
-            .TextChannels.Where(channel => channel is not (SocketThreadChannel or SocketVoiceChannel) && !channel.IsNsfw)
+            .TextChannels.Where(channel => channel is not (SocketThreadChannel or SocketVoiceChannel))
             .Where(channel =>
                 options.Value.DestinationChannelId != 0
                     ? channel.Id == options.Value.DestinationChannelId
                     : channel.Name.Equals(options.Value.DestinationChannelName, StringComparison.OrdinalIgnoreCase)
             )
             .ToArray();
-        if (matches.Length != 1)
-            return null;
+        if (matches.Length == 0)
+            return Unavailable(
+                options.Value.DestinationChannelId != 0
+                    ? $"The configured Gazette channel ID {options.Value.DestinationChannelId} was not found in this guild."
+                    : $"No text channel has the exact configured name '{options.Value.DestinationChannelName}'. Configure Gazette:DestinationChannelId instead."
+            );
+        if (matches.Length > 1)
+            return Unavailable("The Gazette channel name is ambiguous. Configure Gazette:DestinationChannelId to select exactly one channel.");
         var destination = matches[0];
+        if (destination.IsNsfw)
+            return Unavailable($"#{destination.Name} is marked NSFW; the Gazette currently requires a non-NSFW destination.");
         var role = guild.GetRole(messageOptions.Value.NormalUserRoleId);
         var admin = guild.GetUser(adminOptions.Value.AdminUserId);
         var bot = guild.CurrentUser;
-        if (
-            role is null
-            || admin is null
-            || bot is null
-            || !NormalUserChannelAccess.CanRead(destination, [guild.EveryoneRole, role])
-            || !CanRead(admin, destination)
-            || !CanRead(bot, destination)
-        )
-            return null;
+        if (role is null)
+            return Unavailable("The configured normal-member role was not found. Check DiscordMessageTools:NormalUserRoleId.");
+        if (admin is null)
+            return Unavailable("Your guild membership is not in the bot's member cache, so it cannot verify your channel permissions yet.");
+        if (bot is null)
+            return Unavailable("The bot's own guild membership is not available yet.");
+        if (!NormalUserChannelAccess.CanRead(destination, [guild.EveryoneRole, role]))
+            return Unavailable($"The normal-member role cannot both View Channel and Read Message History in #{destination.Name}.");
+        if (!CanRead(admin, destination))
+            return Unavailable($"Your guild permissions do not include both View Channel and Read Message History in #{destination.Name}.");
+        if (!CanRead(bot, destination))
+            return Unavailable($"The bot needs View Channel and Read Message History in #{destination.Name}.");
         var permissions = bot.GetPermissions(destination);
-        return permissions is { SendMessages: true, EmbedLinks: true } ? new(destination.Id, destination.Name) : null;
+        if (!permissions.SendMessages)
+            return Unavailable($"The bot needs Send Messages in #{destination.Name}.");
+        if (!permissions.EmbedLinks)
+            return Unavailable($"The bot needs Embed Links in #{destination.Name}.");
+        DestinationError = string.Empty;
+        return new(destination.Id, destination.Name);
+    }
+
+    private GazetteDestination? Unavailable(string reason)
+    {
+        DestinationError = reason;
+        return null;
     }
 
     public async Task<GazetteChatBatch> ReadRecentAsync(

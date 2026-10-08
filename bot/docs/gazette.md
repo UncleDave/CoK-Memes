@@ -96,6 +96,13 @@ The destination must be non-NSFW, normal-member/admin/bot-readable, and the bot 
 have Send Messages and Embed Links. Existing Discord, AI and normal-role configuration
 is reused; no additional credentials or persistence configuration are introduced.
 
+The committed Production and Development configurations pin the destination by ID
+to their existing bot-conversation channel (also included in MentionHandler's channel
+configuration and the follower bot-mention exclusion). A renamed/decorated channel
+therefore does not depend on an exact `ai-tavern` name match. Destination failures
+explain the specific readiness, resolution, role/member-cache or permission check in
+the admin DM rather than combining them into a generic error.
+
 ## Validation
 
 Backend tests cover admin-only DM routing, private delivery before approval, replacement,

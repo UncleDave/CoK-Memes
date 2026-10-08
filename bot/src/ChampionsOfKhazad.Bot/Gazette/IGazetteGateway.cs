@@ -4,6 +4,8 @@ namespace ChampionsOfKhazad.Bot;
 
 public interface IGazetteGateway
 {
+    string DestinationError { get; }
+
     GazetteDestination? GetDestination();
 
     Task<GazetteChatBatch> ReadRecentAsync(ulong destinationId, DateTimeOffset since, DateTimeOffset until, CancellationToken cancellationToken);

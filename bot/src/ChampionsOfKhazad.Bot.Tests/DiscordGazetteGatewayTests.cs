@@ -1,3 +1,4 @@
+using System.Text.Json;
 using ChampionsOfKhazad.Bot.GenAi;
 using Microsoft.Extensions.Options;
 
@@ -6,6 +7,25 @@ namespace ChampionsOfKhazad.Bot.Tests;
 public class DiscordGazetteGatewayTests
 {
     private static readonly DateTimeOffset Now = new(2026, 10, 8, 12, 0, 0, TimeSpan.Zero);
+
+    [Theory]
+    [InlineData("Production")]
+    [InlineData("Development")]
+    public void EnvironmentConfigurationPinsGazetteToTheExistingBotConversationChannel(string environment)
+    {
+        using var config = JsonDocument.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, $"appsettings.{environment}.json")));
+        var root = config.RootElement;
+        var destination = root.GetProperty("Gazette").GetProperty("DestinationChannelId").GetUInt64();
+        var botConversationChannel = root.GetProperty("Followers").GetProperty("IgnoreBotMentionsInChannelId").GetUInt64();
+        var mentionChannels = root.GetProperty("EventHandlers")
+            .GetProperty("Mention")
+            .GetProperty("ChannelIds")
+            .EnumerateArray()
+            .Select(id => id.GetUInt64());
+        Assert.NotEqual(0UL, destination);
+        Assert.Equal(botConversationChannel, destination);
+        Assert.Contains(destination, mentionChannels);
+    }
 
     [Theory]
     [InlineData("content")]
@@ -75,6 +95,7 @@ public class DiscordGazetteGatewayTests
             Options.Create(new DirectMessageHandlerOptions { AdminUserId = 1 })
         );
         Assert.Null(gateway.GetDestination());
+        Assert.Contains("guild connection is not ready", gateway.DestinationError);
         var batch = await gateway.ReadRecentAsync(8, Now.AddDays(-7), Now, TestContext.Current.CancellationToken);
         Assert.Empty(batch.Sources);
         Assert.False(await gateway.VerifyAsync(8, [Source(1, Now, "Message")], TestContext.Current.CancellationToken));

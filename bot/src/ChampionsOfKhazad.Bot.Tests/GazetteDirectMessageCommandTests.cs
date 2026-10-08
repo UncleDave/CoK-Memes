@@ -187,6 +187,8 @@ public class GazetteDirectMessageCommandTests
         Assert.Empty(fixture.Gateway.Publications);
         if (condition is "no-messages" or "no-destination")
             Assert.Equal(0, fixture.Writer.Calls);
+        if (condition == "no-destination")
+            Assert.Contains(fixture.Replies, text => text.Contains(fixture.Gateway.DestinationError));
     }
 
     [Fact]
@@ -275,6 +277,8 @@ public class GazetteDirectMessageCommandTests
 
     private sealed class Gateway : IGazetteGateway
     {
+        public string DestinationError => "The bot needs Embed Links in #ai-tavern.";
+
         public GazetteDestination? Destination { get; set; } = new(8, "ai-tavern");
         public bool Valid { get; set; } = true;
         public bool SendFails { get; set; }

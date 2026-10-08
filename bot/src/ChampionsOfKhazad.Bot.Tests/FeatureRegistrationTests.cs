@@ -27,6 +27,7 @@ public class FeatureRegistrationTests
         AssertSingleton<IUpdateLore>(services);
         AssertSingleton<IDeleteLore>(services);
         AssertSingleton<IStoreLore>(services);
+        AssertSingleton<IEditLoreStore>(services);
         AssertSingleton<IWordOfTheDayStore>(services);
         AssertSingleton<IGetStreakBreaks>(services);
         AssertSingleton<IStoreStreakBreaks>(services);
@@ -59,6 +60,7 @@ public class FeatureRegistrationTests
         Assert.Equal(ServiceLifetime.Scoped, Assert.Single(services, descriptor => descriptor.ServiceType == typeof(ICompletionService)).Lifetime);
         Assert.Equal(ServiceLifetime.Scoped, Assert.Single(services, descriptor => descriptor.ServiceType == typeof(IEmojiHandler)).Lifetime);
         Assert.Equal(ServiceLifetime.Scoped, Assert.Single(services, descriptor => descriptor.ServiceType == typeof(INotebookDiscoverer)).Lifetime);
+        Assert.Equal(ServiceLifetime.Scoped, Assert.Single(services, descriptor => descriptor.ServiceType == typeof(ILoreEditPlanner)).Lifetime);
         Assert.Equal(
             ServiceLifetime.Scoped,
             Assert.Single(services, descriptor => descriptor.ServiceType == typeof(NotebookObserverService)).Lifetime

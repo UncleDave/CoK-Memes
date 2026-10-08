@@ -21,6 +21,7 @@ internal sealed class MongoLoreStoreFixture
     public Exception? EmbeddingFailure { get; set; }
     public Exception? InsertFailure { get; set; }
     public int EmbeddingCalls { get; private set; }
+    public PipelineDefinition<LoreDocument, LoreDocument>? SearchPipeline { get; private set; }
     public MongoLoreStore Store { get; }
 
     public MongoLoreStoreFixture()
@@ -32,6 +33,12 @@ internal sealed class MongoLoreStoreFixture
                     return BsonSerializer.SerializerRegistry.GetSerializer<LoreDocument>();
                 if (method.Name == "get_Settings")
                     return new MongoCollectionSettings();
+                if (method.Name == "AggregateAsync")
+                {
+                    ((CancellationToken)args![^1]!).ThrowIfCancellationRequested();
+                    SearchPipeline = (PipelineDefinition<LoreDocument, LoreDocument>)args[0]!;
+                    return Task.FromResult<IAsyncCursor<LoreDocument>>(new DocumentCursor([]));
+                }
                 if (method.Name == "FindAsync")
                 {
                     var token = (CancellationToken)args![^1]!;

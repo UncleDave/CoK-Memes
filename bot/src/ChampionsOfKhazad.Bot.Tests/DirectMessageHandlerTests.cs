@@ -1,6 +1,7 @@
 using System.Reflection;
 using ChampionsOfKhazad.Bot.DiscordMemes.WordOfTheDay;
 using ChampionsOfKhazad.Bot.GenAi;
+using ChampionsOfKhazad.Bot.Lore.Abstractions;
 using Discord;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -54,6 +55,7 @@ public class DirectMessageHandlerTests
         Assert.Contains("personality furious 2h", help);
         Assert.Contains("@Lorekeeper you've had a stroke.", help);
         Assert.Contains("notebook show/discard", help);
+        Assert.Contains("lore undo", help);
     }
 
     [Theory]
@@ -86,7 +88,67 @@ public class DirectMessageHandlerTests
         Assert.Equal(shouldPause, notes.State.Paused);
     }
 
-    private static DirectMessageHandler CreateHandler(MemoryStore store, WordGetter getter, NotebookDirectMessageCommand? notebookCommand = null) =>
+    [Theory]
+    [InlineData(true, true, false, true)]
+    [InlineData(false, true, false, false)]
+    [InlineData(true, false, false, false)]
+    [InlineData(true, true, true, false)]
+    public async Task LoreEditorOnlyRunsForHumanAdminDms(bool admin, bool dm, bool bot, bool shouldPlan)
+    {
+        var planner = new LorePlanner();
+        var notebook = new NotebookService(new NotebookStore(), null!, null!, null!, TimeProvider.System, NullLogger<NotebookService>.Instance);
+        var editor = new LoreDirectMessageCommand(
+            new EmptyLoreStore(),
+            planner,
+            new(),
+            Options.Create(new DirectMessageHandlerOptions { AdminUserId = 1 }),
+            TimeProvider.System,
+            NullLogger<LoreDirectMessageCommand>.Instance
+        );
+        var handler = CreateHandler(
+            new MemoryStore(),
+            new WordGetter(),
+            new NotebookDirectMessageCommand(notebook, TimeProvider.System, NullLogger<NotebookDirectMessageCommand>.Instance),
+            editor
+        );
+        var replies = new List<string>();
+        await handler.Handle(new MessageReceived(CreateMessage(admin, dm, bot, "Add Grim", replies)), TestContext.Current.CancellationToken);
+        Assert.Equal(shouldPlan, planner.Called);
+    }
+
+    private sealed class LorePlanner : ILoreEditPlanner
+    {
+        public bool Called { get; private set; }
+
+        public Task<LoreEditPlan> PlanAsync(
+            string instruction,
+            IReadOnlyList<LoreEntrySnapshot> entries,
+            IReadOnlyList<LoreEditorTurn> conversation,
+            CancellationToken cancellationToken
+        )
+        {
+            Called = true;
+            return Task.FromResult(new LoreEditPlan("clarify", null, null, new(), "Which Grim?", false));
+        }
+    }
+
+    private sealed class EmptyLoreStore : IEditLoreStore
+    {
+        public Task<IReadOnlyList<LoreEditState>> GetEntriesAsync(CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<LoreEditState>>([]);
+
+        public Task<LoreEditState> GetEntryAsync(string name, CancellationToken cancellationToken) => throw new NotSupportedException();
+
+        public Task<bool> TrySaveAsync(LoreEditState expected, LoreRevision revision, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+    }
+
+    private static DirectMessageHandler CreateHandler(
+        MemoryStore store,
+        WordGetter getter,
+        NotebookDirectMessageCommand? notebookCommand = null,
+        LoreDirectMessageCommand? loreCommand = null
+    ) =>
         new(
             Options.Create(new DirectMessageHandlerOptions { AdminUserId = 1 }),
             getter,
@@ -94,7 +156,8 @@ public class DirectMessageHandlerTests
                 new LorekeeperPersonalityService(store, TimeProvider.System, NullLogger<LorekeeperPersonalityService>.Instance)
             ),
             notebookCommand!,
-            new CooldownTracker<ulong>(TimeProvider.System)
+            new CooldownTracker<ulong>(TimeProvider.System),
+            loreCommand!
         );
 
     private static IUserMessage CreateMessage(bool admin, bool dm, bool bot, string content, List<string> replies)

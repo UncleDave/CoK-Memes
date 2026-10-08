@@ -10,7 +10,8 @@ public class DirectMessageHandler(
     IGetTheWordOfTheDay wordOfTheDayGetter,
     PersonalityDirectMessageCommand personalityCommand,
     NotebookDirectMessageCommand notebookCommand,
-    CooldownTracker<ulong> cooldowns
+    CooldownTracker<ulong> cooldowns,
+    LoreDirectMessageCommand loreCommand
 ) : INotificationHandler<MessageReceived>
 {
     private const string SourceUrl = $"{Constants.RepositoryUrl}/tree/main/bot";
@@ -27,6 +28,11 @@ public class DirectMessageHandler(
         + "notebook list/history [page] — review active notes or audit history\n"
         + "notebook show/discard <id> — inspect or remove a note\n"
         + "notebook pause/resume — stop or restart new notes\n\n"
+        + "lore — DM lore editor help; explicit add/update requests save directly\n"
+        + "lore list/show/history — browse entries and revisions\n"
+        + "lore undo <name> (or undo) — reverse the latest edit\n"
+        + "lore confirm <token> / lore cancel — approve or cancel a destructive proposal\n"
+        + "lore reset — clear the short-lived editor conversation\n\n"
         + "Duration: whole minutes, hours, or days (e.g. 30m, 2h, 1d), up to 30 days; expires to baseline. "
         + "Without a duration, the personality stays active until changed. Example: personality furious 2h.\n\n"
         + "In guild chat: @Lorekeeper you've had a stroke. — cut that channel's conversation context here (admin only; confirmed with 🧠).";
@@ -56,7 +62,8 @@ public class DirectMessageHandler(
             {
                 var response =
                     await personalityCommand.ExecuteAsync(message.Content, cancellationToken)
-                    ?? await notebookCommand.ExecuteAsync(message.Content, cancellationToken);
+                    ?? await notebookCommand.ExecuteAsync(message.Content, cancellationToken)
+                    ?? await loreCommand.ExecuteAsync(message.Author.Id, message.Content, cancellationToken);
                 if (response is not null)
                     await message.Channel.SendMessageInChunksAsync(response, cancellationToken);
             }

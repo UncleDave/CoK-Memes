@@ -115,6 +115,8 @@ host.Services.AddSingleton<NotificationQueue>().AddHostedService<NotificationQue
 host.Services.AddHostedService<BotService>()
     .AddScoped<PersonalityDirectMessageCommand>()
     .AddScoped<NotebookDirectMessageCommand>()
+    .AddScoped<LoreDirectMessageCommand>()
+    .AddSingleton<LoreEditorSession>()
     .AddScoped<INotebookReviewer, DiscordNotebookReviewer>()
     .AddScoped<INotebookSourceReader, DiscordMessageService>()
     .AddScoped<INotebookBackgroundSourceReader, DiscordMessageService>()

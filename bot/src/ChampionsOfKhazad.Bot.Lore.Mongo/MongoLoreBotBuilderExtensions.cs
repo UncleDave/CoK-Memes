@@ -15,7 +15,9 @@ public static class MongoLoreBotBuilderExtensions
                 Collections.Lore.Name,
                 collection => collection.CreateUniqueIndex(Collections.Lore.UniqueIndex.Field, Collections.Lore.UniqueIndex.Collation)
             )
-            .Services.AddSingleton<IStoreLore, MongoLoreStore>();
+            .Services.AddSingleton<MongoLoreStore>()
+            .AddSingleton<IStoreLore>(services => services.GetRequiredService<MongoLoreStore>())
+            .AddSingleton<IEditLoreStore>(services => services.GetRequiredService<MongoLoreStore>());
 
         return builder;
     }

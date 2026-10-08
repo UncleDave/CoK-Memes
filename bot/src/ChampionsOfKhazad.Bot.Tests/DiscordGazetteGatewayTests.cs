@@ -117,7 +117,9 @@ public class DiscordGazetteGatewayTests
             new(),
             new(null!),
             Options.Create(new GazetteOptions()),
-            Options.Create(new DiscordMessageToolsOptions())
+            Options.Create(new DiscordMessageToolsOptions()),
+            null!,
+            TimeProvider.System
         );
         Assert.Null(gateway.GetDestination());
         Assert.Contains("guild connection is not ready", gateway.DestinationError);
@@ -125,7 +127,7 @@ public class DiscordGazetteGatewayTests
         Assert.Empty(batch.Sources);
         Assert.False(await gateway.VerifyAsync(8, [Source(1, Now, "Message")], TestContext.Current.CancellationToken));
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            gateway.PublishAsync(8, "Edition", new("issue.png", [1]), TestContext.Current.CancellationToken)
+            gateway.PublishAsync(8, "Edition", new("issue.png", [1]), "012345abcdef", TestContext.Current.CancellationToken)
         );
     }
 

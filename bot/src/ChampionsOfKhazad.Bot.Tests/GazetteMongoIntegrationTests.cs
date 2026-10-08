@@ -55,6 +55,24 @@ public class GazetteMongoIntegrationTests
             var persisted = await restarted.GetAsync(cancellation);
             Assert.Equal(99UL, Assert.Single(persisted.Publications).MessageId);
             Assert.Equal(2, persisted.IllustrationAttempts.Count);
+            var snapshots = client.GetDatabase(databaseName).GetCollection<GazettePublishedEdition>("publishedEditions");
+            var approved = new GazettePublishedEdition(
+                "012345abcdef",
+                1,
+                8,
+                "Exact approved text with source links",
+                new DateTime(2026, 10, 8, 12, 0, 0, DateTimeKind.Utc)
+            );
+            var archive = new MongoGazettePublishedEditionStore(snapshots);
+            await archive.SaveAsync(approved, cancellation);
+            Assert.Equal(approved, await new MongoGazettePublishedEditionStore(snapshots).GetAsync(approved.Id, cancellation));
+            await archive.ConfirmMessageAsync(approved.Id, 99, cancellation);
+            Assert.Equal(99UL, (await archive.GetAsync(approved.Id, cancellation))!.MessageId);
+            await Assert.ThrowsAsync<InvalidOperationException>(() => archive.ConfirmMessageAsync(approved.Id, 100, cancellation));
+            await Assert.ThrowsAsync<MongoWriteException>(() =>
+                archive.SaveAsync(approved with { Text = "Must not overwrite approved text" }, cancellation)
+            );
+            Assert.Equal(approved.Text, (await archive.GetAsync(approved.Id, cancellation))!.Text);
         }
         finally
         {

@@ -11,7 +11,9 @@ internal sealed class DiscordGazetteGateway(
     BotContextProvider contextProvider,
     SharedDiscordRestClient rest,
     IOptions<GazetteOptions> options,
-    IOptions<DiscordMessageToolsOptions> messageOptions
+    IOptions<DiscordMessageToolsOptions> messageOptions,
+    IGazettePublishedEditionStore publishedEditions,
+    TimeProvider clock
 ) : IGazetteGateway
 {
     internal const int MaximumChannels = 12;
@@ -187,7 +189,13 @@ internal sealed class DiscordGazetteGateway(
             )
         );
 
-    public async Task<ulong> PublishAsync(ulong destinationId, string edition, GazettePage page, CancellationToken cancellationToken)
+    public async Task<ulong> PublishAsync(
+        ulong destinationId,
+        string edition,
+        GazettePage page,
+        string publicationId,
+        CancellationToken cancellationToken
+    )
     {
         if (edition.Length > 4000 || GetDestination()?.Id != destinationId)
             throw new InvalidOperationException("Gazette destination is unavailable.");
@@ -203,18 +211,39 @@ internal sealed class DiscordGazetteGateway(
             || GetPublicationError(destinationId) is not null
         )
             throw new InvalidOperationException("Gazette destination changed.");
+        return await SendPublicationAsync(
+            text,
+            edition,
+            page,
+            publicationId,
+            () => GetDestination()?.Id == destinationId && GetPublicationError(destinationId) is null,
+            cancellationToken
+        );
+    }
+
+    internal async Task<ulong> SendPublicationAsync(
+        ITextChannel text,
+        string edition,
+        GazettePage page,
+        string publicationId,
+        Func<bool> canSend,
+        CancellationToken cancellationToken
+    )
+    {
+        var components = GazetteReadButton.Build(publicationId);
+        await publishedEditions.SaveAsync(new(publicationId, text.GuildId, text.Id, edition, clock.GetUtcNow().UtcDateTime), cancellationToken);
+        if (!canSend())
+            throw new InvalidOperationException("Gazette destination changed while preparing publication.");
         using var stream = new MemoryStream(page.Png, writable: false);
         var message = await text.SendFileAsync(
             stream,
             page.FileName,
-            embeds:
-            [
-                new EmbedBuilder().WithTitle("The Khazad Gazette").WithImageUrl($"attachment://{page.FileName}").Build(),
-                new EmbedBuilder().WithTitle("Readable edition & sources").WithDescription(edition).Build(),
-            ],
+            embed: new EmbedBuilder().WithTitle("The Khazad Gazette").WithImageUrl($"attachment://{page.FileName}").Build(),
+            components: components,
             allowedMentions: AllowedMentions.None,
             options: new RequestOptions { CancelToken = cancellationToken }
         );
+        await publishedEditions.ConfirmMessageAsync(publicationId, message.Id, cancellationToken);
         return message.Id;
     }
 

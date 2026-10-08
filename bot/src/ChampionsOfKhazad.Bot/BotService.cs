@@ -35,6 +35,7 @@ public class BotService : IHostedService
         _client.MessageReceived += MessageReceivedAsync;
         _client.ReactionAdded += ReactionAddedAsync;
         _client.SlashCommandExecuted += SlashCommandExecutedAsync;
+        _client.ButtonExecuted += ButtonExecutedAsync;
         _client.UserLeft += UserLeftAsync;
     }
 
@@ -129,5 +130,19 @@ public class BotService : IHostedService
     {
         _notificationQueue.TryEnqueue(new UserLeft(user));
         return Task.CompletedTask;
+    }
+
+    private async Task ButtonExecutedAsync(SocketMessageComponent interaction)
+    {
+        if (!GazetteReadButton.TryParse(interaction.Data.CustomId, out _))
+            return;
+        // Acknowledge privately within Discord's deadline; database work belongs in the notification queue.
+        await GazetteReadButton.AcknowledgeAsync(interaction);
+        if (!_notificationQueue.TryEnqueue(new GazetteReadRequested(interaction)))
+            await interaction.FollowupAsync(
+                "I'm busy or shutting down. Please try again shortly.",
+                ephemeral: true,
+                allowedMentions: AllowedMentions.None
+            );
     }
 }

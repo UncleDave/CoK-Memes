@@ -438,7 +438,13 @@ public class GazetteDirectMessageCommandTests
             return Task.FromResult(Valid);
         }
 
-        public Task<ulong> PublishAsync(ulong destinationId, string edition, GazettePage page, CancellationToken cancellationToken)
+        public Task<ulong> PublishAsync(
+            ulong destinationId,
+            string edition,
+            GazettePage page,
+            string publicationId,
+            CancellationToken cancellationToken
+        )
         {
             Publications.Add((destinationId, edition));
             PublishedPages.Add(page);

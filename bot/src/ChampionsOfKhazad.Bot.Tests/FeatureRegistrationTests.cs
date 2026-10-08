@@ -35,6 +35,7 @@ public class FeatureRegistrationTests
         AssertSingleton<IGeneratedImageStore>(services);
         AssertSingleton<INotebookStore>(services);
         AssertSingleton<IGazetteIssueStore>(services);
+        AssertSingleton<IGazettePublishedEditionStore>(services);
         AssertSingleton<ILorekeeperPersonalityStore>(services);
         Assert.Single(services, descriptor => descriptor.ServiceType == typeof(INotificationHandler<CharacterDeathReported>));
     }

@@ -102,7 +102,7 @@ public sealed partial class GazetteDirectMessageCommand(
                     else
                     {
                         publishing = true;
-                        var messageId = await gateway.PublishAsync(pending.Destination.Id, pending.Edition, pending.Page, token);
+                        var messageId = await gateway.PublishAsync(pending.Destination.Id, pending.Edition, pending.Page, pending.Token, token);
                         await issues.MarkPublishedAsync(pending.IssueNumber, pending.Token, messageId, token);
                         await reply(
                             $"Gazette published to #{pending.Destination.Name} (message {messageId}). This approval cannot be reused.",
@@ -253,7 +253,8 @@ public sealed partial class GazetteDirectMessageCommand(
         + "At most 12 channels, the latest 100 messages per channel, and a bounded text sample; not exhaustive coverage.";
 
     private string Preview(GazettePendingDraft pending) =>
-        $"PRIVATE DRAFT — not published. Destination: #{pending.Destination.Name}.\n\n{pending.Edition}\n\n"
+        $"PRIVATE DRAFT — not published. Destination: #{pending.Destination.Name}. "
+        + $"The guild post will show only the page and a Read text & sources button; this text opens privately on click.\n\n{pending.Edition}\n\n"
         + $"Review the page, stories and source links. Reply `gazette approve {pending.Token}` within {Math.Max(0, (int)Math.Ceiling((pending.ExpiresAtUtc - clock.GetUtcNow()).TotalMinutes))} minutes "
         + "to publish exactly the edition above, or `gazette discard`. No edits or regeneration happen during approval.";
 

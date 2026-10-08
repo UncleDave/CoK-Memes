@@ -59,8 +59,13 @@ public class DirectMessageHandlerTests
         public Task<bool> VerifyAsync(ulong destinationId, IReadOnlyList<NotebookSource> sources, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
 
-        public Task<ulong> PublishAsync(ulong destinationId, string edition, GazettePage page, CancellationToken cancellationToken) =>
-            throw new NotSupportedException();
+        public Task<ulong> PublishAsync(
+            ulong destinationId,
+            string edition,
+            GazettePage page,
+            string publicationId,
+            CancellationToken cancellationToken
+        ) => throw new NotSupportedException();
     }
 
     [Theory]

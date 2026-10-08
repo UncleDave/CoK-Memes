@@ -101,17 +101,47 @@ draft. Known pre-send permission failures are explained without implying a send 
 attempted. A send failure or timeout may have an ambiguous outcome: do not retry that
 approval; inspect `#ai-tavern` before requesting another draft. Concurrent/repeated
 approvals cannot send the same pending draft twice. New drafts are not deduplicated
-against previously published editions; there is no persistent edition archive yet.
+against previously published editions.
 
-Publication is one Discord message containing a PNG newspaper page, an image embed,
-and a readable-text/source-link embed with at most 4,000 description characters and
-`AllowedMentions.None`. The private preview delivers the same PNG bytes and the same
-readable edition. Both must be delivered successfully before approval is activated.
+Publication is one Discord message containing a PNG newspaper page, a single image
+embed and a "Read text & sources" button. It does not also show the text edition in
+the channel. The button returns the exact approved readable edition/source links in
+an ephemeral response visible only to the clicking member, never a public follow-up
+or DM. All sends use `AllowedMentions.None`. The private admin preview still delivers
+the PNG bytes and readable edition together for review. Both must be delivered
+successfully before approval is activated.
 `gazette show` reuses those assets; approval never regenerates text, layout or artwork.
 Only the edition is published; tokens, approval instructions
 and sampling diagnostics stay in the administrator's DM. Draft text and cited evidence
-are transient session state, not an additional database archive. Logs contain fixed
+are transient session state until explicitly approved. Logs contain fixed
 outcomes/exception types, not chat, generated prose or rejected source bodies.
+
+## Private readable edition button
+
+Only explicitly approved publication snapshots are stored in Mongo's
+`gazettePublishedEditions` collection, keyed by the unique publication token. This
+retains the final text and source links, guild/channel IDs, approval timestamp and
+confirmed message ID, not raw chat evidence, draft history or image bytes. Snapshots
+are independent of the bounded issue-number journal, so buttons survive restarts and
+later issue publication. Unapproved/discarded previews are never saved here.
+
+Save the snapshot before attempting the Discord send; if persistence fails, do not
+send a newspaper with a broken reader button. Confirm the message ID after the send.
+An ambiguous send can leave an unconfirmed snapshot; it is readable only through a
+matching token on a genuine bot-authored message in the stored guild/channel. It does
+not authorize sending again or open a general lookup command.
+
+The gateway acknowledges Gazette buttons ephemerally within Discord's interaction
+deadline, then queues the database read. The handler rechecks that the interaction
+belongs to the configured connected guild, is on a bot-authored publication in the
+stored channel/message, and that the clicking member can currently View Channel and
+Read Message History. It uses the interaction's guild-member data, not a separate
+member-cache requirement. Recheck access after the database read; wrong-guild/channel,
+copied tokens, missing snapshots or outages produce only a private unavailable reply.
+The reader shows a historical approved snapshot, not regenerated or newly fetched
+source content; Discord itself governs access to the linked source messages. No AI
+call or notebook/lore write occurs on a click. Existing messages are not retrofitted
+with buttons or archived text.
 
 ## Newspaper presentation and issue numbers
 
@@ -120,7 +150,7 @@ secondary columns, rules/borders and a classifieds box. The image model only sup
 an illustration, never the text or newspaper layout. The Linux bot image installs
 DejaVu fonts; Windows rendering uses Georgia. PNGs are at most 1,200 by 4,000 pixels
 and 8 MB, with complete text wrapping rather than silently clipping copy. Text remains
-available alongside the page for accessibility/mobile reading, and source links remain
+available privately through the button for accessibility/mobile reading, and source links remain
 clickable in Discord rather than embedded in the PNG.
 
 Edition dates use the guild's Europe/Copenhagen calendar and human-readable date ranges,
@@ -189,7 +219,11 @@ failures, source access without an admin member-cache entry, private drafting wi
 posting permissions, approval-only posting checks, draft-specific failure wording,
 ambiguous sends, quiet inputs, sampling bounds, REST source filtering and the
 writer's tool-free prompt/JSON/citation contracts, server-name resolution, issue-number
-reservation/acknowledgement and image budgets. Rendering tests exercise real PNG output
+reservation/acknowledgement and image budgets. Reader tests cover private loading
+acknowledgement, ephemeral-only replies, message/audience binding, malformed IDs,
+missing snapshots, access revocation and database failures. Publication tests verify
+the public payload contains only the image/button and archives approved text before
+sending. Rendering tests exercise real PNG output
 and wrapping. Live Mongo compare-and-swap/concurrency checks require a disposable Mongo
 instance, and test doubles are not proof of server semantics. Live editorial quality and actual
 Discord permissions/delivery require an admin trial after deployment.
@@ -198,3 +232,5 @@ Discord permissions/delivery require an admin trial after deployment.
 disposable loopback Mongo server before running the backend tests. It creates/removes
 only its own uniquely named test database and verifies competing issue reservations,
 durable acknowledgements and atomic illustration limits against the real driver/server.
+It also validates published-text persistence across store recreation, duplicate-key
+protection and binding an edition to a single confirmed Discord message.

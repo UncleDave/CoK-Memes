@@ -42,6 +42,12 @@ Endings stay in the reporter's voice: a current status, outlook, uncertainty or 
 which may itself be funny. "For now, the fortress is built chiefly from maybes" fits;
 "That's less a repair saga than an expensive tutorial" is a detachable comedian's verdict.
 Do not mechanically repeat "For now" across all articles.
+This is explicitly a **satirical** newspaper, not a sober factual bulletin. The news
+structure is a vehicle for comedy: each headline/lead needs a recognisable comic
+reframing, with dry irony, mock-grand scale, vivid descriptions and pointed contrasts
+inside the reporting. Accurate source facts do not require bland phrasing. Style
+examples use "a two-phone solution to a two-button problem" and a fortress rumour's
+well-counted pieces versus elusive foundations; they remain examples, never evidence.
 Every non-empty edition has one absurd fictional classified ad, not a real member's
 advert or a purported guild announcement.
 The published section is simply "Classifieds"; neither copy nor illustrations carry
@@ -227,8 +233,9 @@ conflicting/stale numbers require a fresh draft. A confirmed message ID acknowle
 the publication. An ambiguous send keeps its reservation to prevent number reuse or
 duplicate sends after a restart; exceptional failed attempts can therefore leave a gap.
 The bounded journal retains the latest 100 number/token/channel/time/message-ID records,
-not raw chat, edition text or artwork. Mongo revision compare-and-swap is shared with
-the durable illustration budget; only one competing writer may claim a state revision.
+not raw chat, edition text or artwork. Mongo revision compare-and-swap ensures that
+only one competing issue-state writer may claim a revision. Old illustration-attempt
+audit entries are retained for compatible document round-trips but no longer limit images.
 
 ## Optional illustrations
 
@@ -245,20 +252,32 @@ newspaper with the image model or ask it to typeset the articles.
 
 Generation uses the existing image client but a separate private pipeline: no public
 Azure upload, generated-image gallery entry or public confirmation is created. Artwork
-is held only with the transient draft and its rendered PNG. At most one illustration
-request per draft and three reserved attempts per rolling 24 hours by default; failures,
-timeouts and discarded drafts still consume the durable budget. Disabled art, exhausted
-budget, generation failures or invalid image data fall back to the text-only newspaper
+is private transient state with the draft/PNG and one short-lived reuse cache. At most
+one new illustration request per draft, still subject to the one-minute draft spacing;
+there is **no daily illustration quota**. The former three-per-day limit and its
+`Gazette:DailyIllustrationLimit` setting have been removed. Disabled art,
+generation failures or invalid image data fall back to the text-only newspaper
 layout, never prevent the stories/ad from being privately reviewed. The final fallback
 page is previewed and approved unchanged.
-If the optional budget reservation cannot be confirmed, skip art rather than making
-an unreserved image request.
+Every private preview explicitly reports whether art was newly generated, reused,
+omitted by the writer, disabled, failed/timed out or failed to render. `gazette show`
+retains that explanation; it is never included in the published text or page.
+
+Cache one successfully generated and rendered image for at most 30 minutes, keyed by
+a hash of the lead's exact verified source records. Redrafts may change wording without
+spending another image request when they still propose art for the same evidence.
+Edited evidence, source/identity metadata changes, a different source set or expiry
+prevent reuse. Reuse does not extend cache expiry. Failed/invalid images are not cached;
+discarding a preview may leave the private cache until expiry, and a restart clears it.
+Only the hash, image bytes and expiry are cached, not another raw-chat archive. The
+administrator reviews reused art as part of the new preview, and normal verification
+still runs before both preview and publication.
 
 Gazette artwork still uses the shared `gpt-image-2.5-flare` image client; Sunburst has
 not been selected. Only Gazette requests pin `high` quality, 1,024 × 1,024 size and PNG
 output instead of provider-selected `auto`. General bot image generation is unchanged.
-Explicit quality affects token consumption/cost; the existing rolling illustration
-budget still applies. Thumbnail drawing uses cubic resampling before monochrome/tinted
+Explicit quality affects token consumption/cost; new requests are billed even when the
+administrator discards the edition. Thumbnail drawing uses cubic resampling before monochrome/tinted
 printing, avoiding nearest-neighbour aliasing of fine lines.
 
 ## Configuration
@@ -271,7 +290,6 @@ Optional settings under `Gazette`:
 | `DestinationChannelId` | `0` | If set, use this exact channel ID instead of name resolution. |
 | `SourceChannelIds` | `[]` | Optional sampling subset; empty means eligible guild text channels, still bounded above. Never bypasses permissions. |
 | `IllustrationsEnabled` | `true` | Allow one optional lead-story cartoon per draft. |
-| `DailyIllustrationLimit` | `3` | Rolling 24-hour reserved image attempts, from 0 to 10; persisted across restarts. |
 
 The destination must be non-NSFW and normal-member-readable, so its intended audience
 can be resolved safely. The bot needs read access to source channels for drafting;
@@ -294,7 +312,8 @@ failures, source access without an admin member-cache entry, private drafting wi
 posting permissions, approval-only posting checks, draft-specific failure wording,
 ambiguous sends, quiet inputs, sampling bounds, REST source filtering and the
 writer's tool-free prompt/JSON/citation contracts, server-name resolution, issue-number
-reservation/acknowledgement and image budgets. Reader tests cover private loading
+reservation/acknowledgement, one-image-per-draft behavior, exact-evidence artwork reuse,
+cache expiry and explicit missing-image reasons. Reader tests cover private loading
 acknowledgement, ephemeral-only replies, message/audience binding, malformed IDs,
 missing snapshots, access revocation and database failures. Publication tests verify
 the public payload contains only the ordered images/button and archives approved text before
@@ -307,6 +326,6 @@ Discord permissions/delivery require an admin trial after deployment.
 `GazetteMongoIntegrationTests` is opt-in: set `COK_GAZETTE_MONGO_TEST_CONNECTION` to a
 disposable loopback Mongo server before running the backend tests. It creates/removes
 only its own uniquely named test database and verifies competing issue reservations,
-durable acknowledgements and atomic illustration limits against the real driver/server.
+durable acknowledgements against the real driver/server.
 It also validates published-text persistence across store recreation, duplicate-key
 protection and binding an edition to a single confirmed Discord message.

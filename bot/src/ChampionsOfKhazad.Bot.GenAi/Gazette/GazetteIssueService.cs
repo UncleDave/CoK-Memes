@@ -51,21 +51,4 @@ public sealed class GazetteIssueService(IGazetteIssueStore store, TimeProvider c
         }
         throw new InvalidOperationException("Gazette publication acknowledgement could not be saved.");
     }
-
-    public async Task<bool> TryReserveIllustrationAsync(int dailyLimit, CancellationToken cancellationToken)
-    {
-        if (dailyLimit is < 1 or > 10)
-            return false;
-        for (var attempt = 0; attempt < 3; attempt++)
-        {
-            var now = clock.GetUtcNow().UtcDateTime;
-            var state = await store.GetAsync(cancellationToken);
-            var recent = state.IllustrationAttempts.Where(time => time > now.AddDays(-1)).ToArray();
-            if (recent.Length >= dailyLimit)
-                return false;
-            if (await store.TrySaveAsync(state with { IllustrationAttempts = recent.Append(now).ToArray() }, cancellationToken))
-                return true;
-        }
-        return false;
-    }
 }

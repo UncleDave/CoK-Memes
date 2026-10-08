@@ -10,4 +10,7 @@ public sealed record GazettePendingDraft(
     DateTimeOffset ExpiresAtUtc,
     long IssueNumber,
     GazettePrintEdition PrintEdition
-);
+)
+{
+    public string IllustrationStatus { get; init; } = "Illustration: no status recorded.";
+}

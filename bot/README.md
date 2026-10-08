@@ -87,7 +87,8 @@ needs Embed Links and Attach Files there to publish, but not to prepare a privat
 `Gazette:SourceChannelIds` pin the destination and narrow sampling. See
 [Gazette configuration and DM commands](docs/gazette.md) before a live trial.
 The bot's Linux image installs DejaVu fonts for rendered newspaper pages. Issue numbers
-and the optional illustration budget use the existing Mongo configuration.
+and published-text snapshots use the existing Mongo configuration. Gazette images have
+no daily quota; repeated drafts of unchanged lead evidence can reuse recent artwork.
 
 ### Discord setup
 

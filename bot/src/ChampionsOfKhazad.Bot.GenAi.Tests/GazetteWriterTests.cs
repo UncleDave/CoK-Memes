@@ -43,6 +43,10 @@ public class GazetteWriterTests
         Assert.Contains("No archival stories", policy);
         Assert.Contains("do not relentlessly target one person", policy);
         Assert.Contains("Be FUNNY, not dry", policy);
+        Assert.Contains("SATIRICAL newspaper, not a factual bulletin", policy);
+        Assert.Contains("Do not erase the humour while checking accuracy", policy);
+        Assert.Contains("two-phone solution to a two-button problem", policy);
+        Assert.Contains("return null only when no useful illustration concept fits", policy);
         Assert.Contains("Choose ONE comic angle", policy);
         Assert.Contains("inverted-pyramid news structure", policy);
         Assert.Contains("TWO short newspaper paragraphs", policy);

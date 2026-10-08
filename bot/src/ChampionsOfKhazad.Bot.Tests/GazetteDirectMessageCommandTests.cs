@@ -1,12 +1,89 @@
 using ChampionsOfKhazad.Bot.GenAi;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
 namespace ChampionsOfKhazad.Bot.Tests;
 
 public class GazetteDirectMessageCommandTests
 {
+    [Fact]
+    public async Task SameLeadEvidenceReusesSuccessfulArtAcrossRedraftsAndKeepsStatusInShow()
+    {
+        var fixture = new Fixture();
+        fixture.Writer.Edition = fixture.Writer.Edition with { IllustrationPrompt = "A phone returning from the dead beside its replacement." };
+        await fixture.Run("gazette draft");
+        Assert.NotNull(fixture.Session.Illustration);
+        var original = fixture.Session.Illustration;
+        fixture.Clock.Now = fixture.Clock.Now.AddMinutes(1);
+        fixture.Writer.Edition = fixture.Writer.Edition with
+        {
+            Articles = [fixture.Writer.Edition.Articles[0] with { Headline = "A different headline for the same evidence" }],
+            IllustrationPrompt = "Same phone story, phrased differently.",
+        };
+        await fixture.Run("gazette draft");
+        Assert.Equal(1, fixture.Illustrator.Calls);
+        Assert.Same(original, fixture.Session.Illustration);
+        Assert.Contains("reused", fixture.Session.Pending!.IllustrationStatus);
+        await fixture.Run("gazette show");
+        Assert.Contains("Illustration: reused", fixture.Replies[^1]);
+        await fixture.Run($"gazette approve {fixture.Session.Pending!.Token}");
+        Assert.DoesNotContain("Illustration:", Assert.Single(fixture.Gateway.Publications).Text);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ChangedEvidenceOrExpiredCacheGeneratesNewArtRatherThanReusingStaleMeaning(bool expiry)
+    {
+        var fixture = new Fixture();
+        fixture.Writer.Edition = fixture.Writer.Edition with { IllustrationPrompt = "A clear visual gag." };
+        await fixture.Run("gazette draft");
+        fixture.Clock.Now = fixture.Clock.Now.AddMinutes(expiry ? 30 : 1);
+        if (!expiry)
+            fixture.Gateway.Sources = [fixture.Gateway.Sources[0] with { Content = "Evidence edited to a different incident", ContentHash = "new" }];
+        await fixture.Run("gazette draft");
+        Assert.Equal(2, fixture.Illustrator.Calls);
+        Assert.Contains("newly generated", fixture.Session.Pending!.IllustrationStatus);
+    }
+
+    [Fact]
+    public async Task SeveralDifferentDraftsInOneDayAreNotStoppedByTheRemovedImageQuota()
+    {
+        var fixture = new Fixture();
+        fixture.Writer.Edition = fixture.Writer.Edition with { IllustrationPrompt = "A visual gag." };
+        for (var index = 0; index < 5; index++)
+        {
+            fixture.Gateway.Sources = [fixture.Gateway.Sources[0] with { Content = $"New evidence {index}" }];
+            await fixture.Run("gazette draft");
+            Assert.NotNull(fixture.Session.Pending);
+            fixture.Clock.Now = fixture.Clock.Now.AddMinutes(1);
+        }
+        Assert.Equal(5, fixture.Illustrator.Calls);
+        Assert.Empty(fixture.IssueStore.State.IllustrationAttempts);
+        Assert.Equal(0, fixture.IssueStore.Saves);
+    }
+
+    [Theory]
+    [InlineData("omitted", "did not propose")]
+    [InlineData("disabled", "disabled")]
+    [InlineData("generation-failed", "generation failed")]
+    [InlineData("render-failed", "could not be rendered")]
+    public async Task EveryImagelessPreviewExplainsItsReasonAndInvalidArtIsNotCached(string reason, string expected)
+    {
+        var fixture = new Fixture();
+        if (reason != "omitted")
+            fixture.Writer.Edition = fixture.Writer.Edition with { IllustrationPrompt = "An illustration concept." };
+        fixture.Options.IllustrationsEnabled = reason != "disabled";
+        fixture.Illustrator.Fails = reason == "generation-failed";
+        fixture.Renderer.FailWithArtwork = reason == "render-failed";
+        await fixture.Run("gazette draft");
+        var pending = Assert.IsType<GazettePendingDraft>(fixture.Session.Pending);
+        Assert.Contains(expected, pending.IllustrationStatus);
+        Assert.Contains(fixture.Replies, reply => reply.Contains(pending.IllustrationStatus));
+        Assert.Null(fixture.Session.Illustration);
+        Assert.Equal(reason is "omitted" or "disabled" ? 0 : 1, fixture.Illustrator.Calls);
+    }
+
     [Fact]
     public void ReadableEditionKeepsOriginalUnicodeNamesAndParagraphsWhilePrintUsesItsOwnGlyphCleanup()
     {
@@ -112,15 +189,16 @@ public class GazetteDirectMessageCommandTests
     }
 
     [Fact]
-    public async Task UnavailableArtworkBudgetDoesNotSpendAnUnreservedImageCallOrPreventThePrivatePage()
+    public async Task PrivateDraftImagesDoNotDependOnMongoBudgetWrites()
     {
         var fixture = new Fixture();
         fixture.Writer.Edition = fixture.Writer.Edition with { IllustrationPrompt = "A woodcut phone." };
         fixture.IssueStore.FailWrites = true;
         await fixture.Run("gazette draft");
         Assert.NotNull(fixture.Session.Pending);
-        Assert.Equal(0, fixture.Illustrator.Calls);
-        Assert.Contains(fixture.Replies, reply => reply.Contains("Illustration was unavailable"));
+        Assert.Equal(1, fixture.Illustrator.Calls);
+        Assert.Contains(fixture.Replies, reply => reply.Contains("Illustration: newly generated"));
+        Assert.Empty(fixture.IssueStore.State.IllustrationAttempts);
     }
 
     [Fact]
@@ -147,7 +225,7 @@ public class GazetteDirectMessageCommandTests
         Assert.NotNull(fixture.Session.Pending);
         Assert.Single(fixture.Pages);
         Assert.Equal(1, fixture.Illustrator.Calls);
-        Assert.Single(fixture.IssueStore.State.IllustrationAttempts);
+        Assert.Empty(fixture.IssueStore.State.IllustrationAttempts);
         var pending = fixture.Session.Pending!;
         await fixture.Run("gazette show");
         await fixture.Run($"gazette approve {pending.Token}");
@@ -462,6 +540,7 @@ public class GazetteDirectMessageCommandTests
         public StubGazetteIllustrator Illustrator { get; } = new();
         public CapturingLogger Logger { get; } = new();
         public StubGazettePageRenderer Renderer { get; } = new();
+        public GazetteOptions Options { get; } = new();
         public GazetteDirectMessageCommand Command { get; }
 
         public Fixture() =>
@@ -469,13 +548,13 @@ public class GazetteDirectMessageCommandTests
                 Gateway,
                 Writer,
                 Session,
-                Options.Create(new DirectMessageHandlerOptions { AdminUserId = 1 }),
+                Microsoft.Extensions.Options.Options.Create(new DirectMessageHandlerOptions { AdminUserId = 1 }),
                 Clock,
                 Logger,
                 new GazetteIssueService(IssueStore, Clock),
                 Renderer,
                 Illustrator,
-                Options.Create(new GazetteOptions())
+                Microsoft.Extensions.Options.Options.Create(Options)
             );
 
         public Task Run(string content) =>

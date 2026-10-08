@@ -33,24 +33,13 @@ public class GazetteIssueServiceTests
     }
 
     [Fact]
-    public async Task IllustrationAttemptsHaveADurableRollingBudgetButDoNotConsumeIssueNumbers()
+    public async Task ReadingTheNextIssueNumberDoesNotWriteAnyImageBudgetOrPublicationState()
     {
         var store = new MemoryGazetteIssueStore();
-        var clock = new Clock();
-        var service = new GazetteIssueService(store, clock);
+        var service = new GazetteIssueService(store, TimeProvider.System);
         var cancellation = TestContext.Current.CancellationToken;
-        Assert.True(await service.TryReserveIllustrationAsync(1, cancellation));
-        Assert.False(await new GazetteIssueService(store, clock).TryReserveIllustrationAsync(1, cancellation));
         Assert.Equal(1, await service.GetNextAsync(cancellation));
-        clock.Now = clock.Now.AddDays(1);
-        Assert.True(await service.TryReserveIllustrationAsync(1, cancellation));
-        Assert.Single(store.State.IllustrationAttempts);
-    }
-
-    private sealed class Clock : TimeProvider
-    {
-        public DateTimeOffset Now { get; set; } = DateTimeOffset.UtcNow;
-
-        public override DateTimeOffset GetUtcNow() => Now;
+        Assert.Equal(0, store.Saves);
+        Assert.Empty(store.State.IllustrationAttempts);
     }
 }

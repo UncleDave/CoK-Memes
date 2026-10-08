@@ -9,7 +9,7 @@ public class GazetteMongoIntegrationTests
     public static bool HasLocalMongo => !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("COK_GAZETTE_MONGO_TEST_CONNECTION"));
 
     [Fact(Skip = "Set COK_GAZETTE_MONGO_TEST_CONNECTION to a disposable local Mongo instance.", SkipUnless = nameof(HasLocalMongo))]
-    public async Task RealMongoSerializesCompetingIssueClaimsAndPreservesAcknowledgementsAndImageBudget()
+    public async Task RealMongoSerializesCompetingIssueClaimsAndPreservesAcknowledgementsAndPublishedText()
     {
         var connection = Environment.GetEnvironmentVariable("COK_GAZETTE_MONGO_TEST_CONNECTION")!;
         Assert.All(MongoUrl.Create(connection).Servers, server => Assert.Contains(server.Host, new[] { "localhost", "127.0.0.1", "::1" }));
@@ -39,22 +39,11 @@ public class GazetteMongoIntegrationTests
             Assert.Equal(1, await collection.CountDocumentsAsync(FilterDefinition<GazetteState>.Empty, cancellationToken: cancellation));
             var reservation = Assert.Single((await store.GetAsync(cancellation)).Publications);
             await service.MarkPublishedAsync(1, reservation.Token, 99, cancellation);
-            var budget = await Task.WhenAll(
-                Enumerable
-                    .Range(0, 5)
-                    .Select(_ =>
-                        new GazetteIssueService(new MongoGazetteIssueStore(collection), TimeProvider.System).TryReserveIllustrationAsync(
-                            2,
-                            cancellation
-                        )
-                    )
-            );
-            Assert.Equal(2, budget.Count(success => success));
             var restarted = new MongoGazetteIssueStore(collection);
             Assert.Equal(2, await new GazetteIssueService(restarted, TimeProvider.System).GetNextAsync(cancellation));
             var persisted = await restarted.GetAsync(cancellation);
             Assert.Equal(99UL, Assert.Single(persisted.Publications).MessageId);
-            Assert.Equal(2, persisted.IllustrationAttempts.Count);
+            Assert.Empty(persisted.IllustrationAttempts);
             var snapshots = client.GetDatabase(databaseName).GetCollection<GazettePublishedEdition>("publishedEditions");
             var approved = new GazettePublishedEdition(
                 "012345abcdef",

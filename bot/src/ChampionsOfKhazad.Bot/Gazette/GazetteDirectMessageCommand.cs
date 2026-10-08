@@ -196,6 +196,8 @@ public sealed partial class GazetteDirectMessageCommand(
             return;
         }
         session.Pending = null;
+        if (session.Illustration is { } expired && clock.GetUtcNow() >= expired.ExpiresAtUtc)
+            session.Illustration = null;
         _stage = "resolving the newspaper audience";
         var destination = gateway.GetDestination();
         if (destination is null)
@@ -234,21 +236,28 @@ public sealed partial class GazetteDirectMessageCommand(
             return;
         }
         byte[]? artwork = null;
-        var artworkStatus = "";
-        if (options.Value.IllustrationsEnabled && edition.IllustrationPrompt is { } concept)
+        var leadUrls = edition.Articles[0].SourceUrls.ToHashSet(StringComparer.Ordinal);
+        var evidenceKey = GazetteCachedIllustration.CreateEvidenceKey(sources.Where(source => leadUrls.Contains(source.Url)).ToArray());
+        var artworkStatus = "Illustration: omitted—the writer did not propose a visual gag for this lead.";
+        if (!options.Value.IllustrationsEnabled)
+            artworkStatus = "Illustration: disabled in Gazette configuration.";
+        else if (edition.IllustrationPrompt is { } concept)
         {
             try
             {
-                _stage = "reserving illustration budget";
-                if (await issues.TryReserveIllustrationAsync(options.Value.DailyIllustrationLimit, cancellationToken))
+                if (session.Illustration is { } cached && cached.ExpiresAtUtc > clock.GetUtcNow() && cached.EvidenceKey == evidenceKey)
+                {
+                    artwork = cached.Image;
+                    artworkStatus = "Illustration: reused from the same verified lead-story evidence; no new image request.";
+                }
+                else
                 {
                     _stage = "generating the lead illustration";
                     using var artTimeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                     artTimeout.CancelAfter(TimeSpan.FromMinutes(2));
                     artwork = await illustrator.GenerateAsync(concept, artTimeout.Token).WaitAsync(artTimeout.Token);
+                    artworkStatus = "Illustration: newly generated for this lead.";
                 }
-                else
-                    artworkStatus = " Illustration budget reached; this edition uses the text-only newspaper layout.";
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -257,7 +266,7 @@ public sealed partial class GazetteDirectMessageCommand(
             catch (Exception exception)
             {
                 logger.LogWarning("Gazette illustration unavailable at {Stage} with {ExceptionType}", _stage, exception.GetType().Name);
-                artworkStatus = " Illustration was unavailable; this edition uses the text-only newspaper layout.";
+                artworkStatus = "Illustration was unavailable: generation failed or timed out; this edition has no image.";
             }
         }
         GazettePrintEdition printEdition;
@@ -270,7 +279,10 @@ public sealed partial class GazetteDirectMessageCommand(
         {
             _stage = "rendering newspaper pages without artwork";
             printEdition = renderer.Render(edition, issueNumber, FormatDates(since, until), null);
-            artworkStatus = " Illustration could not be rendered; this edition uses the text-only newspaper layout.";
+            artwork = null;
+            if (session.Illustration?.EvidenceKey == evidenceKey)
+                session.Illustration = null;
+            artworkStatus = "Illustration: image could not be rendered; this edition has no image.";
         }
         // Name/source verification happens again after optional image generation, before preview delivery.
         _stage = "rechecking evidence after rendering";
@@ -279,6 +291,8 @@ public sealed partial class GazetteDirectMessageCommand(
             await reply("The draft's cited evidence changed while the page was being prepared. Request a fresh draft.", cancellationToken);
             return;
         }
+        if (artwork is not null && !ReferenceEquals(session.Illustration?.Image, artwork))
+            session.Illustration = new(evidenceKey, artwork, clock.GetUtcNow().AddMinutes(30));
         var pending = new GazettePendingDraft(
             Guid.NewGuid().ToString("N")[..12],
             destination,
@@ -287,11 +301,14 @@ public sealed partial class GazetteDirectMessageCommand(
             clock.GetUtcNow().AddMinutes(30),
             issueNumber,
             printEdition
-        );
+        )
+        {
+            IllustrationStatus = artworkStatus,
+        };
         await SendPreviewAsync(pending, reply, sendPage, cancellationToken);
         _stage = "sending private sampling diagnostics";
         var slimEdition = edition.Articles.Count == 1 ? " Only one supported story was selected; this is a slim, single-page edition." : "";
-        await reply(Coverage(batch) + artworkStatus + slimEdition, cancellationToken);
+        await reply(Coverage(batch) + slimEdition, cancellationToken);
         // Only a successfully delivered private preview becomes approvable.
         cancellationToken.ThrowIfCancellationRequested();
         session.Pending = pending;
@@ -303,7 +320,8 @@ public sealed partial class GazetteDirectMessageCommand(
 
     private string Preview(GazettePendingDraft pending) =>
         $"PRIVATE DRAFT — not published. Destination: #{pending.Destination.Name}. "
-        + $"The guild post will show only the {pending.PrintEdition.Pages.Count} newspaper {(pending.PrintEdition.Pages.Count == 1 ? "page" : "pages")} and a Read text & sources button; this text opens privately on click.\n\n{pending.Edition}\n\n"
+        + $"The guild post will show only the {pending.PrintEdition.Pages.Count} newspaper {(pending.PrintEdition.Pages.Count == 1 ? "page" : "pages")} and a Read text & sources button; this text opens privately on click.\n"
+        + $"{pending.IllustrationStatus}\n\n{pending.Edition}\n\n"
         + $"Review all pages, stories and source links. Reply `gazette approve {pending.Token}` within {Math.Max(0, (int)Math.Ceiling((pending.ExpiresAtUtc - clock.GetUtcNow()).TotalMinutes))} minutes "
         + "to publish exactly the edition above, or `gazette discard`. No edits or regeneration happen during approval.";
 

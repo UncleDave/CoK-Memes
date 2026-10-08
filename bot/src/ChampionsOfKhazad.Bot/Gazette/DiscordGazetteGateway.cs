@@ -1,5 +1,7 @@
+using System.Net;
 using ChampionsOfKhazad.Bot.GenAi;
 using Discord;
+using Discord.Net;
 using Discord.WebSocket;
 using Microsoft.Extensions.Options;
 
@@ -71,6 +73,8 @@ internal sealed class DiscordGazetteGateway(
             return $"The bot needs Send Messages in #{channelName}.";
         if (!permissions.EmbedLinks)
             return $"The bot needs Embed Links in #{channelName}.";
+        if (!permissions.AttachFiles)
+            return $"The bot needs Attach Files in #{channelName} to publish the newspaper page.";
         return null;
     }
 
@@ -124,6 +128,7 @@ internal sealed class DiscordGazetteGateway(
             since,
             until
         );
+        sources = await CreateNameResolver().ResolveAsync(sources, refresh: false, cancellationToken);
         return new(sources, read, ids.Count, failures);
     }
 
@@ -156,6 +161,8 @@ internal sealed class DiscordGazetteGateway(
         foreach (var group in sources.Chunk(3))
         {
             var current = await reader.ReadSourcesAsync(group.Select(source => source.Url).ToArray(), cancellationToken);
+            if (current is not null)
+                current = await CreateNameResolver().ResolveAsync(current, refresh: true, cancellationToken);
             if (!SourcesMatch(group, current))
                 return false;
         }
@@ -180,7 +187,7 @@ internal sealed class DiscordGazetteGateway(
             )
         );
 
-    public async Task<ulong> PublishAsync(ulong destinationId, string edition, CancellationToken cancellationToken)
+    public async Task<ulong> PublishAsync(ulong destinationId, string edition, GazettePage page, CancellationToken cancellationToken)
     {
         if (edition.Length > 4000 || GetDestination()?.Id != destinationId)
             throw new InvalidOperationException("Gazette destination is unavailable.");
@@ -196,8 +203,15 @@ internal sealed class DiscordGazetteGateway(
             || GetPublicationError(destinationId) is not null
         )
             throw new InvalidOperationException("Gazette destination changed.");
-        var message = await text.SendMessageAsync(
-            embed: new EmbedBuilder().WithDescription(edition).Build(),
+        using var stream = new MemoryStream(page.Png, writable: false);
+        var message = await text.SendFileAsync(
+            stream,
+            page.FileName,
+            embeds:
+            [
+                new EmbedBuilder().WithTitle("The Khazad Gazette").WithImageUrl($"attachment://{page.FileName}").Build(),
+                new EmbedBuilder().WithTitle("Readable edition & sources").WithDescription(edition).Build(),
+            ],
             allowedMentions: AllowedMentions.None,
             options: new RequestOptions { CancelToken = cancellationToken }
         );
@@ -206,6 +220,29 @@ internal sealed class DiscordGazetteGateway(
 
     private DiscordNotebookSourceReader CreateReader(ulong destinationId) =>
         new(rest, GetGuild()?.Id ?? 0, () => GetSourceChannels(destinationId), id => GetGuild()?.GetUser(id)?.GetName());
+
+    private GazetteMemberNameResolver CreateNameResolver()
+    {
+        IGuild? memberGuild = null;
+        return new(
+            async (id, cancellationToken) =>
+            {
+                var guildId = GetGuild()?.Id ?? throw new InvalidOperationException("Guild connection is unavailable.");
+                var request = new RequestOptions { CancelToken = cancellationToken };
+                memberGuild ??= await rest.Client.GetGuildAsync(guildId, options: request);
+                try
+                {
+                    var member = await memberGuild.GetUserAsync(id, options: request);
+                    return member?.GetName();
+                }
+                catch (HttpException exception) when (exception.HttpCode == HttpStatusCode.NotFound)
+                {
+                    return null;
+                }
+            },
+            id => GetGuild()?.GetUser(id)?.GetName()
+        );
+    }
 
     private IReadOnlyDictionary<ulong, string> GetSourceChannels(ulong destinationId)
     {

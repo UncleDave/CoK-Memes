@@ -14,5 +14,5 @@ public interface IGazetteGateway
 
     Task<bool> VerifyAsync(ulong destinationId, IReadOnlyList<NotebookSource> sources, CancellationToken cancellationToken);
 
-    Task<ulong> PublishAsync(ulong destinationId, string edition, CancellationToken cancellationToken);
+    Task<ulong> PublishAsync(ulong destinationId, string edition, GazettePage page, CancellationToken cancellationToken);
 }

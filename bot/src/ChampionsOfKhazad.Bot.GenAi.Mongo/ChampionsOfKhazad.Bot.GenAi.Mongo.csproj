@@ -3,4 +3,7 @@
     <ProjectReference Include="..\ChampionsOfKhazad.Bot.GenAi\ChampionsOfKhazad.Bot.GenAi.csproj" />
     <ProjectReference Include="..\ChampionsOfKhazad.Bot.Mongo\ChampionsOfKhazad.Bot.Mongo.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="ChampionsOfKhazad.Bot.Tests" />
+  </ItemGroup>
 </Project>

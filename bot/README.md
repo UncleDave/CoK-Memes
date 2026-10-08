@@ -82,10 +82,12 @@ and feature settings; replace them with values for your development guild.
 
 The on-demand Gazette uses the existing admin DM identity, AI configuration and
 normal-member role. Its default publication channel is `#ai-tavern`; the bot also
-needs Embed Links there to publish, but not to prepare a private draft. Optional
+needs Embed Links and Attach Files there to publish, but not to prepare a private draft. Optional
 `Gazette:DestinationChannelId` and
 `Gazette:SourceChannelIds` pin the destination and narrow sampling. See
 [Gazette configuration and DM commands](docs/gazette.md) before a live trial.
+The bot's Linux image installs DejaVu fonts for rendered newspaper pages. Issue numbers
+and the optional illustration budget use the existing Mongo configuration.
 
 ### Discord setup
 
@@ -95,11 +97,13 @@ Portal. Invite the bot with the `bot` and `applications.commands` scopes and the
 - Read Messages/View Channels
 - Send Messages
 - Send Messages in Threads
+- Embed Links
+- Attach Files
 - Add Reactions
 - Read Message History
 - Manage Messages
 
-Permission bitmask: `274877983808`.
+Permission bitmask: `274878032960`.
 
 ## Run locally
 

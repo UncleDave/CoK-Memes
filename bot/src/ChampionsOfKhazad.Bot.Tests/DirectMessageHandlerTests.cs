@@ -24,7 +24,11 @@ public class DirectMessageHandlerTests
             new(),
             Options.Create(new DirectMessageHandlerOptions { AdminUserId = 1 }),
             TimeProvider.System,
-            NullLogger<GazetteDirectMessageCommand>.Instance
+            NullLogger<GazetteDirectMessageCommand>.Instance,
+            new GazetteIssueService(new MemoryGazetteIssueStore(), TimeProvider.System),
+            new StubGazettePageRenderer(),
+            new StubGazetteIllustrator(),
+            Options.Create(new GazetteOptions())
         );
         var handler = CreateHandler(null!, null!, gazetteCommand: command);
         await handler.Handle(new MessageReceived(CreateMessage(admin, dm, bot, "gazette draft", [])), TestContext.Current.CancellationToken);
@@ -55,7 +59,7 @@ public class DirectMessageHandlerTests
         public Task<bool> VerifyAsync(ulong destinationId, IReadOnlyList<NotebookSource> sources, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
 
-        public Task<ulong> PublishAsync(ulong destinationId, string edition, CancellationToken cancellationToken) =>
+        public Task<ulong> PublishAsync(ulong destinationId, string edition, GazettePage page, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
     }
 
@@ -216,7 +220,11 @@ public class DirectMessageHandlerTests
                     new(),
                     Options.Create(new DirectMessageHandlerOptions { AdminUserId = 1 }),
                     TimeProvider.System,
-                    NullLogger<GazetteDirectMessageCommand>.Instance
+                    NullLogger<GazetteDirectMessageCommand>.Instance,
+                    new GazetteIssueService(new MemoryGazetteIssueStore(), TimeProvider.System),
+                    new StubGazettePageRenderer(),
+                    new StubGazetteIllustrator(),
+                    Options.Create(new GazetteOptions())
                 )
         );
 

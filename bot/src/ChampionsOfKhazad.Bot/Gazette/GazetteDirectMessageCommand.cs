@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 using ChampionsOfKhazad.Bot.GenAi;
@@ -12,7 +13,11 @@ public sealed partial class GazetteDirectMessageCommand(
     GazetteSession session,
     IOptions<DirectMessageHandlerOptions> adminOptions,
     TimeProvider clock,
-    ILogger<GazetteDirectMessageCommand> logger
+    ILogger<GazetteDirectMessageCommand> logger,
+    GazetteIssueService issues,
+    IGazettePageRenderer renderer,
+    IGazetteIllustrator illustrator,
+    IOptions<GazetteOptions> options
 )
 {
     private const string Help =
@@ -24,7 +29,8 @@ public sealed partial class GazetteDirectMessageCommand(
         ulong actorId,
         string content,
         Func<string, CancellationToken, Task> reply,
-        CancellationToken cancellationToken
+        CancellationToken cancellationToken,
+        Func<GazettePage, CancellationToken, Task>? sendPage = null
     )
     {
         var parts = content.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
@@ -39,11 +45,11 @@ public sealed partial class GazetteDirectMessageCommand(
             if (session.Pending is { } old && clock.GetUtcNow() >= old.ExpiresAtUtc)
                 session.Pending = null;
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            timeout.CancelAfter(TimeSpan.FromMinutes(3));
+            timeout.CancelAfter(TimeSpan.FromMinutes(6));
             var token = timeout.Token;
             if (drafting)
             {
-                await DraftAsync(reply, token);
+                await DraftAsync(reply, sendPage, token);
             }
             else if (parts.Length == 2 && parts[1].Equals("discard", StringComparison.OrdinalIgnoreCase))
             {
@@ -52,7 +58,10 @@ public sealed partial class GazetteDirectMessageCommand(
             }
             else if (parts.Length == 2 && parts[1].Equals("show", StringComparison.OrdinalIgnoreCase))
             {
-                await reply(session.Pending is { } pending ? Preview(pending) : NoDraft, token);
+                if (session.Pending is { } pending)
+                    await SendPreviewAsync(pending, reply, sendPage, token);
+                else
+                    await reply(NoDraft, token);
             }
             else if (parts.Length == 3 && parts[1].Equals("approve", StringComparison.OrdinalIgnoreCase))
             {
@@ -83,10 +92,18 @@ public sealed partial class GazetteDirectMessageCommand(
                             token
                         );
                     }
+                    else if (!await issues.TryReserveAsync(pending.IssueNumber, pending.Token, pending.Destination.Id, token))
+                    {
+                        await reply(
+                            "This issue number has already been reserved by another publication. Request a fresh draft; this preview was not sent.",
+                            token
+                        );
+                    }
                     else
                     {
                         publishing = true;
-                        var messageId = await gateway.PublishAsync(pending.Destination.Id, pending.Edition, token);
+                        var messageId = await gateway.PublishAsync(pending.Destination.Id, pending.Edition, pending.Page, token);
+                        await issues.MarkPublishedAsync(pending.IssueNumber, pending.Token, messageId, token);
                         await reply(
                             $"Gazette published to #{pending.Destination.Name} (message {messageId}). This approval cannot be reused.",
                             token
@@ -131,7 +148,11 @@ public sealed partial class GazetteDirectMessageCommand(
 
     private const string NoDraft = "No live Gazette draft. Request `gazette draft` first; previews expire after 30 minutes or a restart.";
 
-    private async Task DraftAsync(Func<string, CancellationToken, Task> reply, CancellationToken cancellationToken)
+    private async Task DraftAsync(
+        Func<string, CancellationToken, Task> reply,
+        Func<GazettePage, CancellationToken, Task>? sendPage,
+        CancellationToken cancellationToken
+    )
     {
         var until = clock.GetUtcNow();
         if (until < session.NextDraftAtUtc)
@@ -147,6 +168,7 @@ public sealed partial class GazetteDirectMessageCommand(
             return;
         }
         var since = until.AddDays(-7);
+        await reply("Preparing a private Gazette draft. An optional illustration may take a minute.", cancellationToken);
         var batch = await gateway.ReadRecentAsync(destination.Id, since, until, cancellationToken);
         if (batch.Sources.Count == 0)
         {
@@ -160,7 +182,8 @@ public sealed partial class GazetteDirectMessageCommand(
             await reply($"No suitable stories were found in this sample; no edition was padded or invented. {Coverage(batch)}", cancellationToken);
             return;
         }
-        var text = Render(edition, since, until);
+        var issueNumber = await issues.GetNextAsync(cancellationToken);
+        var text = Render(edition, since, until, issueNumber);
         var sourceUrls = edition.Articles.SelectMany(article => article.SourceUrls).ToHashSet(StringComparer.Ordinal);
         var sources = batch.Sources.Where(source => sourceUrls.Contains(source.Url)).DistinctBy(source => source.Url).ToArray();
         if (sourceUrls.Count != sources.Length || !await gateway.VerifyAsync(destination.Id, sources, cancellationToken))
@@ -168,8 +191,58 @@ public sealed partial class GazetteDirectMessageCommand(
             await reply("The draft's cited evidence changed or became unavailable. Request a fresh draft.", cancellationToken);
             return;
         }
-        var pending = new GazettePendingDraft(Guid.NewGuid().ToString("N")[..12], destination, text, sources, clock.GetUtcNow().AddMinutes(30));
-        await reply(Preview(pending) + "\n\n" + Coverage(batch), cancellationToken);
+        byte[]? artwork = null;
+        var artworkStatus = "";
+        if (options.Value.IllustrationsEnabled && edition.IllustrationPrompt is { } concept)
+        {
+            try
+            {
+                if (await issues.TryReserveIllustrationAsync(options.Value.DailyIllustrationLimit, cancellationToken))
+                {
+                    using var artTimeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                    artTimeout.CancelAfter(TimeSpan.FromMinutes(2));
+                    artwork = await illustrator.GenerateAsync(concept, artTimeout.Token).WaitAsync(artTimeout.Token);
+                }
+                else
+                    artworkStatus = " Illustration budget reached; this edition uses the text-only newspaper layout.";
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                logger.LogWarning("Gazette illustration unavailable with {ExceptionType}", exception.GetType().Name);
+                artworkStatus = " Illustration was unavailable; this edition uses the text-only newspaper layout.";
+            }
+        }
+        GazettePage page;
+        try
+        {
+            page = renderer.Render(edition, issueNumber, FormatDates(since, until), artwork);
+        }
+        catch when (artwork is not null)
+        {
+            page = renderer.Render(edition, issueNumber, FormatDates(since, until), null);
+            artworkStatus = " Illustration could not be rendered; this edition uses the text-only newspaper layout.";
+        }
+        // Name/source verification happens again after optional image generation, before preview delivery.
+        if (!await gateway.VerifyAsync(destination.Id, sources, cancellationToken))
+        {
+            await reply("The draft's cited evidence changed while the page was being prepared. Request a fresh draft.", cancellationToken);
+            return;
+        }
+        var pending = new GazettePendingDraft(
+            Guid.NewGuid().ToString("N")[..12],
+            destination,
+            text,
+            sources,
+            clock.GetUtcNow().AddMinutes(30),
+            issueNumber,
+            page
+        );
+        await SendPreviewAsync(pending, reply, sendPage, cancellationToken);
+        await reply(Coverage(batch) + artworkStatus, cancellationToken);
         // Only a successfully delivered private preview becomes approvable.
         cancellationToken.ThrowIfCancellationRequested();
         session.Pending = pending;
@@ -179,16 +252,39 @@ public sealed partial class GazetteDirectMessageCommand(
         $"Sample: {batch.Sources.Count} human messages, {batch.ChannelsRead}/{batch.AvailableChannels} eligible channels read; {batch.ReadFailures} read failures. "
         + "At most 12 channels, the latest 100 messages per channel, and a bounded text sample; not exhaustive coverage.";
 
-    private static string Preview(GazettePendingDraft pending) =>
+    private string Preview(GazettePendingDraft pending) =>
         $"PRIVATE DRAFT — not published. Destination: #{pending.Destination.Name}.\n\n{pending.Edition}\n\n"
-        + $"Review the stories and source links. Reply `gazette approve {pending.Token}` by {pending.ExpiresAtUtc:yyyy-MM-dd HH:mm} UTC "
+        + $"Review the page, stories and source links. Reply `gazette approve {pending.Token}` within {Math.Max(0, (int)Math.Ceiling((pending.ExpiresAtUtc - clock.GetUtcNow()).TotalMinutes))} minutes "
         + "to publish exactly the edition above, or `gazette discard`. No edits or regeneration happen during approval.";
 
-    internal static string Render(GazetteEdition edition, DateTimeOffset since, DateTimeOffset until)
+    private async Task SendPreviewAsync(
+        GazettePendingDraft pending,
+        Func<string, CancellationToken, Task> reply,
+        Func<GazettePage, CancellationToken, Task>? sendPage,
+        CancellationToken cancellationToken
+    )
+    {
+        if (sendPage is null)
+            throw new InvalidOperationException("Private newspaper page delivery is unavailable.");
+        await sendPage(pending.Page, cancellationToken);
+        await reply(Preview(pending), cancellationToken);
+    }
+
+    internal static string FormatDates(DateTimeOffset since, DateTimeOffset until)
+    {
+        var zone = TimeZoneInfo.FindSystemTimeZoneById("Europe/Copenhagen");
+        var start = TimeZoneInfo.ConvertTime(since, zone);
+        var end = TimeZoneInfo.ConvertTime(until, zone);
+        return start.Year == end.Year && start.Month == end.Month
+            ? $"{start.Day}–{end.ToString("d MMMM yyyy", CultureInfo.InvariantCulture)}"
+            : $"{start.ToString("d MMMM yyyy", CultureInfo.InvariantCulture)}–{end.ToString("d MMMM yyyy", CultureInfo.InvariantCulture)}";
+    }
+
+    internal static string Render(GazetteEdition edition, DateTimeOffset since, DateTimeOffset until, long issueNumber = 1)
     {
         if (edition.Articles.Count is < 1 or > 3)
             throw new InvalidOperationException("Invalid Gazette article count.");
-        var text = new StringBuilder($"**THE KHAZAD GAZETTE**\n*Selected dispatches · {since:dd MMM}–{until:dd MMM yyyy} (UTC)*\n");
+        var text = new StringBuilder($"**THE KHAZAD GAZETTE**\n*Issue No. {issueNumber} · {FormatDates(since, until)}*\n");
         foreach (var article in edition.Articles)
         {
             if (string.IsNullOrWhiteSpace(article.Headline) || string.IsNullOrWhiteSpace(article.Body) || article.SourceUrls.Count is < 1 or > 3)
@@ -198,7 +294,7 @@ public sealed partial class GazetteDirectMessageCommand(
             text.Append('\n');
         }
         if (!string.IsNullOrWhiteSpace(edition.Editorial))
-            text.Append($"\n**From the editor — fictional satire**\n{Escape(edition.Editorial)}\n");
+            text.Append($"\n**Classifieds — fictional satire**\n{Escape(edition.Editorial)}\n");
         if (text.Length > 4000)
             throw new InvalidOperationException("Gazette edition exceeds a single Discord embed.");
         return text.ToString().TrimEnd();

@@ -68,7 +68,17 @@ public class DirectMessageHandler(
                         message.Author.Id,
                         message.Content,
                         (response, token) => message.Channel.SendMessageInChunksAsync(response, token),
-                        cancellationToken
+                        cancellationToken,
+                        sendPage: async (page, token) =>
+                        {
+                            using var stream = new MemoryStream(page.Png, writable: false);
+                            await message.Channel.SendFileAsync(
+                                stream,
+                                page.FileName,
+                                allowedMentions: AllowedMentions.None,
+                                options: new RequestOptions { CancelToken = token }
+                            );
+                        }
                     )
                 )
                     return;

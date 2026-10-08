@@ -37,6 +37,9 @@ public class GazetteWriterTests
         Assert.Contains("must privately review and explicitly approve", policy);
         Assert.Contains("No archival stories", policy);
         Assert.Contains("do not relentlessly target one person", policy);
+        Assert.Contains("Be FUNNY, not dry", policy);
+        Assert.Contains("SERVER display names", policy);
+        Assert.Contains("Always add ONE tiny fictional classified", policy);
         Assert.Contains(GuildPromptContext.GetActivity(Now), policy);
         Assert.DoesNotContain(Source.Content, policy);
         using var input = JsonDocument.Parse(client.Messages[1].Text!);
@@ -65,6 +68,9 @@ public class GazetteWriterTests
     }
 
     [Theory]
+    [InlineData(
+        """{"articles":[{"headline":"Headline","body":"Story","sourceUrls":["https://discord.com/channels/1/3/42"]}],"editorial":"","illustrationPrompt":null}"""
+    )]
     [InlineData("not JSON")]
     [InlineData("null")]
     [InlineData("[]")]

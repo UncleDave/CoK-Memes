@@ -7,6 +7,13 @@ namespace ChampionsOfKhazad.Bot.Tests;
 
 public class DiscordGazetteGatewayTests
 {
+    [Fact]
+    public void PublishingAPageRequiresBotAttachmentPermission()
+    {
+        var permissions = new ChannelPermissions(viewChannel: true, sendMessages: true, embedLinks: true);
+        Assert.Contains("Attach Files", DiscordGazetteGateway.GetPublicationPermissionError(permissions, "ai-tavern"));
+    }
+
     private static readonly DateTimeOffset Now = new(2026, 10, 8, 12, 0, 0, TimeSpan.Zero);
 
     [Theory]
@@ -22,7 +29,7 @@ public class DiscordGazetteGatewayTests
     [Fact]
     public void PublicationDoesNotRequireReadHistoryPermissionOrAnAdminGuildMember()
     {
-        var permissions = new ChannelPermissions(viewChannel: true, sendMessages: true, embedLinks: true);
+        var permissions = new ChannelPermissions(viewChannel: true, sendMessages: true, embedLinks: true, attachFiles: true);
         Assert.False(permissions.ReadMessageHistory);
         Assert.Null(DiscordGazetteGateway.GetPublicationPermissionError(permissions, "ai-tavern"));
     }
@@ -117,7 +124,9 @@ public class DiscordGazetteGatewayTests
         var batch = await gateway.ReadRecentAsync(8, Now.AddDays(-7), Now, TestContext.Current.CancellationToken);
         Assert.Empty(batch.Sources);
         Assert.False(await gateway.VerifyAsync(8, [Source(1, Now, "Message")], TestContext.Current.CancellationToken));
-        await Assert.ThrowsAsync<InvalidOperationException>(() => gateway.PublishAsync(8, "Edition", TestContext.Current.CancellationToken));
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            gateway.PublishAsync(8, "Edition", new("issue.png", [1]), TestContext.Current.CancellationToken)
+        );
     }
 
     private static NotebookSource Source(int id, DateTimeOffset at, string content) =>

@@ -7,6 +7,50 @@ namespace ChampionsOfKhazad.Bot.Tests;
 public class GazetteDirectMessageCommandTests
 {
     [Fact]
+    public async Task UnavailableArtworkBudgetDoesNotSpendAnUnreservedImageCallOrPreventThePrivatePage()
+    {
+        var fixture = new Fixture();
+        fixture.Writer.Edition = fixture.Writer.Edition with { IllustrationPrompt = "A woodcut phone." };
+        fixture.IssueStore.FailWrites = true;
+        await fixture.Run("gazette draft");
+        Assert.NotNull(fixture.Session.Pending);
+        Assert.Equal(0, fixture.Illustrator.Calls);
+        Assert.Contains(fixture.Replies, reply => reply.Contains("Illustration was unavailable"));
+    }
+
+    [Fact]
+    public async Task DraftHasIssueNumberAndHumanApprovalWindowWithoutUtc()
+    {
+        var fixture = new Fixture();
+        await fixture.Run("gazette draft");
+        Assert.Contains(fixture.Replies, reply => reply.Contains("Issue No. 1") && reply.Contains("within 30 minutes"));
+        Assert.DoesNotContain(fixture.Replies, reply => reply.Contains("UTC"));
+        Assert.Equal(0, fixture.IssueStore.State.LastReservedIssue);
+        await fixture.Run("gazette discard");
+        Assert.Equal(0, fixture.IssueStore.State.LastReservedIssue);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task OptionalArtIsGeneratedOnceBeforePreviewAndFailureStillAllowsANewspaper(bool fails)
+    {
+        var fixture = new Fixture();
+        fixture.Writer.Edition = fixture.Writer.Edition with { IllustrationPrompt = "A woodcut phone resurrection." };
+        fixture.Illustrator.Fails = fails;
+        await fixture.Run("gazette draft");
+        Assert.NotNull(fixture.Session.Pending);
+        Assert.Single(fixture.Pages);
+        Assert.Equal(1, fixture.Illustrator.Calls);
+        Assert.Single(fixture.IssueStore.State.IllustrationAttempts);
+        var pending = fixture.Session.Pending!;
+        await fixture.Run("gazette show");
+        await fixture.Run($"gazette approve {pending.Token}");
+        Assert.Equal(1, fixture.Illustrator.Calls);
+        Assert.Same(pending.Page, Assert.Single(fixture.Gateway.PublishedPages));
+    }
+
+    [Fact]
     public async Task DraftDoesNotCheckPostingPermissionsAndCanBeReviewedWhileBotCannotPublish()
     {
         var fixture = new Fixture();
@@ -73,10 +117,16 @@ public class GazetteDirectMessageCommandTests
             {
                 Assert.Null(fixture.Session.Pending);
                 Assert.Empty(fixture.Gateway.Publications);
-                preview = text;
+                preview = (preview ?? "") + text;
                 return Task.CompletedTask;
             },
-            TestContext.Current.CancellationToken
+            TestContext.Current.CancellationToken,
+            sendPage: (page, _) =>
+            {
+                fixture.Pages.Add(page);
+                Assert.Null(fixture.Session.Pending);
+                return Task.CompletedTask;
+            }
         );
 
         var pending = Assert.IsType<GazettePendingDraft>(fixture.Session.Pending);
@@ -102,8 +152,9 @@ public class GazetteDirectMessageCommandTests
         var publication = Assert.Single(fixture.Gateway.Publications);
         Assert.Equal(pending.Destination.Id, publication.Destination);
         Assert.Equal(pending.Edition, publication.Text);
+        Assert.Same(pending.Page, Assert.Single(fixture.Gateway.PublishedPages));
         Assert.Equal(1, fixture.Writer.Calls);
-        Assert.Equal(2, fixture.Gateway.Verifications);
+        Assert.Equal(3, fixture.Gateway.Verifications);
         Assert.Null(fixture.Session.Pending);
         Assert.Contains(fixture.Replies, text => text.Contains("No live Gazette draft"));
     }
@@ -204,7 +255,8 @@ public class GazetteDirectMessageCommandTests
                 calls++;
                 return calls == 1 ? Task.FromException(new InvalidOperationException("DM unavailable")) : Task.CompletedTask;
             },
-            TestContext.Current.CancellationToken
+            TestContext.Current.CancellationToken,
+            sendPage: (_, _) => Task.CompletedTask
         );
         Assert.Null(fixture.Session.Pending);
         Assert.Empty(fixture.Gateway.Publications);
@@ -298,6 +350,9 @@ public class GazetteDirectMessageCommandTests
         public Writer Writer { get; } = new();
         public GazetteSession Session { get; } = new();
         public List<string> Replies { get; } = [];
+        public List<GazettePage> Pages { get; } = [];
+        public MemoryGazetteIssueStore IssueStore { get; } = new();
+        public StubGazetteIllustrator Illustrator { get; } = new();
         public GazetteDirectMessageCommand Command { get; }
 
         public Fixture() =>
@@ -307,7 +362,11 @@ public class GazetteDirectMessageCommandTests
                 Session,
                 Options.Create(new DirectMessageHandlerOptions { AdminUserId = 1 }),
                 Clock,
-                NullLogger<GazetteDirectMessageCommand>.Instance
+                NullLogger<GazetteDirectMessageCommand>.Instance,
+                new GazetteIssueService(IssueStore, Clock),
+                new StubGazettePageRenderer(),
+                Illustrator,
+                Options.Create(new GazetteOptions())
             );
 
         public Task Run(string content) =>
@@ -319,7 +378,12 @@ public class GazetteDirectMessageCommandTests
                     Replies.Add(text);
                     return Task.CompletedTask;
                 },
-                TestContext.Current.CancellationToken
+                TestContext.Current.CancellationToken,
+                sendPage: (page, _) =>
+                {
+                    Pages.Add(page);
+                    return Task.CompletedTask;
+                }
             );
     }
 
@@ -345,6 +409,7 @@ public class GazetteDirectMessageCommandTests
         public IReadOnlyList<NotebookSource> Sources { get; set; } =
         [new(Fixture.Url, 9, "Raider", new(2026, 10, 7, 12, 0, 0, DateTimeKind.Utc), "Dinner debate.")];
         public List<(ulong Destination, string Text)> Publications { get; } = [];
+        public List<GazettePage> PublishedPages { get; } = [];
 
         public GazetteDestination? GetDestination() => Destination;
 
@@ -371,9 +436,10 @@ public class GazetteDirectMessageCommandTests
             return Task.FromResult(Valid);
         }
 
-        public Task<ulong> PublishAsync(ulong destinationId, string edition, CancellationToken cancellationToken)
+        public Task<ulong> PublishAsync(ulong destinationId, string edition, GazettePage page, CancellationToken cancellationToken)
         {
             Publications.Add((destinationId, edition));
+            PublishedPages.Add(page);
             return SendFails ? Task.FromException<ulong>(new InvalidOperationException("Unknown send outcome")) : Task.FromResult(100UL);
         }
     }

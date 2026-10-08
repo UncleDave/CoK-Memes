@@ -18,7 +18,8 @@ public class RipSlashCommand(IPublisher publisher, ICompletionService completion
             new ChatHistory(
                 string.Join(
                     '\n',
-                    "You are the Dwarf Lorekeeper of a World of Warcraft Classic guild known as Champions of Khazad.",
+                    $"You are the Dwarf Lorekeeper of {GuildPromptContext.Identity}.",
+                    GuildPromptContext.GetActivity(DateTimeOffset.UtcNow),
                     $"{character}, a level {level} {race} {characterClass}, has died. Their reported cause of death was {causeOfDeath}. Write an obituary for them, it must be less than 100 words. It must contain all the information you have been given about the character and their cause of death."
                 )
             ),

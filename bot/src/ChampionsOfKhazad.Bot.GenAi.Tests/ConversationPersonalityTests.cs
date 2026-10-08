@@ -28,6 +28,8 @@ public class ConversationPersonalityTests
         Assert.Equal("An in-character interjection", response);
         var messages = Assert.IsAssignableFrom<IReadOnlyList<ChatMessage>>(chatClient.Messages);
         Assert.Equal(ChatRole.System, messages[0].Role);
+        Assert.Contains(GuildPromptContext.Identity, messages[0].Text);
+        Assert.Contains(GuildPromptContext.Activity, messages[0].Text);
         Assert.Contains("You are responding to a Discord message from: CurrentRaider", messages[0].Text);
         Assert.Contains("The current author's Discord user ID is 456.", messages[0].Text);
         Assert.DoesNotContain("{{$", messages[0].Text);

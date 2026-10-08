@@ -15,6 +15,10 @@ internal abstract class PersonalityBase(
         "## ROLE AND CONTEXT",
         personalityPrompt,
         "",
+        "## GUILD CONTEXT",
+        GuildPromptContext.Identity,
+        "{{$guildActivity}}",
+        "",
         "## AUTHOR INFORMATION",
         "You are responding to a Discord message from: {{$userName}}",
         "The current author's Discord user ID is {{$userId}}.",
@@ -62,6 +66,7 @@ internal abstract class PersonalityBase(
     )
     {
         var systemPrompt = _systemPromptTemplate
+            .Replace("{{$guildActivity}}", GuildPromptContext.GetActivity(DateTimeOffset.UtcNow))
             .Replace("{{$userName}}", messageContext.UserName)
             .Replace("{{$userId}}", messageContext.UserId.ToString())
             .Replace("{{$emojis}}", string.Join(' ', emojiHandler.GetEmojis()))

@@ -32,6 +32,8 @@ public class PersonalityBaseTests
             Assert.Contains(chatClient.Options!.Tools!, tool => tool is HostedWebSearchTool);
             Assert.Contains(chatClient.Options.Tools!, tool => tool.Name == "read_discord_messages");
             Assert.Contains("The current author's Discord user ID is 1.", chatClient.Messages[0].Text);
+            Assert.Contains(GuildPromptContext.Identity, chatClient.Messages[0].Text);
+            Assert.Contains(GuildPromptContext.Activity, chatClient.Messages[0].Text);
             Assert.Contains("respond only to the message marked currentRequest", chatClient.Messages[0].Text);
             Assert.Contains("do not reconstruct that closed conversation with tools", chatClient.Messages[0].Text);
             Assert.Contains("consider whether the conversation contains a useful new", chatClient.Messages[0].Text);

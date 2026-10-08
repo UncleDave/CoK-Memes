@@ -5,6 +5,7 @@ namespace ChampionsOfKhazad.Bot.GenAi;
 
 internal sealed class GazetteWriter(IChatClient chatClient) : IGazetteWriter
 {
+    internal const int MaximumOutputTokens = 8192;
     private const string Policy = """
         Draft The Khazad Gazette: selected dispatches from Champions of Khazad, written by a self-important dwarven newspaper.
         Real guild happenings, wildly undeserved journalistic gravitas. This is NOT an exhaustive chat summary or a weekly roast.
@@ -88,7 +89,7 @@ internal sealed class GazetteWriter(IChatClient chatClient) : IGazetteWriter
             }
         );
         if (data.Length > 100000)
-            throw Invalid();
+            throw Invalid(GazetteValidationFailure.InputTooLarge, GazetteValidationField.Input, data.Length, 100000);
         var response = await chatClient
             .GetResponseAsync(
                 [new(ChatRole.System, Policy + "\n" + GuildPromptContext.GetActivity(until)), new(ChatRole.User, data)],
@@ -97,85 +98,115 @@ internal sealed class GazetteWriter(IChatClient chatClient) : IGazetteWriter
                     ResponseFormat = ChatResponseFormat.Json,
                     Reasoning = new ReasoningOptions { Effort = ReasoningEffort.High },
                     Tools = [],
-                    MaxOutputTokens = 4096,
+                    MaxOutputTokens = MaximumOutputTokens,
                 },
                 cancellationToken
             )
             .WaitAsync(cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
+        if (response.FinishReason == ChatFinishReason.Length)
+            throw Invalid(GazetteValidationFailure.IncompleteResponse, GazetteValidationField.Response);
         return Parse(response.Text, sources);
     }
 
     private static GazetteEdition Parse(string text, IReadOnlyList<NotebookSource> sources)
     {
         if (text.Length > 16000)
-            throw Invalid();
+            throw Invalid(GazetteValidationFailure.ResponseTooLarge, GazetteValidationField.Response, text.Length, 16000);
         try
         {
             using var document = JsonDocument.Parse(text);
             var root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object)
+                throw Invalid(GazetteValidationFailure.InvalidShape, GazetteValidationField.Response);
             var hasIllustration = root.TryGetProperty("illustrationPrompt", out var illustrationElement);
-            RequireProperties(root, hasIllustration ? ["articles", "editorial", "illustrationPrompt"] : ["articles", "editorial"]);
-            var illustration = hasIllustration && illustrationElement.ValueKind != JsonValueKind.Null ? ReadString(illustrationElement, 400) : null;
+            RequireProperties(
+                root,
+                hasIllustration ? ["articles", "editorial", "illustrationPrompt"] : ["articles", "editorial"],
+                GazetteValidationField.Response
+            );
+            var illustration =
+                hasIllustration && illustrationElement.ValueKind != JsonValueKind.Null
+                    ? ReadString(illustrationElement, 400, GazetteValidationField.IllustrationPrompt)
+                    : null;
             var articles = root.GetProperty("articles");
-            if (articles.ValueKind != JsonValueKind.Array || articles.GetArrayLength() > 3)
-                throw Invalid();
-            var editorial = ReadString(root.GetProperty("editorial"), 200, allowEmpty: true);
+            if (articles.ValueKind != JsonValueKind.Array)
+                throw Invalid(GazetteValidationFailure.InvalidShape, GazetteValidationField.Articles);
+            if (articles.GetArrayLength() > 3)
+                throw Invalid(GazetteValidationFailure.InvalidArticleCount, GazetteValidationField.Articles, articles.GetArrayLength(), 3);
+            var editorial = ReadString(root.GetProperty("editorial"), 200, GazetteValidationField.Editorial, allowEmpty: true);
             var supplied = sources.Select(source => source.Url).ToHashSet(StringComparer.Ordinal);
             var parsed = new List<GazetteArticle>();
             foreach (var article in articles.EnumerateArray())
             {
+                if (article.ValueKind != JsonValueKind.Object)
+                    throw Invalid(GazetteValidationFailure.InvalidShape, GazetteValidationField.Article);
                 var hasTeaser = article.TryGetProperty("teaser", out var teaserElement);
-                RequireProperties(article, hasTeaser ? ["headline", "body", "teaser", "sourceUrls"] : ["headline", "body", "sourceUrls"]);
-                var teaser = hasTeaser ? ReadString(teaserElement, 160) : null;
-                var headline = ReadString(article.GetProperty("headline"), 100);
-                var body = ReadString(article.GetProperty("body"), 650);
+                RequireProperties(
+                    article,
+                    hasTeaser ? ["headline", "body", "teaser", "sourceUrls"] : ["headline", "body", "sourceUrls"],
+                    GazetteValidationField.Article
+                );
+                var teaser = hasTeaser ? ReadString(teaserElement, 160, GazetteValidationField.Teaser) : null;
+                var headline = ReadString(article.GetProperty("headline"), 100, GazetteValidationField.Headline);
+                var body = ReadString(article.GetProperty("body"), 650, GazetteValidationField.Body);
                 var urls = article.GetProperty("sourceUrls");
-                if (
-                    headline.Contains('\n')
-                    || headline.Contains('\r')
-                    || (teaser is not null && (teaser.Contains('\n') || teaser.Contains('\r')))
-                    || urls.ValueKind != JsonValueKind.Array
-                    || urls.GetArrayLength() is < 1 or > 3
-                )
-                    throw Invalid();
-                var links = urls.EnumerateArray().Select(url => ReadString(url, 200)).ToArray();
-                if (links.Distinct(StringComparer.Ordinal).Count() != links.Length || links.Any(url => !supplied.Contains(url)))
-                    throw Invalid();
+                if (headline.Contains('\n') || headline.Contains('\r'))
+                    throw Invalid(GazetteValidationFailure.MultilineText, GazetteValidationField.Headline);
+                if (teaser is not null && (teaser.Contains('\n') || teaser.Contains('\r')))
+                    throw Invalid(GazetteValidationFailure.MultilineText, GazetteValidationField.Teaser);
+                if (urls.ValueKind != JsonValueKind.Array)
+                    throw Invalid(GazetteValidationFailure.InvalidShape, GazetteValidationField.SourceUrls);
+                if (urls.GetArrayLength() is < 1 or > 3)
+                    throw Invalid(GazetteValidationFailure.InvalidCitationCount, GazetteValidationField.SourceUrls, urls.GetArrayLength(), 3);
+                var links = urls.EnumerateArray().Select(url => ReadString(url, 200, GazetteValidationField.SourceUrl)).ToArray();
+                if (links.Distinct(StringComparer.Ordinal).Count() != links.Length)
+                    throw Invalid(GazetteValidationFailure.DuplicateCitation, GazetteValidationField.SourceUrls);
+                if (links.Any(url => !supplied.Contains(url)))
+                    throw Invalid(GazetteValidationFailure.InvalidCitation, GazetteValidationField.SourceUrls);
                 parsed.Add(new(headline, body, links) { Teaser = teaser });
             }
-            if ((parsed.Count == 0 && (editorial.Length != 0 || illustration is not null)) || (parsed.Count > 0 && editorial.Length == 0))
-                throw Invalid();
+            if (parsed.Count == 0 && (editorial.Length != 0 || illustration is not null))
+                throw Invalid(GazetteValidationFailure.UnexpectedFiller, GazetteValidationField.Response);
+            if (parsed.Count > 0 && editorial.Length == 0)
+                throw Invalid(GazetteValidationFailure.MissingClassified, GazetteValidationField.Editorial);
             return new(parsed, editorial) { IllustrationPrompt = illustration };
         }
         catch (JsonException)
         {
-            throw Invalid();
+            throw Invalid(GazetteValidationFailure.InvalidJson, GazetteValidationField.Response, text.Length);
         }
     }
 
-    private static void RequireProperties(JsonElement element, string[] properties)
+    private static void RequireProperties(JsonElement element, string[] properties, GazetteValidationField field)
     {
         if (element.ValueKind != JsonValueKind.Object)
-            throw Invalid();
+            throw Invalid(GazetteValidationFailure.InvalidShape, field);
         var fields = element.EnumerateObject().Select(field => field.Name).ToArray();
         if (
             fields.Length != properties.Length
             || fields.Distinct(StringComparer.Ordinal).Count() != properties.Length
             || properties.Except(fields).Any()
         )
-            throw Invalid();
+            throw Invalid(GazetteValidationFailure.InvalidShape, field);
     }
 
-    private static string ReadString(JsonElement element, int maximum, bool allowEmpty = false)
+    private static string ReadString(JsonElement element, int maximum, GazetteValidationField field, bool allowEmpty = false)
     {
         if (element.ValueKind != JsonValueKind.String)
-            throw Invalid();
+            throw Invalid(GazetteValidationFailure.InvalidFieldType, field);
         var value = element.GetString()!;
-        if (value.Length > maximum || (!allowEmpty && string.IsNullOrWhiteSpace(value)))
-            throw Invalid();
+        if (value.Length > maximum)
+            throw Invalid(GazetteValidationFailure.FieldTooLong, field, value.Length, maximum);
+        if (!allowEmpty && string.IsNullOrWhiteSpace(value))
+            throw Invalid(GazetteValidationFailure.MissingText, field);
         return value.Trim();
     }
 
-    private static InvalidOperationException Invalid() => new("Gazette writer did not produce a valid edition.");
+    private static GazetteDraftValidationException Invalid(
+        GazetteValidationFailure failure,
+        GazetteValidationField field,
+        int? actualLength = null,
+        int? limit = null
+    ) => new(failure, field, actualLength, limit);
 }

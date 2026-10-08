@@ -1,4 +1,5 @@
 using ChampionsOfKhazad.Bot.GenAi;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
@@ -6,6 +7,58 @@ namespace ChampionsOfKhazad.Bot.Tests;
 
 public class GazetteDirectMessageCommandTests
 {
+    [Fact]
+    public async Task RenderingFailureIsClearlyDistinguishedFromModelValidation()
+    {
+        var fixture = new Fixture();
+        fixture.Renderer.Failure = new InvalidOperationException("SECRET renderer data");
+        await fixture.Run("gazette draft");
+        Assert.Contains("rendering newspaper pages", Assert.Single(fixture.Logger.Messages));
+        Assert.Contains(fixture.Replies, reply => reply.Contains("rendering newspaper pages"));
+        Assert.DoesNotContain("SECRET", string.Join('\n', fixture.Logger.Messages.Concat(fixture.Replies)));
+        Assert.Null(fixture.Session.Pending);
+        Assert.Empty(fixture.Pages);
+    }
+
+    [Fact]
+    public async Task RejectedModelFieldsIdentifyStageAndBoundsWithoutExposingContentInLogsOrDms()
+    {
+        var fixture = new Fixture();
+        fixture.Writer.Failure = new GazetteDraftValidationException(GazetteValidationFailure.FieldTooLong, GazetteValidationField.Body, 701, 650);
+        await fixture.Run("gazette draft");
+        var log = Assert.Single(fixture.Logger.Messages);
+        Assert.Contains("writing stories", log);
+        Assert.Contains("FieldTooLong", log);
+        Assert.Contains("Body", log);
+        Assert.Contains("701", log);
+        Assert.Contains("650", log);
+        Assert.Contains(fixture.Replies, reply => reply.Contains("writing stories") && reply.Contains("701/650"));
+        Assert.Null(fixture.Session.Pending);
+        Assert.Empty(fixture.Gateway.Publications);
+    }
+
+    [Fact]
+    public async Task GenericProviderFailuresExposeOnlyStageTypeAndStaticFailureSiteNotRawExceptionMessages()
+    {
+        var fixture = new Fixture();
+        fixture.Writer.Failure = new InvalidOperationException("SECRET raw guild conversation and credential");
+        await fixture.Run("gazette draft");
+        Assert.Contains("writing stories", Assert.Single(fixture.Logger.Messages));
+        Assert.DoesNotContain("SECRET", string.Join('\n', fixture.Logger.Messages.Concat(fixture.Replies)));
+        Assert.Contains(fixture.Replies, reply => reply.Contains("writing stories"));
+        Assert.Null(fixture.Session.Pending);
+    }
+
+    [Fact]
+    public async Task TruncatedModelResponseIsExplainedAsAnOutputLimitNotAPermissionProblem()
+    {
+        var fixture = new Fixture();
+        fixture.Writer.Failure = new GazetteDraftValidationException(GazetteValidationFailure.IncompleteResponse, GazetteValidationField.Response);
+        await fixture.Run("gazette draft");
+        Assert.Contains(fixture.Replies, reply => reply.Contains("cut short at its output limit"));
+        Assert.DoesNotContain(fixture.Replies, reply => reply.Contains("permission", StringComparison.OrdinalIgnoreCase));
+    }
+
     [Fact]
     public async Task AllPagesArePrivatelyPreviewedAndPublishedUnchangedWithOneApproval()
     {
@@ -397,6 +450,8 @@ public class GazetteDirectMessageCommandTests
         public List<GazettePage> Pages { get; } = [];
         public MemoryGazetteIssueStore IssueStore { get; } = new();
         public StubGazetteIllustrator Illustrator { get; } = new();
+        public CapturingLogger Logger { get; } = new();
+        public StubGazettePageRenderer Renderer { get; } = new();
         public GazetteDirectMessageCommand Command { get; }
 
         public Fixture() =>
@@ -406,9 +461,9 @@ public class GazetteDirectMessageCommandTests
                 Session,
                 Options.Create(new DirectMessageHandlerOptions { AdminUserId = 1 }),
                 Clock,
-                NullLogger<GazetteDirectMessageCommand>.Instance,
+                Logger,
                 new GazetteIssueService(IssueStore, Clock),
-                new StubGazettePageRenderer(),
+                Renderer,
                 Illustrator,
                 Options.Create(new GazetteOptions())
             );
@@ -496,6 +551,7 @@ public class GazetteDirectMessageCommandTests
 
     private sealed class Writer : IGazetteWriter
     {
+        public Exception? Failure { get; set; }
         public int Calls { get; private set; }
         public DateTimeOffset Since { get; private set; }
         public GazetteEdition Edition { get; set; } =
@@ -512,8 +568,26 @@ public class GazetteDirectMessageCommandTests
         )
         {
             Calls++;
+            if (Failure is { } error)
+                return Task.FromException<GazetteEdition>(error);
             Since = since;
             return Task.FromResult(Edition);
+        }
+    }
+
+    private sealed class CapturingLogger : ILogger<GazetteDirectMessageCommand>
+    {
+        public List<string> Messages { get; } = [];
+
+        public IDisposable? BeginScope<TState>(TState state)
+            where TState : notnull => null;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+        {
+            Assert.Null(exception);
+            Messages.Add(formatter(state, exception));
         }
     }
 }

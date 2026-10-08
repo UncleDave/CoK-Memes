@@ -111,7 +111,7 @@ public class GazetteWriterTests
                 }
             )
         );
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+        await Assert.ThrowsAsync<GazetteDraftValidationException>(() =>
             new GazetteWriter(client).WriteAsync([Source], Now.AddDays(-7), Now, TestContext.Current.CancellationToken)
         );
     }
@@ -161,7 +161,7 @@ public class GazetteWriterTests
     [InlineData("""{"articles":[{"headline":"Headline","body":" ","sourceUrls":["https://discord.com/channels/1/3/42"]}],"editorial":""}""")]
     public async Task InvalidShapeOrInventedCitationsFailClosed(string response)
     {
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+        await Assert.ThrowsAsync<GazetteDraftValidationException>(() =>
             new GazetteWriter(new CapturingClient(response)).WriteAsync([Source], Now.AddDays(-7), Now, TestContext.Current.CancellationToken)
         );
     }
@@ -186,7 +186,7 @@ public class GazetteWriterTests
                 editorial = field == "editorial" ? new string('x', length) : "",
             }
         );
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+        await Assert.ThrowsAsync<GazetteDraftValidationException>(() =>
             new GazetteWriter(new CapturingClient(response)).WriteAsync([Source], Now.AddDays(-7), Now, TestContext.Current.CancellationToken)
         );
     }
@@ -195,7 +195,7 @@ public class GazetteWriterTests
     public async Task OversizedInputIsRejectedBeforeModelCall()
     {
         var client = new CapturingClient("unused");
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+        await Assert.ThrowsAsync<GazetteDraftValidationException>(() =>
             new GazetteWriter(client).WriteAsync(
                 [Source with { Content = new string('x', 100001) }],
                 Now.AddDays(-7),
@@ -206,7 +206,72 @@ public class GazetteWriterTests
         Assert.Null(client.Messages);
     }
 
-    private sealed class CapturingClient(string response) : IChatClient
+    [Fact]
+    public async Task HighReasoningGetsMoreOutputHeadroomAndAnIncompleteResponseIsIdentifiedBeforeParsing()
+    {
+        var client = new CapturingClient("SECRET unfinished generated prose", ChatFinishReason.Length);
+        var failure = await Assert.ThrowsAsync<GazetteDraftValidationException>(() =>
+            new GazetteWriter(client).WriteAsync([Source], Now.AddDays(-7), Now, TestContext.Current.CancellationToken)
+        );
+        Assert.Equal(8192, client.Options!.MaxOutputTokens);
+        Assert.Equal(GazetteValidationFailure.IncompleteResponse, failure.Failure);
+        Assert.Equal(GazetteValidationField.Response, failure.Field);
+        Assert.DoesNotContain("SECRET", failure.ToString());
+    }
+
+    [Fact]
+    public async Task OverlongBodyReportsOnlyItsFieldAndLengthsNotRejectedProse()
+    {
+        var body = "SECRET generated prose " + new string('x', 650);
+        var client = new CapturingClient(
+            JsonSerializer.Serialize(
+                new
+                {
+                    articles = new[]
+                    {
+                        new
+                        {
+                            headline = "Headline",
+                            body,
+                            sourceUrls = new[] { Url },
+                        },
+                    },
+                    editorial = "Ad",
+                }
+            )
+        );
+        var failure = await Assert.ThrowsAsync<GazetteDraftValidationException>(() =>
+            new GazetteWriter(client).WriteAsync([Source], Now.AddDays(-7), Now, TestContext.Current.CancellationToken)
+        );
+        Assert.Equal(GazetteValidationFailure.FieldTooLong, failure.Failure);
+        Assert.Equal(GazetteValidationField.Body, failure.Field);
+        Assert.Equal(body.Length, failure.ActualLength);
+        Assert.Equal(650, failure.Limit);
+        Assert.DoesNotContain("SECRET", failure.ToString());
+    }
+
+    [Theory]
+    [InlineData("not JSON", GazetteValidationFailure.InvalidJson, GazetteValidationField.Response)]
+    [InlineData("null", GazetteValidationFailure.InvalidShape, GazetteValidationField.Response)]
+    [InlineData("[]", GazetteValidationFailure.InvalidShape, GazetteValidationField.Response)]
+    [InlineData("""{"articles":[null],"editorial":"Ad"}""", GazetteValidationFailure.InvalidShape, GazetteValidationField.Article)]
+    [InlineData("""{"articles":[],"editorial":42}""", GazetteValidationFailure.InvalidFieldType, GazetteValidationField.Editorial)]
+    [InlineData(
+        """{"articles":[{"headline":"Headline","body":"Body","sourceUrls":["invented SECRET URL"]}],"editorial":"Ad"}""",
+        GazetteValidationFailure.InvalidCitation,
+        GazetteValidationField.SourceUrls
+    )]
+    public async Task MalformedResponsesHaveFixedSafeFailureCategories(string response, GazetteValidationFailure reason, GazetteValidationField field)
+    {
+        var failure = await Assert.ThrowsAsync<GazetteDraftValidationException>(() =>
+            new GazetteWriter(new CapturingClient(response)).WriteAsync([Source], Now.AddDays(-7), Now, TestContext.Current.CancellationToken)
+        );
+        Assert.Equal(reason, failure.Failure);
+        Assert.Equal(field, failure.Field);
+        Assert.DoesNotContain("SECRET", failure.ToString());
+    }
+
+    private sealed class CapturingClient(string response, ChatFinishReason? finishReason = null) : IChatClient
     {
         public IReadOnlyList<ChatMessage>? Messages { get; private set; }
         public ChatOptions? Options { get; private set; }
@@ -220,7 +285,7 @@ public class GazetteWriterTests
             cancellationToken.ThrowIfCancellationRequested();
             Messages = messages.ToArray();
             Options = options;
-            return Task.FromResult(new ChatResponse(new ChatMessage(ChatRole.Assistant, response)));
+            return Task.FromResult(new ChatResponse(new ChatMessage(ChatRole.Assistant, response)) { FinishReason = finishReason });
         }
 
         public IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(

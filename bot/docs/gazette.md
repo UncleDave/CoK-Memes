@@ -82,6 +82,23 @@ channels read/eligible and read failures. A failed channel does not prevent draf
 from other safe channels. Drafts are limited to one model call per minute and commands
 have a six-minute deadline. Optional artwork has its own two-minute deadline.
 
+Draft failure diagnostics identify the operation stage (chat/name reading, story writing,
+issue-number lookup, formatting, evidence checks, rendering or private delivery), exception
+type and static code failure site. Model validation failures additionally expose a fixed
+category/field name and numeric length/limit where relevant, never rejected text, source
+URLs, unknown model-supplied property names, prompts or raw exception messages. The
+admin DM explains the stage and validation category instead of reporting only a generic
+InvalidOperationException. No draft becomes approvable after a failure.
+
+The high-reasoning writer has an 8,192-token generation ceiling to leave room for
+reasoning plus its JSON response. A reported length-limited response is identified as
+incomplete before parsing. Invalid JSON, wrong shape/type, field lengths, citations and
+missing classifieds have separate fixed rejection categories. The existing 650-character
+story-body limit, other field limits, overall response/input bounds and source checks
+are unchanged: increased generation headroom is not permission for longer published
+copy or unsafe citations, and it may allow more billed reasoning tokens. No automatic
+retries or rewrites of rejected output are performed.
+
 Gazette author/mention names prefer the server display name. Missing socket-cache
 members are looked up through the guild-member REST API; global account names do not
 silently substitute for unknown server names. Resolve authors before mentions, at most

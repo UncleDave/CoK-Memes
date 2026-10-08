@@ -1,5 +1,6 @@
 using System.Text.Json;
 using ChampionsOfKhazad.Bot.GenAi;
+using Discord;
 using Microsoft.Extensions.Options;
 
 namespace ChampionsOfKhazad.Bot.Tests;
@@ -7,6 +8,24 @@ namespace ChampionsOfKhazad.Bot.Tests;
 public class DiscordGazetteGatewayTests
 {
     private static readonly DateTimeOffset Now = new(2026, 10, 8, 12, 0, 0, TimeSpan.Zero);
+
+    [Theory]
+    [InlineData(false, true, true, "View Channel")]
+    [InlineData(true, false, true, "Send Messages")]
+    [InlineData(true, true, false, "Embed Links")]
+    public void PublicationErrorsIdentifyTheBotsMissingPostingPermission(bool view, bool send, bool embed, string missing)
+    {
+        var permissions = new ChannelPermissions(viewChannel: view, sendMessages: send, embedLinks: embed);
+        Assert.Contains(missing, DiscordGazetteGateway.GetPublicationPermissionError(permissions, "ai-tavern"));
+    }
+
+    [Fact]
+    public void PublicationDoesNotRequireReadHistoryPermissionOrAnAdminGuildMember()
+    {
+        var permissions = new ChannelPermissions(viewChannel: true, sendMessages: true, embedLinks: true);
+        Assert.False(permissions.ReadMessageHistory);
+        Assert.Null(DiscordGazetteGateway.GetPublicationPermissionError(permissions, "ai-tavern"));
+    }
 
     [Theory]
     [InlineData("Production")]
@@ -91,8 +110,7 @@ public class DiscordGazetteGatewayTests
             new(),
             new(null!),
             Options.Create(new GazetteOptions()),
-            Options.Create(new DiscordMessageToolsOptions()),
-            Options.Create(new DirectMessageHandlerOptions { AdminUserId = 1 })
+            Options.Create(new DiscordMessageToolsOptions())
         );
         Assert.Null(gateway.GetDestination());
         Assert.Contains("guild connection is not ready", gateway.DestinationError);

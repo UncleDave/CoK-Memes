@@ -9,8 +9,7 @@ internal sealed class DiscordGazetteGateway(
     BotContextProvider contextProvider,
     SharedDiscordRestClient rest,
     IOptions<GazetteOptions> options,
-    IOptions<DiscordMessageToolsOptions> messageOptions,
-    IOptions<DirectMessageHandlerOptions> adminOptions
+    IOptions<DiscordMessageToolsOptions> messageOptions
 ) : IGazetteGateway
 {
     internal const int MaximumChannels = 12;
@@ -45,27 +44,34 @@ internal sealed class DiscordGazetteGateway(
         if (destination.IsNsfw)
             return Unavailable($"#{destination.Name} is marked NSFW; the Gazette currently requires a non-NSFW destination.");
         var role = guild.GetRole(messageOptions.Value.NormalUserRoleId);
-        var admin = guild.GetUser(adminOptions.Value.AdminUserId);
-        var bot = guild.CurrentUser;
         if (role is null)
             return Unavailable("The configured normal-member role was not found. Check DiscordMessageTools:NormalUserRoleId.");
-        if (admin is null)
-            return Unavailable("Your guild membership is not in the bot's member cache, so it cannot verify your channel permissions yet.");
-        if (bot is null)
-            return Unavailable("The bot's own guild membership is not available yet.");
         if (!NormalUserChannelAccess.CanRead(destination, [guild.EveryoneRole, role]))
             return Unavailable($"The normal-member role cannot both View Channel and Read Message History in #{destination.Name}.");
-        if (!CanRead(admin, destination))
-            return Unavailable($"Your guild permissions do not include both View Channel and Read Message History in #{destination.Name}.");
-        if (!CanRead(bot, destination))
-            return Unavailable($"The bot needs View Channel and Read Message History in #{destination.Name}.");
-        var permissions = bot.GetPermissions(destination);
-        if (!permissions.SendMessages)
-            return Unavailable($"The bot needs Send Messages in #{destination.Name}.");
-        if (!permissions.EmbedLinks)
-            return Unavailable($"The bot needs Embed Links in #{destination.Name}.");
         DestinationError = string.Empty;
         return new(destination.Id, destination.Name);
+    }
+
+    public string? GetPublicationError(ulong destinationId)
+    {
+        if (GetDestination()?.Id != destinationId)
+            return DestinationError.Length > 0 ? DestinationError : "The Gazette destination changed.";
+        var guild = GetGuild();
+        var destination = guild?.GetTextChannel(destinationId);
+        if (destination is null || guild?.CurrentUser is not { } bot)
+            return "The bot's guild connection is not ready for publication.";
+        return GetPublicationPermissionError(bot.GetPermissions(destination), destination.Name);
+    }
+
+    internal static string? GetPublicationPermissionError(ChannelPermissions permissions, string channelName)
+    {
+        if (!permissions.ViewChannel)
+            return $"The bot needs View Channel in #{channelName}.";
+        if (!permissions.SendMessages)
+            return $"The bot needs Send Messages in #{channelName}.";
+        if (!permissions.EmbedLinks)
+            return $"The bot needs Embed Links in #{channelName}.";
+        return null;
     }
 
     private GazetteDestination? Unavailable(string reason)
@@ -178,6 +184,8 @@ internal sealed class DiscordGazetteGateway(
     {
         if (edition.Length > 4000 || GetDestination()?.Id != destinationId)
             throw new InvalidOperationException("Gazette destination is unavailable.");
+        if (GetPublicationError(destinationId) is { } error)
+            throw new InvalidOperationException(error);
         var channel = await rest.Client.GetChannelAsync(destinationId, options: new RequestOptions { CancelToken = cancellationToken });
         if (
             channel is not ITextChannel text
@@ -185,6 +193,7 @@ internal sealed class DiscordGazetteGateway(
             || text.Id != destinationId
             || text.GuildId != GetGuild()?.Id
             || GetDestination()?.Id != destinationId
+            || GetPublicationError(destinationId) is not null
         )
             throw new InvalidOperationException("Gazette destination changed.");
         var message = await text.SendMessageAsync(
@@ -204,9 +213,8 @@ internal sealed class DiscordGazetteGateway(
         if (guild is null || GetDestination()?.Id != destinationId)
             return new Dictionary<ulong, string>();
         var normalRole = guild.GetRole(messageOptions.Value.NormalUserRoleId);
-        var requester = guild.GetUser(adminOptions.Value.AdminUserId);
         var bot = guild.CurrentUser;
-        if (normalRole is null || requester is null || bot is null)
+        if (normalRole is null || bot is null)
             return new Dictionary<ulong, string>();
         var channels = guild
             .TextChannels.Where(channel => channel is not (SocketThreadChannel or SocketVoiceChannel) && !channel.IsNsfw)
@@ -218,8 +226,8 @@ internal sealed class DiscordGazetteGateway(
             channel.Id,
             NormalUserChannelAccess.CanRead(channel, [guild.EveryoneRole, normalRole]),
             NormalUserChannelAccess.CanRead(channel, [guild.EveryoneRole]),
-            CanRead(requester, channel),
-            CanRead(bot, channel)
+            RequesterCanRead: false,
+            BotCanRead: CanRead(bot, channel)
         ));
         var allowed = DiscordMessageAccessPolicy.GetGazetteSourceChannelIds(candidates, everyoneCanRead);
         return channels.Where(channel => allowed.Contains(channel.Id)).ToDictionary(channel => channel.Id, channel => channel.Name);

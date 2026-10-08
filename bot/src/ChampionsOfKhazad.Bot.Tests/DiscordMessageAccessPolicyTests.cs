@@ -2,10 +2,22 @@ namespace ChampionsOfKhazad.Bot.Tests;
 
 public class DiscordMessageAccessPolicyTests
 {
+    [Fact]
+    public void GazetteCanReadAudienceSafeSourcesWhenNoRequestingGuildMemberIsCached()
+    {
+        var channels = new[]
+        {
+            new DiscordMessageAccessPolicy.ChannelCandidate(1, true, true, false, true),
+            new DiscordMessageAccessPolicy.ChannelCandidate(2, false, false, false, true),
+            new DiscordMessageAccessPolicy.ChannelCandidate(3, true, true, false, false),
+        };
+        Assert.Equal(1UL, Assert.Single(DiscordMessageAccessPolicy.GetGazetteSourceChannelIds(channels, true)));
+    }
+
     [Theory]
-    [InlineData(false, new ulong[] { 1, 2 })]
-    [InlineData(true, new ulong[] { 2 })]
-    public void GazetteUsesPublicationAudienceAndRequiresNormalMemberAdminAndBotAccess(bool everyone, ulong[] expected)
+    [InlineData(false, new ulong[] { 1, 2, 4 })]
+    [InlineData(true, new ulong[] { 2, 4 })]
+    public void GazetteUsesPublicationAudienceAndBotReadabilityWithoutRequesterCacheOrPermissions(bool everyone, ulong[] expected)
     {
         var channels = new[]
         {

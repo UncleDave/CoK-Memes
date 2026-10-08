@@ -15,6 +15,11 @@ the bot, can request or publish an edition:
 - `gazette approve <token>` — publish exactly the previewed edition to `#ai-tavern`.
 - `gazette discard` — clear the pending draft without publishing.
 
+The sender's Discord user ID in an admin DM is the authorization boundary. Gazette
+does not look up the administrator in the guild member cache or recheck the admin's
+guild channel permissions. That cache can legitimately omit an offline guild member.
+This does not broaden source scope: normal-member audience and bot-read checks remain.
+
 The default window is the preceding seven days. A successful edition contains one to
 three sourced stories and, optionally, a tiny fictional advert/editor's note explicitly
 labelled satire. Quiet or unsuitable conversation produces no edition, not invented
@@ -35,7 +40,7 @@ accurate or safe: the administrator must inspect the preview and evidence.
 Publication scope, not the administrator's elevated privileges, governs source access.
 Reuse the existing normal-member channel permission calculations:
 
-- Require the configured normal-member role, administrator and bot to be able to read
+- Require the configured normal-member role and bot to be able to read
   source text channels and message history.
 - Exclude officer/private channels, NSFW channels, threads and voice channels.
 - If the publication channel is readable by `@everyone`, exclude sources that are only
@@ -71,7 +76,10 @@ and destination channel ID. No natural-language approval, scheduled event, obser
 or public command can publish it.
 
 Approval is consumed before verification/send. An unavailable source or destination
-clears it. A send failure or timeout may have an ambiguous outcome: do not retry that
+clears it. Only approval checks the bot's View Channel, Send Messages and Embed Links
+permissions in the destination; missing posting permissions do not prevent a private
+draft. Known pre-send permission failures are explained without implying a send was
+attempted. A send failure or timeout may have an ambiguous outcome: do not retry that
 approval; inspect `#ai-tavern` before requesting another draft. Concurrent/repeated
 approvals cannot send the same pending draft twice. New drafts are not deduplicated
 against previously published editions; there is no persistent edition archive yet.
@@ -92,21 +100,25 @@ Optional settings under `Gazette`:
 | `DestinationChannelId` | `0` | If set, use this exact channel ID instead of name resolution. |
 | `SourceChannelIds` | `[]` | Optional sampling subset; empty means eligible guild text channels, still bounded above. Never bypasses permissions. |
 
-The destination must be non-NSFW, normal-member/admin/bot-readable, and the bot must
-have Send Messages and Embed Links. Existing Discord, AI and normal-role configuration
+The destination must be non-NSFW and normal-member-readable, so its intended audience
+can be resolved safely. The bot needs read access to source channels for drafting;
+it only needs View Channel, Send Messages and Embed Links in the destination when
+publication is approved. Existing Discord, AI and normal-role configuration
 is reused; no additional credentials or persistence configuration are introduced.
 
 The committed Production and Development configurations pin the destination by ID
 to their existing bot-conversation channel (also included in MentionHandler's channel
 configuration and the follower bot-mention exclusion). A renamed/decorated channel
 therefore does not depend on an exact `ai-tavern` name match. Destination failures
-explain the specific readiness, resolution, role/member-cache or permission check in
+explain the specific readiness, resolution, normal-role or audience check in
 the admin DM rather than combining them into a generic error.
 
 ## Validation
 
 Backend tests cover admin-only DM routing, private delivery before approval, replacement,
 expiry, discard, concurrent/repeated approval, exact-edition publishing, evidence/access
-failures, ambiguous sends, quiet inputs, sampling bounds, REST source filtering and the
+failures, source access without an admin member-cache entry, private drafting without
+posting permissions, approval-only posting checks, draft-specific failure wording,
+ambiguous sends, quiet inputs, sampling bounds, REST source filtering and the
 writer's tool-free prompt/JSON/citation contracts. Live editorial quality and actual
 Discord permissions/delivery require an admin trial after deployment.

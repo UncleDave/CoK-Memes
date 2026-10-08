@@ -33,6 +33,7 @@ public sealed partial class GazetteDirectMessageCommand(
 
         await session.Gate.WaitAsync(cancellationToken);
         var publishing = false;
+        var drafting = parts.Length == 2 && parts[1].Equals("draft", StringComparison.OrdinalIgnoreCase);
         try
         {
             if (session.Pending is { } old && clock.GetUtcNow() >= old.ExpiresAtUtc)
@@ -40,14 +41,14 @@ public sealed partial class GazetteDirectMessageCommand(
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             timeout.CancelAfter(TimeSpan.FromMinutes(3));
             var token = timeout.Token;
-            if (parts.Length == 2 && parts[1].Equals("draft", StringComparison.OrdinalIgnoreCase))
+            if (drafting)
             {
                 await DraftAsync(reply, token);
             }
             else if (parts.Length == 2 && parts[1].Equals("discard", StringComparison.OrdinalIgnoreCase))
             {
                 session.Pending = null;
-                await reply("Gazette draft discarded. Nothing was published.", token);
+                await reply("Gazette draft discarded.", token);
             }
             else if (parts.Length == 2 && parts[1].Equals("show", StringComparison.OrdinalIgnoreCase))
             {
@@ -72,6 +73,13 @@ public sealed partial class GazetteDirectMessageCommand(
                     {
                         await reply(
                             "The destination or cited evidence changed, became unavailable, or approval expired. Nothing was published. Request `gazette draft` again.",
+                            token
+                        );
+                    }
+                    else if (gateway.GetPublicationError(pending.Destination.Id) is { } error)
+                    {
+                        await reply(
+                            $"Cannot publish this edition: {error} The approval was cleared; request a fresh draft after fixing the bot's posting permissions.",
                             token
                         );
                     }
@@ -107,8 +115,10 @@ public sealed partial class GazetteDirectMessageCommand(
             );
             await reply(
                 publishing
-                    ? "Publication could not be confirmed. The approval has been consumed; check #ai-tavern before requesting another draft. No automatic retry will occur."
-                    : "The Gazette command failed or timed out. Nothing was published; pending approval was cleared. Try `gazette draft` again.",
+                        ? "Publication could not be confirmed. The approval has been consumed; check #ai-tavern before requesting another draft. No automatic retry will occur."
+                    : drafting
+                        ? "I couldn't prepare a Gazette draft; the request failed or timed out. Pending preview was cleared. Try `gazette draft` again."
+                    : "The Gazette command failed or timed out; pending approval was cleared. Try `gazette draft` again.",
                 cancellationToken
             );
             return true;
@@ -133,24 +143,21 @@ public sealed partial class GazetteDirectMessageCommand(
         var destination = gateway.GetDestination();
         if (destination is null)
         {
-            await reply($"{gateway.DestinationError} Nothing was published.", cancellationToken);
+            await reply($"I couldn't prepare a draft: {gateway.DestinationError}", cancellationToken);
             return;
         }
         var since = until.AddDays(-7);
         var batch = await gateway.ReadRecentAsync(destination.Id, since, until, cancellationToken);
         if (batch.Sources.Count == 0)
         {
-            await reply($"No usable recent human messages were found. {Coverage(batch)} Nothing was published.", cancellationToken);
+            await reply($"No usable recent human messages were found, so no draft was created. {Coverage(batch)}", cancellationToken);
             return;
         }
         session.NextDraftAtUtc = clock.GetUtcNow().AddMinutes(1);
         var edition = await writer.WriteAsync(batch.Sources, since, until, cancellationToken);
         if (edition.Articles.Count == 0)
         {
-            await reply(
-                $"No suitable stories were found in this sample; no edition was padded or invented. {Coverage(batch)} Nothing was published.",
-                cancellationToken
-            );
+            await reply($"No suitable stories were found in this sample; no edition was padded or invented. {Coverage(batch)}", cancellationToken);
             return;
         }
         var text = Render(edition, since, until);
@@ -158,7 +165,7 @@ public sealed partial class GazetteDirectMessageCommand(
         var sources = batch.Sources.Where(source => sourceUrls.Contains(source.Url)).DistinctBy(source => source.Url).ToArray();
         if (sourceUrls.Count != sources.Length || !await gateway.VerifyAsync(destination.Id, sources, cancellationToken))
         {
-            await reply("The draft's cited evidence changed or became unavailable. Nothing was published; request a fresh draft.", cancellationToken);
+            await reply("The draft's cited evidence changed or became unavailable. Request a fresh draft.", cancellationToken);
             return;
         }
         var pending = new GazettePendingDraft(Guid.NewGuid().ToString("N")[..12], destination, text, sources, clock.GetUtcNow().AddMinutes(30));

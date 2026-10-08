@@ -7,6 +7,61 @@ namespace ChampionsOfKhazad.Bot.Tests;
 public class GazetteDirectMessageCommandTests
 {
     [Fact]
+    public async Task DraftDoesNotCheckPostingPermissionsAndCanBeReviewedWhileBotCannotPublish()
+    {
+        var fixture = new Fixture();
+        fixture.Gateway.PublicationError = "The bot needs Embed Links in #ai-tavern.";
+        await fixture.Run("gazette draft");
+        Assert.NotNull(fixture.Session.Pending);
+        Assert.Equal(1, fixture.Writer.Calls);
+        Assert.Equal(0, fixture.Gateway.PublicationChecks);
+        Assert.Empty(fixture.Gateway.Publications);
+    }
+
+    [Fact]
+    public async Task ApprovalChecksBotPostingPermissionsAndReportsKnownFailureWithoutAnAmbiguousSendWarning()
+    {
+        var fixture = new Fixture();
+        fixture.Gateway.PublicationError = "The bot needs Embed Links in #ai-tavern.";
+        await fixture.Run("gazette draft");
+        await fixture.Run($"gazette approve {fixture.Session.Pending!.Token}");
+        Assert.Equal(1, fixture.Gateway.PublicationChecks);
+        Assert.Empty(fixture.Gateway.Publications);
+        Assert.Null(fixture.Session.Pending);
+        Assert.Contains(fixture.Replies, reply => reply.Contains(fixture.Gateway.PublicationError));
+        Assert.DoesNotContain(fixture.Replies, reply => reply.Contains("Publication could not be confirmed"));
+    }
+
+    [Theory]
+    [InlineData("destination")]
+    [InlineData("no-messages")]
+    [InlineData("no-stories")]
+    [InlineData("source-changed")]
+    public async Task DraftFailuresDescribeDraftingRatherThanPublication(string failure)
+    {
+        var fixture = new Fixture();
+        switch (failure)
+        {
+            case "destination":
+                fixture.Gateway.Destination = null;
+                break;
+            case "no-messages":
+                fixture.Gateway.Sources = [];
+                break;
+            case "no-stories":
+                fixture.Writer.Edition = new([], "");
+                break;
+            case "source-changed":
+                fixture.Gateway.Valid = false;
+                break;
+        }
+        await fixture.Run("gazette draft");
+        Assert.Null(fixture.Session.Pending);
+        Assert.DoesNotContain(fixture.Replies, reply => reply.Contains("published", StringComparison.OrdinalIgnoreCase));
+        Assert.Equal(0, fixture.Gateway.PublicationChecks);
+    }
+
+    [Fact]
     public async Task DraftIsPrivateAndOnlyBecomesApprovableAfterCompletePreviewDelivery()
     {
         var fixture = new Fixture();
@@ -277,7 +332,10 @@ public class GazetteDirectMessageCommandTests
 
     private sealed class Gateway : IGazetteGateway
     {
-        public string DestinationError => "The bot needs Embed Links in #ai-tavern.";
+        public string DestinationError => "The Gazette channel could not be resolved.";
+
+        public string? PublicationError { get; set; }
+        public int PublicationChecks { get; private set; }
 
         public GazetteDestination? Destination { get; set; } = new(8, "ai-tavern");
         public bool Valid { get; set; } = true;
@@ -289,6 +347,12 @@ public class GazetteDirectMessageCommandTests
         public List<(ulong Destination, string Text)> Publications { get; } = [];
 
         public GazetteDestination? GetDestination() => Destination;
+
+        public string? GetPublicationError(ulong destinationId)
+        {
+            PublicationChecks++;
+            return PublicationError;
+        }
 
         public Task<GazetteChatBatch> ReadRecentAsync(
             ulong destinationId,

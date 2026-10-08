@@ -43,6 +43,8 @@ public class DirectMessageHandlerTests
             return null;
         }
 
+        public string? GetPublicationError(ulong destinationId) => throw new NotSupportedException();
+
         public Task<GazetteChatBatch> ReadRecentAsync(
             ulong destinationId,
             DateTimeOffset since,

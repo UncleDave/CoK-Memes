@@ -8,6 +8,8 @@ public interface IGazetteGateway
 
     GazetteDestination? GetDestination();
 
+    string? GetPublicationError(ulong destinationId);
+
     Task<GazetteChatBatch> ReadRecentAsync(ulong destinationId, DateTimeOffset since, DateTimeOffset until, CancellationToken cancellationToken);
 
     Task<bool> VerifyAsync(ulong destinationId, IReadOnlyList<NotebookSource> sources, CancellationToken cancellationToken);

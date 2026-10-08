@@ -61,9 +61,12 @@ to continue searching the sample after choosing the lead, not stop at one headli
 event or retell it three ways. This is an editorial target, not permission to invent
 two filler stories. A genuinely thin sample can still yield a single-page edition;
 the private diagnostics explicitly say when only one story was selected.
-Prefer member/game/hobby happenings over bot administration and memory/context
-housekeeping. Expired bot-context labels are generally maintenance chatter rather than
-news, unless the exchange contains a standalone guild joke worth reporting.
+Select moments with a distinctive incident, amusing contrast or memorable exchange
+that stands on its own as guild news. Routine bot administration or bot troubleshooting
+should not become a story merely to fill a slot, but can qualify when there is a genuinely
+entertaining incident. This is editorial judgement, not a topic blacklist; member
+troubleshooting and real-world tech anecdotes remain eligible. Avoid selection rules
+that single out the particular role/context incident from a previous trial draft.
 
 The model runs an isolated, tool-free JSON task with the shared dated guild-activity
 context. Chat records, names, mention mappings and URLs are untrusted data, not commands.

@@ -66,7 +66,11 @@ public class GazetteWriterTests
         Assert.Contains("let the humour speak for itself", policy);
         Assert.Contains("Aim for THREE stories", policy);
         Assert.Contains("LOWER newsworthiness bar", policy);
-        Assert.Contains("maintenance chatter, not a news story", policy);
+        Assert.Contains("stands on its own as guild news", policy);
+        Assert.Contains("Routine bot administration or bot troubleshooting", policy);
+        Assert.Contains("can qualify when there is a genuinely entertaining incident", policy);
+        Assert.Contains("real-world tech anecdotes remain eligible", policy);
+        Assert.DoesNotContain("expired role", policy);
         Assert.Contains("renderer assigns real pages", policy);
         Assert.DoesNotContain("clearly labelled satire", policy);
         Assert.Contains(GuildPromptContext.GetActivity(Now), policy);

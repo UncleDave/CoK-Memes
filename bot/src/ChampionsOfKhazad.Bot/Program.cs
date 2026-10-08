@@ -39,6 +39,7 @@ host.Services.AddSerilog();
 
 host.Services.AddOptionsWithEagerValidation<BotOptions>(host.Configuration.GetSection(BotOptions.Key));
 host.Services.AddOptionsWithEagerValidation<DiscordMessageToolsOptions>(host.Configuration.GetSection(DiscordMessageToolsOptions.Key));
+host.Services.AddOptionsWithEagerValidation<GazetteOptions>(host.Configuration.GetSection(GazetteOptions.Key));
 host.Services.AddSingleton(typeof(CooldownTracker<>));
 
 host.Services.AddSingleton<DiscordSocketClient>(services =>
@@ -116,6 +117,9 @@ host.Services.AddHostedService<BotService>()
     .AddScoped<PersonalityDirectMessageCommand>()
     .AddScoped<NotebookDirectMessageCommand>()
     .AddScoped<LoreDirectMessageCommand>()
+    .AddScoped<GazetteDirectMessageCommand>()
+    .AddScoped<IGazetteGateway, DiscordGazetteGateway>()
+    .AddSingleton<GazetteSession>()
     .AddSingleton<LoreEditorSession>()
     .AddScoped<INotebookReviewer, DiscordNotebookReviewer>()
     .AddScoped<INotebookSourceReader, DiscordMessageService>()

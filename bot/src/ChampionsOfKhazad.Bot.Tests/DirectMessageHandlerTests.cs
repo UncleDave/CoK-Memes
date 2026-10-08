@@ -15,6 +15,51 @@ public class DirectMessageHandlerTests
     [InlineData(false, true, false, false)]
     [InlineData(true, false, false, false)]
     [InlineData(true, true, true, false)]
+    public async Task GazetteOnlyRunsForHumanAdminDms(bool admin, bool dm, bool bot, bool expected)
+    {
+        var gateway = new GazetteGateway();
+        var command = new GazetteDirectMessageCommand(
+            gateway,
+            null!,
+            new(),
+            Options.Create(new DirectMessageHandlerOptions { AdminUserId = 1 }),
+            TimeProvider.System,
+            NullLogger<GazetteDirectMessageCommand>.Instance
+        );
+        var handler = CreateHandler(null!, null!, gazetteCommand: command);
+        await handler.Handle(new MessageReceived(CreateMessage(admin, dm, bot, "gazette draft", [])), TestContext.Current.CancellationToken);
+        Assert.Equal(expected, gateway.Called);
+    }
+
+    private sealed class GazetteGateway : IGazetteGateway
+    {
+        public bool Called { get; private set; }
+
+        public GazetteDestination? GetDestination()
+        {
+            Called = true;
+            return null;
+        }
+
+        public Task<GazetteChatBatch> ReadRecentAsync(
+            ulong destinationId,
+            DateTimeOffset since,
+            DateTimeOffset until,
+            CancellationToken cancellationToken
+        ) => throw new NotSupportedException();
+
+        public Task<bool> VerifyAsync(ulong destinationId, IReadOnlyList<NotebookSource> sources, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public Task<ulong> PublishAsync(ulong destinationId, string edition, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+    }
+
+    [Theory]
+    [InlineData(true, true, false, true)]
+    [InlineData(false, true, false, false)]
+    [InlineData(true, false, false, false)]
+    [InlineData(true, true, true, false)]
     public async Task OnlyHumanAdminInDmCanChangePersonality(bool admin, bool dm, bool bot, bool shouldSave)
     {
         var store = new MemoryStore();
@@ -46,7 +91,7 @@ public class DirectMessageHandlerTests
         var handler = CreateHandler(null!, null!);
         await handler.Handle(new MessageReceived(CreateMessage(true, true, false, content, replies)), TestContext.Current.CancellationToken);
 
-        var help = Assert.Single(replies);
+        var help = string.Concat(replies);
         Assert.Contains("word —", help);
         Assert.Contains("personality list", help);
         Assert.Contains("baseline|grouchy|furious", help);
@@ -56,6 +101,7 @@ public class DirectMessageHandlerTests
         Assert.Contains("@Lorekeeper you've had a stroke.", help);
         Assert.Contains("notebook show/discard", help);
         Assert.Contains("lore undo", help);
+        Assert.Contains("gazette approve", help);
     }
 
     [Theory]
@@ -147,7 +193,8 @@ public class DirectMessageHandlerTests
         MemoryStore store,
         WordGetter getter,
         NotebookDirectMessageCommand? notebookCommand = null,
-        LoreDirectMessageCommand? loreCommand = null
+        LoreDirectMessageCommand? loreCommand = null,
+        GazetteDirectMessageCommand? gazetteCommand = null
     ) =>
         new(
             Options.Create(new DirectMessageHandlerOptions { AdminUserId = 1 }),
@@ -157,7 +204,16 @@ public class DirectMessageHandlerTests
             ),
             notebookCommand!,
             new CooldownTracker<ulong>(TimeProvider.System),
-            loreCommand!
+            loreCommand!,
+            gazetteCommand
+                ?? new GazetteDirectMessageCommand(
+                    null!,
+                    null!,
+                    new(),
+                    Options.Create(new DirectMessageHandlerOptions { AdminUserId = 1 }),
+                    TimeProvider.System,
+                    NullLogger<GazetteDirectMessageCommand>.Instance
+                )
         );
 
     private static IUserMessage CreateMessage(bool admin, bool dm, bool bot, string content, List<string> replies)

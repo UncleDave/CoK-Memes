@@ -29,6 +29,7 @@ Keep README files focused on operational information: prerequisites, configurati
 
 - `bot/docs/notebook.md` — temporary notebook selection, evidence/review requirements, privacy, and diagnostic semantics.
 - `bot/docs/background-notebook-observer.md` — background observation, shared channel scope, event scheduling, budgets, and checkpoint semantics.
+- `bot/docs/gazette.md` — on-demand newspaper drafts, source sampling, publication audience, and admin DM approval.
 
 ## Coding Style & Naming Conventions
 

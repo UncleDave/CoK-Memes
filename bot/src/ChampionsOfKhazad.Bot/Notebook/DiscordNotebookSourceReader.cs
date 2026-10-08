@@ -18,7 +18,18 @@ internal sealed class DiscordNotebookSourceReader(
 
     public IReadOnlyList<ulong> GetChannelIds() => getAccessibleChannels().Keys.Order().ToArray();
 
-    public async Task<NotebookObservationBatch?> ReadBatchAsync(ulong channelId, ulong afterMessageId, int limit, CancellationToken cancellationToken)
+    public Task<NotebookObservationBatch?> ReadBatchAsync(ulong channelId, ulong afterMessageId, int limit, CancellationToken cancellationToken) =>
+        ReadBatchCoreAsync(channelId, afterMessageId, limit, cancellationToken);
+
+    public Task<NotebookObservationBatch?> ReadRecentBatchAsync(ulong channelId, int limit, CancellationToken cancellationToken) =>
+        ReadBatchCoreAsync(channelId, null, limit, cancellationToken);
+
+    private async Task<NotebookObservationBatch?> ReadBatchCoreAsync(
+        ulong channelId,
+        ulong? afterMessageId,
+        int limit,
+        CancellationToken cancellationToken
+    )
     {
         cancellationToken.ThrowIfCancellationRequested();
         if (!getAccessibleChannels().ContainsKey(channelId))
@@ -31,11 +42,11 @@ internal sealed class DiscordNotebookSourceReader(
             var channel = await GetChannelAsync(channelId, requestOptions);
             if (channel is null)
                 return null;
-            messages = (
-                await channel
-                    .GetMessagesAsync(afterMessageId, Direction.After, Math.Clamp(limit, 1, MaximumBatchSize), options: requestOptions)
-                    .FlattenAsync()
-            ).ToArray();
+            var size = Math.Clamp(limit, 1, MaximumBatchSize);
+            var batches = afterMessageId is { } cursor
+                ? channel.GetMessagesAsync(cursor, Direction.After, size, options: requestOptions)
+                : channel.GetMessagesAsync(size, options: requestOptions);
+            messages = (await batches.FlattenAsync()).ToArray();
         }
         catch (HttpException exception) when (exception.HttpCode is HttpStatusCode.NotFound or HttpStatusCode.Forbidden)
         {
@@ -46,7 +57,7 @@ internal sealed class DiscordNotebookSourceReader(
         if (!accessibleChannels.ContainsKey(channelId))
             return null;
         var consumed = messages
-            .Where(message => message.Channel.Id == channelId && message.Id > afterMessageId)
+            .Where(message => message.Channel.Id == channelId && (afterMessageId is null || message.Id > afterMessageId.Value))
             .DistinctBy(message => message.Id)
             .OrderBy(message => message.Id)
             .ToArray();
@@ -59,7 +70,7 @@ internal sealed class DiscordNotebookSourceReader(
         }
 
         return getAccessibleChannels().ContainsKey(channelId)
-            ? new NotebookObservationBatch(channelId, consumed.LastOrDefault()?.Id ?? afterMessageId, observations)
+            ? new NotebookObservationBatch(channelId, consumed.LastOrDefault()?.Id ?? afterMessageId ?? 0, observations)
             : null;
     }
 

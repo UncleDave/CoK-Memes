@@ -80,6 +80,12 @@ Configure the remaining values before starting either host:
 Review the bot's existing `appsettings*.json` files for guild-specific channel/user IDs
 and feature settings; replace them with values for your development guild.
 
+The on-demand Gazette uses the existing admin DM identity, AI configuration and
+normal-member role. Its default publication channel is `#ai-tavern`; the bot also
+needs Embed Links there. Optional `Gazette:DestinationChannelId` and
+`Gazette:SourceChannelIds` pin the destination and narrow sampling. See
+[Gazette configuration and DM commands](docs/gazette.md) before a live trial.
+
 ### Discord setup
 
 Enable **Server Members Intent** and **Message Content Intent** in the Discord Developer

@@ -2,6 +2,22 @@ namespace ChampionsOfKhazad.Bot.Tests;
 
 public class DiscordMessageAccessPolicyTests
 {
+    [Theory]
+    [InlineData(false, new ulong[] { 1, 2 })]
+    [InlineData(true, new ulong[] { 2 })]
+    public void GazetteUsesPublicationAudienceAndRequiresNormalMemberAdminAndBotAccess(bool everyone, ulong[] expected)
+    {
+        var channels = new[]
+        {
+            new DiscordMessageAccessPolicy.ChannelCandidate(1, true, false, true, true),
+            new DiscordMessageAccessPolicy.ChannelCandidate(2, true, true, true, true),
+            new DiscordMessageAccessPolicy.ChannelCandidate(3, false, true, true, true),
+            new DiscordMessageAccessPolicy.ChannelCandidate(4, true, true, false, true),
+            new DiscordMessageAccessPolicy.ChannelCandidate(5, true, true, true, false),
+        };
+        Assert.Equal(expected, DiscordMessageAccessPolicy.GetGazetteSourceChannelIds(channels, everyone).Order());
+    }
+
     [Fact]
     public void BackgroundAccessRequiresNormalMemberAndBotReadabilityWithoutARequesterOrEveryoneAudience()
     {

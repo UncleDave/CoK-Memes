@@ -11,6 +11,22 @@ namespace ChampionsOfKhazad.Bot.Tests;
 public class DiscordNotebookSourceReaderTests
 {
     [Fact]
+    public async Task RecentBatchReadsLatestHistoryWithoutAnAfterCursorAndUsesTheSameEvidenceRules()
+    {
+        var fixture = new ReaderFixture();
+        fixture.Add(41, "Human message");
+        fixture.Add(42, "Bot message", bot: true);
+        using var cancellation = new CancellationTokenSource();
+        var batch = await fixture.CreateReader().ReadRecentBatchAsync(3, 200, cancellation.Token);
+        Assert.NotNull(batch);
+        Assert.Equal(100, fixture.Limit);
+        Assert.Equal(Direction.Before, fixture.Direction);
+        Assert.Equal(0UL, fixture.AfterMessageId);
+        Assert.Equal("Human message", Assert.Single(batch.Messages).Source.Content);
+        Assert.All(fixture.Tokens, token => Assert.Equal(cancellation.Token, token));
+    }
+
+    [Fact]
     public void ChannelEnumerationUsesFreshAccessAndDoesNotReadOrDisposeRest()
     {
         var fixture = new ReaderFixture();
@@ -304,6 +320,12 @@ public class DiscordNotebookSourceReaderTests
                     {
                         "get_Id" => channelId,
                         "get_GuildId" => guildId,
+                        "GetMessagesAsync" when arguments![0] is int => ReadHistory(
+                            0,
+                            Direction.Before,
+                            (int)arguments[0]!,
+                            (RequestOptions)arguments[^1]!
+                        ),
                         "GetMessagesAsync" => ReadHistory(
                             (ulong)arguments![0]!,
                             (Direction)arguments[1]!,

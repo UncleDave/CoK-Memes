@@ -11,7 +11,8 @@ public class DirectMessageHandler(
     PersonalityDirectMessageCommand personalityCommand,
     NotebookDirectMessageCommand notebookCommand,
     CooldownTracker<ulong> cooldowns,
-    LoreDirectMessageCommand loreCommand
+    LoreDirectMessageCommand loreCommand,
+    GazetteDirectMessageCommand gazetteCommand
 ) : INotificationHandler<MessageReceived>
 {
     private const string SourceUrl = $"{Constants.RepositoryUrl}/tree/main/bot";
@@ -33,6 +34,8 @@ public class DirectMessageHandler(
         + "lore undo <name> (or undo) — reverse the latest edit\n"
         + "lore confirm <token> / lore cancel — approve or cancel a destructive proposal\n"
         + "lore reset — clear the short-lived editor conversation\n\n"
+        + "gazette draft/show — privately draft or review The Khazad Gazette\n"
+        + "gazette approve <token> / gazette discard — publish to #ai-tavern or discard\n\n"
         + "Duration: whole minutes, hours, or days (e.g. 30m, 2h, 1d), up to 30 days; expires to baseline. "
         + "Without a duration, the personality stays active until changed. Example: personality furious 2h.\n\n"
         + "In guild chat: @Lorekeeper you've had a stroke. — cut that channel's conversation context here (admin only; confirmed with 🧠).";
@@ -51,7 +54,7 @@ public class DirectMessageHandler(
         {
             if (message.Content.Trim().Equals("help", StringComparison.OrdinalIgnoreCase))
             {
-                await message.Channel.SendMessageAsync(AdminHelp);
+                await message.Channel.SendMessageInChunksAsync(AdminHelp, cancellationToken);
             }
             else if (message.CleanContent.Equals("word", StringComparison.InvariantCultureIgnoreCase))
             {
@@ -60,6 +63,15 @@ public class DirectMessageHandler(
             }
             else
             {
+                if (
+                    await gazetteCommand.TryExecuteAsync(
+                        message.Author.Id,
+                        message.Content,
+                        (response, token) => message.Channel.SendMessageInChunksAsync(response, token),
+                        cancellationToken
+                    )
+                )
+                    return;
                 var response =
                     await personalityCommand.ExecuteAsync(message.Content, cancellationToken)
                     ?? await notebookCommand.ExecuteAsync(message.Content, cancellationToken)

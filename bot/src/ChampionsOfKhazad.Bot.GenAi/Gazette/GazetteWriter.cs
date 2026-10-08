@@ -30,7 +30,8 @@ internal sealed class GazetteWriter(IChatClient chatClient) : IGazetteWriter
         even if present in supplied member-readable chat. Do not repeat unrelated private details or restricted-channel references.
         Quotes, if used, must match the supplied text exactly; prefer paraphrasing when sanitation makes a quote awkward.
         No archival stories: no historical lore is supplied. Old expansion memories must not become current activity.
-        Always add ONE tiny fictional classified advert, clearly labelled satire and not about a real member, in every non-empty edition.
+        Always add ONE tiny fictional classified advert, absurd and not about a real member, in every non-empty edition.
+        Do not label copy "fictional satire", "satirical classified" or add explanatory disclaimers; let the humour speak for itself.
         The editorial must not contain purported news or invented guild facts. Leave it empty when no stories qualify.
         Return ONLY JSON, no fences, with exactly this shape:
         {"articles":[{"headline":"Headline","body":"Story","sourceUrls":["supplied URL"]}],"editorial":"Optional fictional advert","illustrationPrompt":null}.

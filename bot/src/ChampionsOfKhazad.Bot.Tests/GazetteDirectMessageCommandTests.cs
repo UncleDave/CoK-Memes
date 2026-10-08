@@ -336,7 +336,9 @@ public class GazetteDirectMessageCommandTests
         var rendered = GazetteDirectMessageCommand.Render(edition, now.AddDays(-7), now);
         Assert.Contains(@"\*\*Headline\*\*", rendered);
         Assert.Contains(@"\[Body\] \<@123\>", rendered);
-        Assert.Contains("fictional satire", rendered);
+        Assert.Contains("**Classifieds**", rendered);
+        Assert.DoesNotContain("fictional satire", rendered, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("satirical classified", rendered, StringComparison.OrdinalIgnoreCase);
         Assert.Throws<InvalidOperationException>(() =>
             GazetteDirectMessageCommand.Render(new([new("Headline", new string('x', 4100), [Fixture.Url])], ""), now, now)
         );

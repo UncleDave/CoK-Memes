@@ -52,7 +52,7 @@ internal sealed class GazettePageRenderer : IGazettePageRenderer
                 Body = Wrap(article.Body, body, secondaryWidth, paint),
             })
             .ToArray();
-        var leadBodyHeight = Math.Max(leadBody.Count * 44, art is null ? 0 : 375);
+        var leadBodyHeight = Math.Max(leadBody.Count * 44, art is null ? 0 : 340);
         var secondaryHeight = secondary.Length == 0 ? 0 : secondary.Max(article => article.Title.Count * 48 + article.Body.Count * 44 + 65);
         var advert = Wrap(edition.Editorial, body, contentWidth - 50, paint);
         var height = 330 + leadTitle.Count * 60 + leadBodyHeight + secondaryHeight + advert.Count * 44 + 300;
@@ -105,7 +105,6 @@ internal sealed class GazettePageRenderer : IGazettePageRenderer
             };
             canvas.DrawBitmap(art, rect, monochrome);
             canvas.DrawRect(rect, rules);
-            canvas.DrawText("AI illustration · fictional satire", rect.Left, rect.Bottom + 30, small, paint);
         }
         y = bodyTop + leadBodyHeight + 35;
         canvas.DrawLine(Margin, y, Width - Margin, y, rules);
@@ -121,7 +120,7 @@ internal sealed class GazettePageRenderer : IGazettePageRenderer
             canvas.DrawLine(Width / 2, y - 35, Width / 2, y + secondaryHeight - 40, rules);
         y += secondaryHeight;
         canvas.DrawRect(new SKRect(Margin, y, Width - Margin, y + 95 + advert.Count * 44), rules);
-        canvas.DrawText("CLASSIFIEDS — FICTIONAL SATIRE", Margin + 25, y + 43, small, paint);
+        canvas.DrawText("CLASSIFIEDS", Margin + 25, y + 43, small, paint);
         DrawLines(canvas, advert, Margin + 25, y + 92, 44, body, paint);
         Center(canvas, "SELECTED DISPATCHES FROM CHAMPIONS OF KHAZAD", height - 55, small, paint);
         using var image = SKImage.FromBitmap(bitmap);

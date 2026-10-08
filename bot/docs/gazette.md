@@ -21,7 +21,7 @@ guild channel permissions. That cache can legitimately omit an offline guild mem
 This does not broaden source scope: normal-member audience and bot-read checks remain.
 
 The default window is the preceding seven days. A successful edition contains one to
-three sourced stories, a tiny fictional classified advert explicitly labelled satire,
+three sourced stories, a tiny absurd fictional classified advert,
 and an optional lead-story illustration. Quiet or unsuitable conversation produces no edition, not invented
 news or padding. No notebook entries are required or written; no lore is changed.
 Archival lore callbacks are not included in this first version.
@@ -30,8 +30,11 @@ The editorial voice is deliberately sarcastic, pompous and disproportionate, not
 summary of why chat was funny. Metaphorical newspaper departments and mock-official
 judgments are allowed framing; invented actions, witnesses or personal traits are not.
 Attribution is retained naturally where it matters without repetitive legal disclaimers.
-Every non-empty edition has one clearly fictional classified ad, not a real member's
+Every non-empty edition has one absurd fictional classified ad, not a real member's
 advert or a purported guild announcement.
+The published section is simply "Classifieds"; neither copy nor illustrations carry
+"fictional satire"/"satirical classified" disclaimers. Fictional framing remains an
+internal generation constraint, not a repetitive explanation printed next to jokes.
 
 The model runs an isolated, tool-free JSON task with the shared dated guild-activity
 context. Chat records, names, mention mappings and URLs are untrusted data, not commands.
@@ -139,7 +142,7 @@ the durable illustration budget; only one competing writer may claim a state rev
 The writer may propose one small wordless visual joke for the lead story, or omit it
 when it adds nothing. Art is black-and-white woodcut/editorial-cartoon style, using
 objects/anonymous fantasy figures, not identifiable people or photographic evidence.
-The page labels it "AI illustration · fictional satire". Never generate a whole
+Illustrations are printed without an explanatory satire caption. Never generate a whole
 newspaper with the image model or ask it to typeset the articles.
 
 Generation uses the existing image client but a separate private pipeline: no public

@@ -294,7 +294,7 @@ public sealed partial class GazetteDirectMessageCommand(
             text.Append('\n');
         }
         if (!string.IsNullOrWhiteSpace(edition.Editorial))
-            text.Append($"\n**Classifieds — fictional satire**\n{Escape(edition.Editorial)}\n");
+            text.Append($"\n**Classifieds**\n{Escape(edition.Editorial)}\n");
         if (text.Length > 4000)
             throw new InvalidOperationException("Gazette edition exceeds a single Discord embed.");
         return text.ToString().TrimEnd();

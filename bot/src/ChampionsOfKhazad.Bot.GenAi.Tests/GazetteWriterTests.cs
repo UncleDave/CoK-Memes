@@ -40,6 +40,8 @@ public class GazetteWriterTests
         Assert.Contains("Be FUNNY, not dry", policy);
         Assert.Contains("SERVER display names", policy);
         Assert.Contains("Always add ONE tiny fictional classified", policy);
+        Assert.Contains("let the humour speak for itself", policy);
+        Assert.DoesNotContain("clearly labelled satire", policy);
         Assert.Contains(GuildPromptContext.GetActivity(Now), policy);
         Assert.DoesNotContain(Source.Content, policy);
         using var input = JsonDocument.Parse(client.Messages[1].Text!);

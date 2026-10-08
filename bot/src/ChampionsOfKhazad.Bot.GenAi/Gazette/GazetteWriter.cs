@@ -95,7 +95,8 @@ internal sealed class GazetteWriter(IChatClient chatClient) : IGazetteWriter
                 [new(ChatRole.System, Policy + "\n" + GuildPromptContext.GetActivity(until)), new(ChatRole.User, data)],
                 new ChatOptions
                 {
-                    ResponseFormat = ChatResponseFormat.Json,
+                    ResponseFormat = BuildResponseFormat(sources),
+                    AdditionalProperties = new() { ["strict"] = true },
                     Reasoning = new ReasoningOptions { Effort = ReasoningEffort.High },
                     Tools = [],
                     MaxOutputTokens = MaximumOutputTokens,
@@ -107,6 +108,80 @@ internal sealed class GazetteWriter(IChatClient chatClient) : IGazetteWriter
         if (response.FinishReason == ChatFinishReason.Length)
             throw Invalid(GazetteValidationFailure.IncompleteResponse, GazetteValidationField.Response);
         return Parse(response.Text, sources);
+    }
+
+    internal static ChatResponseFormat BuildResponseFormat(IReadOnlyList<NotebookSource> sources)
+    {
+        var schema = JsonSerializer.SerializeToElement(
+            new
+            {
+                type = "object",
+                additionalProperties = false,
+                required = new[] { "articles", "editorial", "illustrationPrompt" },
+                properties = new
+                {
+                    articles = new
+                    {
+                        type = "array",
+                        minItems = 0,
+                        maxItems = 3,
+                        items = new
+                        {
+                            type = "object",
+                            additionalProperties = false,
+                            required = new[] { "headline", "body", "teaser", "sourceUrls" },
+                            properties = new
+                            {
+                                headline = new
+                                {
+                                    type = "string",
+                                    minLength = 1,
+                                    maxLength = 100,
+                                    pattern = @"^[^\r\n]+$",
+                                },
+                                body = new
+                                {
+                                    type = "string",
+                                    minLength = 1,
+                                    maxLength = 650,
+                                    description = "Nonblank story body, at most 650 characters. Preserve source attribution and uncertainty.",
+                                },
+                                teaser = new
+                                {
+                                    type = "string",
+                                    minLength = 1,
+                                    maxLength = 160,
+                                    pattern = @"^[^\r\n]+$",
+                                },
+                                sourceUrls = new
+                                {
+                                    type = "array",
+                                    minItems = 1,
+                                    maxItems = 3,
+                                    items = new
+                                    {
+                                        type = "string",
+                                        @enum = sources.Select(source => source.Url).Distinct(StringComparer.Ordinal).ToArray(),
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    editorial = new { type = "string", maxLength = 200 },
+                    illustrationPrompt = new
+                    {
+                        type = new[] { "string", "null" },
+                        minLength = 1,
+                        maxLength = 400,
+                    },
+                },
+            }
+        );
+        return ChatResponseFormat.ForJsonSchema(
+            schema,
+            "khazad_gazette_edition",
+            "An evidence-grounded Gazette draft with exact fields and supplied source URLs."
+        );
     }
 
     private static GazetteEdition Parse(string text, IReadOnlyList<NotebookSource> sources)

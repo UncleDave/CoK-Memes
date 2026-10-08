@@ -1,5 +1,7 @@
+using System.ClientModel.Primitives;
 using System.Text.Json;
 using Microsoft.Extensions.AI;
+using OpenAI.Responses;
 
 namespace ChampionsOfKhazad.Bot.GenAi.Tests;
 
@@ -27,7 +29,10 @@ public class GazetteWriterTests
         Assert.Equal("Dinner debate", Assert.Single(edition.Articles).Headline);
         Assert.Equal("Wanted: a clock.", edition.Editorial);
         Assert.Empty(client.Options!.Tools!);
-        Assert.Equal(ChatResponseFormat.Json, client.Options.ResponseFormat);
+        var format = Assert.IsType<ChatResponseFormatJson>(client.Options.ResponseFormat);
+        Assert.NotNull(format.Schema);
+        Assert.Equal("khazad_gazette_edition", format.SchemaName);
+        Assert.Equal(true, client.Options.AdditionalProperties!["strict"]);
         Assert.Equal(ReasoningEffort.High, client.Options.Reasoning!.Effort);
         Assert.Equal(2, client.Messages!.Count);
         var policy = client.Messages[0].Text!;
@@ -57,6 +62,71 @@ public class GazetteWriterTests
         Assert.DoesNotContain(Source.Content, policy);
         using var input = JsonDocument.Parse(client.Messages[1].Text!);
         Assert.Equal(Source.Content, input.RootElement.GetProperty("sources")[0].GetProperty("Content").GetString());
+    }
+
+    [Fact]
+    public void SchemaIsTranslatedIntoStrictOpenAIResponsesStructuredOutputNotBareJsonMode()
+    {
+        var options = new ChatOptions
+        {
+            ResponseFormat = GazetteWriter.BuildResponseFormat([Source]),
+            AdditionalProperties = new() { ["strict"] = true },
+        };
+#pragma warning disable OPENAI001
+        var providerFormat = options.ResponseFormat.AsOpenAIResponseTextFormat(options);
+        using var json = JsonDocument.Parse(ModelReaderWriter.Write(providerFormat).ToString());
+#pragma warning restore OPENAI001
+        var root = json.RootElement;
+        Assert.Equal("json_schema", root.GetProperty("type").GetString());
+        Assert.True(root.GetProperty("strict").GetBoolean());
+        Assert.Equal("khazad_gazette_edition", root.GetProperty("name").GetString());
+        Assert.False(root.GetProperty("schema").GetProperty("additionalProperties").GetBoolean());
+        var properties = root.GetProperty("schema").GetProperty("properties");
+        var article = properties.GetProperty("articles").GetProperty("items");
+        Assert.False(article.GetProperty("additionalProperties").GetBoolean());
+        var body = article.GetProperty("properties").GetProperty("body");
+        Assert.Equal("string", body.GetProperty("type").GetString());
+        // The OpenAI adapter strips unsupported validation keywords; application length checks remain required.
+        Assert.False(body.TryGetProperty("maxLength", out _));
+        Assert.Contains("650 characters", body.GetProperty("description").GetString());
+        Assert.Equal(Url, article.GetProperty("properties").GetProperty("sourceUrls").GetProperty("items").GetProperty("enum")[0].GetString());
+    }
+
+    [Fact]
+    public void RequestSchemaEnforcesRootAndArticleFieldsLimitsAndOnlySuppliedCitations()
+    {
+        const string secondUrl = "https://discord.com/channels/1/3/99";
+        var format = Assert.IsType<ChatResponseFormatJson>(GazetteWriter.BuildResponseFormat([Source, Source with { Url = secondUrl }, Source]));
+        var schema = format.Schema!.Value;
+        Assert.Equal("object", schema.GetProperty("type").GetString());
+        Assert.False(schema.GetProperty("additionalProperties").GetBoolean());
+        Assert.Equal(
+            new[] { "articles", "editorial", "illustrationPrompt" },
+            schema.GetProperty("required").EnumerateArray().Select(value => value.GetString())
+        );
+        var properties = schema.GetProperty("properties");
+        var articles = properties.GetProperty("articles");
+        Assert.Equal(3, articles.GetProperty("maxItems").GetInt32());
+        var article = articles.GetProperty("items");
+        Assert.False(article.GetProperty("additionalProperties").GetBoolean());
+        Assert.Equal(
+            new[] { "headline", "body", "teaser", "sourceUrls" },
+            article.GetProperty("required").EnumerateArray().Select(value => value.GetString())
+        );
+        var fields = article.GetProperty("properties");
+        Assert.Equal(100, fields.GetProperty("headline").GetProperty("maxLength").GetInt32());
+        Assert.Equal(650, fields.GetProperty("body").GetProperty("maxLength").GetInt32());
+        Assert.Equal(160, fields.GetProperty("teaser").GetProperty("maxLength").GetInt32());
+        Assert.Equal(
+            new[] { Url, secondUrl },
+            fields.GetProperty("sourceUrls").GetProperty("items").GetProperty("enum").EnumerateArray().Select(value => value.GetString())
+        );
+        Assert.Equal(200, properties.GetProperty("editorial").GetProperty("maxLength").GetInt32());
+        Assert.Equal(
+            new[] { "string", "null" },
+            properties.GetProperty("illustrationPrompt").GetProperty("type").EnumerateArray().Select(value => value.GetString())
+        );
+        Assert.Equal(400, properties.GetProperty("illustrationPrompt").GetProperty("maxLength").GetInt32());
     }
 
     [Fact]

@@ -99,6 +99,16 @@ are unchanged: increased generation headroom is not permission for longer publis
 copy or unsafe citations, and it may allow more billed reasoning tokens. No automatic
 retries or rewrites of rejected output are performed.
 
+The API request uses a named JSON-schema response format, not bare JSON mode with
+prompt-only instructions. The root and article objects reject additional properties,
+require their exact fields, constrain types and nullable artwork, and limit source
+URLs to an enum drawn from that request's verified source records. The local schema
+also describes length/count bounds; the OpenAI adapter normalizes unsupported validation
+keywords, so deterministic application checks still enforce those numeric limits. This
+prevents shape drift at generation time rather than merely detecting it afterwards.
+Application-side parsing, duplicate-citation checks, evidence revalidation, privacy
+instructions and admin approval remain authoritative even with constrained output.
+
 Gazette author/mention names prefer the server display name. Missing socket-cache
 members are looked up through the guild-member REST API; global account names do not
 silently substitute for unknown server names. Resolve authors before mentions, at most

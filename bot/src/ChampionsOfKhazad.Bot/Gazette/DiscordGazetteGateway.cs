@@ -20,6 +20,7 @@ internal sealed class DiscordGazetteGateway(
     internal const int MaximumMessagesPerChannel = 100;
     internal const int MaximumInputCharacters = 40000;
     internal const int MaximumSources = 160;
+    internal const int MaximumPreviousEditions = 5;
 
     public string DestinationError { get; private set; } = "The Gazette destination is unavailable.";
 
@@ -132,6 +133,29 @@ internal sealed class DiscordGazetteGateway(
         );
         sources = await CreateNameResolver().ResolveAsync(sources, refresh: false, cancellationToken);
         return new(sources, read, ids.Count, failures);
+    }
+
+    public async Task<IReadOnlyList<GazettePublishedEdition>> ReadPreviousEditionsAsync(
+        ulong destinationId,
+        DateTimeOffset since,
+        DateTimeOffset until,
+        CancellationToken cancellationToken
+    )
+    {
+        var guild = GetGuild();
+        if (guild is null || GetDestination()?.Id != destinationId)
+            throw new InvalidOperationException("Gazette destination is unavailable.");
+        var editions = await publishedEditions.GetRecentAsync(
+            guild.Id,
+            destinationId,
+            since.UtcDateTime,
+            until.UtcDateTime,
+            MaximumPreviousEditions,
+            cancellationToken
+        );
+        if (GetGuild()?.Id != guild.Id || GetDestination()?.Id != destinationId)
+            throw new InvalidOperationException("Gazette destination changed while reading previous coverage.");
+        return editions;
     }
 
     internal static IReadOnlyList<NotebookSource> SelectSources(IEnumerable<NotebookSource> sources, DateTimeOffset since, DateTimeOffset until)

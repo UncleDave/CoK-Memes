@@ -202,6 +202,15 @@ public class GazetteReadInteractionHandlerTests
                 : Task.FromResult(Edition);
         }
 
+        public Task<IReadOnlyList<GazettePublishedEdition>> GetRecentAsync(
+            ulong guildId,
+            ulong channelId,
+            DateTime sinceUtc,
+            DateTime untilUtc,
+            int maximumEditions,
+            CancellationToken cancellationToken
+        ) => throw new NotSupportedException();
+
         public Task SaveAsync(GazettePublishedEdition edition, CancellationToken cancellationToken) => throw new NotSupportedException();
 
         public Task ConfirmMessageAsync(string id, ulong messageId, CancellationToken cancellationToken) => throw new NotSupportedException();

@@ -125,6 +125,9 @@ public class DiscordGazetteGatewayTests
         Assert.Contains("guild connection is not ready", gateway.DestinationError);
         var batch = await gateway.ReadRecentAsync(8, Now.AddDays(-7), Now, TestContext.Current.CancellationToken);
         Assert.Empty(batch.Sources);
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            gateway.ReadPreviousEditionsAsync(8, Now.AddDays(-7), Now, TestContext.Current.CancellationToken)
+        );
         Assert.False(await gateway.VerifyAsync(8, [Source(1, Now, "Message")], TestContext.Current.CancellationToken));
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
             gateway.PublishAsync(8, "Edition", new([new("issue.png", [1])]), "012345abcdef", TestContext.Current.CancellationToken)

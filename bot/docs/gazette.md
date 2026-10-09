@@ -26,6 +26,33 @@ and an optional lead-story illustration. Quiet or unsuitable conversation produc
 news or padding. No notebook entries are required or written; no lore is changed.
 Archival lore callbacks are not included in this first version.
 
+### Avoiding repeat stories
+
+Drafting checks the latest five approved publication snapshots in the same guild and
+destination within the seven-day sampling window. Their final text is supplied to the
+writer only as untrusted "already covered" context, never as evidence for new claims.
+Messages cited in those editions are removed from the writer's evidence and allowed
+citation schema; deterministic validation rejects attempts to cite them again. Existing
+text-only snapshots work without a migration or a new raw-chat archive.
+
+The writer must not recycle the same incident with different wording, a new comic angle,
+or neighbouring messages as alternative citations. A follow-up needs a substantive new
+development supported by fresh evidence. Unreported incidents from before the previous
+publication remain eligible: there is no blanket "since the last issue" cutoff. Thin
+samples produce a smaller edition or no edition rather than reruns or filler. Private
+diagnostics report how many previous editions were checked; history-read failures stop
+drafting rather than silently disable this safeguard.
+
+Discarded or unapproved drafts do not consume stories. Approved snapshots with an
+unconfirmed send are conservatively treated as covered, since Discord may have accepted
+the publication even when acknowledgement failed. This can also exclude a story from
+an archived attempt that was never sent. History survives restarts but is bounded to
+five editions; publications predating the readable-text archive cannot be checked.
+Exact source reuse is blocked mechanically; identifying the same incident through other
+messages still relies on the writer's judgement and administrator review.
+
+## Editorial policy
+
 The editorial voice is straight-faced, disproportionate newspaper reporting, not a
 chronological chat recap with a funny final sentence. Choose a news/comic angle first,
 use an outcome-first inverted-pyramid lead, then attributed supporting details in two
@@ -159,8 +186,8 @@ and Attach Files permissions in the destination; missing posting permissions do 
 draft. Known pre-send permission failures are explained without implying a send was
 attempted. A send failure or timeout may have an ambiguous outcome: do not retry that
 approval; inspect `#ai-tavern` before requesting another draft. Concurrent/repeated
-approvals cannot send the same pending draft twice. New drafts are not deduplicated
-against previously published editions.
+approvals cannot send the same pending draft twice. New drafts check recent approved
+coverage as described above; merely previewing an edition does not mark its stories covered.
 
 Publication is one Discord message containing one or two ordered PNG newspaper pages,
 matching image embeds and one "Read text & sources" button. It does not also show the text edition in
@@ -183,6 +210,11 @@ retains the final text and source links, guild/channel IDs, approval timestamp a
 confirmed message ID, not raw chat evidence, draft history or image bytes. Snapshots
 are independent of the bounded issue-number journal, so buttons survive restarts and
 later issue publication. Unapproved/discarded previews are never saved here.
+
+A compound guild/channel/approval-time/token index supports bounded recent-coverage
+lookups without scanning the full publication archive. At most five 4,000-character
+editions supplement the bounded chat sample; both count towards the existing 100,000-
+character serialized writer-input ceiling.
 
 Save the snapshot before attempting the Discord send; if persistence fails, do not
 send a newspaper with a broken reader button. Confirm the message ID after the send.
@@ -331,7 +363,9 @@ writer's tool-free prompt/JSON/citation contracts, server-name resolution, issue
 reservation/acknowledgement, one-image-per-draft behavior, exact-evidence artwork reuse,
 cache expiry and explicit missing-image reasons. Reader tests cover private loading
 acknowledgement, ephemeral-only replies, message/audience binding, malformed IDs,
-missing snapshots, access revocation and database failures. Publication tests verify
+missing snapshots, access revocation and database failures. Repeat-prevention tests cover
+history forwarding and failure handling, legacy citation extraction, evidence/schema
+exclusion, quiet already-covered samples and combined input bounds. Publication tests verify
 the public payload contains only the ordered images/button and archives approved text before
 sending. Preview tests reject approval if even the inside-page delivery fails.
 Rendering tests exercise real PNG output, teaser selection and one/two-page composition

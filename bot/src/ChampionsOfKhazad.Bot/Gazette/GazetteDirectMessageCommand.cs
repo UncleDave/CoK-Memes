@@ -215,12 +215,17 @@ public sealed partial class GazetteDirectMessageCommand(
             await reply($"No usable recent human messages were found, so no draft was created. {Coverage(batch)}", cancellationToken);
             return;
         }
+        _stage = "reading previous Gazette coverage";
+        var previousEditions = await gateway.ReadPreviousEditionsAsync(destination.Id, since, until, cancellationToken);
         session.NextDraftAtUtc = clock.GetUtcNow().AddMinutes(1);
         _stage = "writing stories";
-        var edition = await writer.WriteAsync(batch.Sources, since, until, cancellationToken);
+        var edition = await writer.WriteAsync(batch.Sources, since, until, previousEditions, cancellationToken);
         if (edition.Articles.Count == 0)
         {
-            await reply($"No suitable stories were found in this sample; no edition was padded or invented. {Coverage(batch)}", cancellationToken);
+            await reply(
+                $"No suitable fresh stories were found in this sample; already-covered stories are excluded, and no edition was padded or invented. {Coverage(batch)}",
+                cancellationToken
+            );
             return;
         }
         _stage = "reading the next issue number";
@@ -317,7 +322,10 @@ public sealed partial class GazetteDirectMessageCommand(
         await SendPreviewAsync(pending, reply, sendPage, cancellationToken);
         _stage = "sending private sampling diagnostics";
         var slimEdition = edition.Articles.Count == 1 ? " Only one supported story was selected; this is a slim, single-page edition." : "";
-        await reply(Coverage(batch) + slimEdition, cancellationToken);
+        await reply(
+            Coverage(batch) + $" Checked {previousEditions.Count} recent approved editions to avoid repeat stories." + slimEdition,
+            cancellationToken
+        );
         // Only a successfully delivered private preview becomes approvable.
         cancellationToken.ThrowIfCancellationRequested();
         session.Pending = pending;

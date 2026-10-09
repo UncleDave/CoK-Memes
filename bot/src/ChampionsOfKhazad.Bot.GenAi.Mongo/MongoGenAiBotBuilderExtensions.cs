@@ -27,7 +27,19 @@ public static class MongoGenAiBotBuilderExtensions
             .AddCollection<LorekeeperPersonalitySetting>("lorekeeperPersonality")
             .AddCollection<NotebookState>("lorekeeperNotebook")
             .AddCollection<GazetteState>("gazette")
-            .AddCollection<GazettePublishedEdition>("gazettePublishedEditions")
+            .AddCollection<GazettePublishedEdition>(
+                "gazettePublishedEditions",
+                collection =>
+                    collection.Indexes.CreateOne(
+                        new CreateIndexModel<GazettePublishedEdition>(
+                            Builders<GazettePublishedEdition>
+                                .IndexKeys.Ascending(edition => edition.GuildId)
+                                .Ascending(edition => edition.ChannelId)
+                                .Descending(edition => edition.ApprovedAtUtc)
+                                .Descending(edition => edition.Id)
+                        )
+                    )
+            )
             .Services.AddSingleton<IGeneratedImageStore, MongoGeneratedImageStore>()
             .AddSingleton<INotebookStore, MongoNotebookStore>()
             .AddSingleton<IGazetteIssueStore, MongoGazetteIssueStore>()

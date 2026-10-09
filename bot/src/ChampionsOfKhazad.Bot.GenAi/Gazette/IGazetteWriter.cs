@@ -6,6 +6,7 @@ public interface IGazetteWriter
         IReadOnlyList<NotebookSource> sources,
         DateTimeOffset since,
         DateTimeOffset until,
+        IReadOnlyList<GazettePublishedEdition> previousEditions,
         CancellationToken cancellationToken
     );
 }

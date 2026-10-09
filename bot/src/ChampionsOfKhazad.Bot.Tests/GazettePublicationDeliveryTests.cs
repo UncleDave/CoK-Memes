@@ -115,6 +115,15 @@ public class GazettePublicationDeliveryTests
 
         public Task<GazettePublishedEdition?> GetAsync(string id, CancellationToken cancellationToken) => Task.FromResult(Edition);
 
+        public Task<IReadOnlyList<GazettePublishedEdition>> GetRecentAsync(
+            ulong guildId,
+            ulong channelId,
+            DateTime sinceUtc,
+            DateTime untilUtc,
+            int maximumEditions,
+            CancellationToken cancellationToken
+        ) => throw new NotSupportedException();
+
         public Task SaveAsync(GazettePublishedEdition edition, CancellationToken cancellationToken)
         {
             Stages.Add("archive");

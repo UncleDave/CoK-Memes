@@ -7,6 +7,44 @@ namespace ChampionsOfKhazad.Bot.Tests;
 public class GazetteDirectMessageCommandTests
 {
     [Fact]
+    public async Task DraftChecksDurableCoverageWithoutCuttingOffOlderUnreportedMessages()
+    {
+        var fixture = new Fixture();
+        fixture.Gateway.PreviousEditions = [new("previous", 1, 8, "Previous approved story", fixture.Clock.Now.AddHours(-11).UtcDateTime)];
+        await fixture.Run("gazette draft");
+        Assert.Equal(fixture.Gateway.PreviousEditions, fixture.Writer.PreviousEditions);
+        Assert.Equal(fixture.Clock.Now.AddDays(-7), fixture.Gateway.HistorySince);
+        Assert.Equal(fixture.Clock.Now, fixture.Gateway.HistoryUntil);
+        Assert.Equal(fixture.Gateway.Sources, fixture.Writer.Sources);
+        Assert.NotNull(fixture.Session.Pending);
+        Assert.Contains(fixture.Replies, reply => reply.Contains("Checked 1 recent approved editions"));
+    }
+
+    [Fact]
+    public async Task HistoryReadFailureDoesNotSilentlyAllowRepeatStories()
+    {
+        var fixture = new Fixture();
+        fixture.Gateway.HistoryFailure = new InvalidOperationException("SECRET database details");
+        await fixture.Run("gazette draft");
+        Assert.Equal(0, fixture.Writer.Calls);
+        Assert.Null(fixture.Session.Pending);
+        Assert.Empty(fixture.Pages);
+        Assert.Contains(fixture.Replies, reply => reply.Contains("reading previous Gazette coverage"));
+        Assert.DoesNotContain("SECRET", string.Join('\n', fixture.Replies.Concat(fixture.Logger.Messages)));
+    }
+
+    [Fact]
+    public async Task NoFreshStoriesExplainsThatPreviouslyCoveredNewsWasExcluded()
+    {
+        var fixture = new Fixture();
+        fixture.Writer.Edition = new([], "");
+        await fixture.Run("gazette draft");
+        Assert.Null(fixture.Session.Pending);
+        Assert.Empty(fixture.Pages);
+        Assert.Contains(fixture.Replies, reply => reply.Contains("already-covered stories are excluded"));
+    }
+
+    [Fact]
     public async Task SameLeadEvidenceReusesSuccessfulArtAcrossRedraftsAndKeepsStatusInShow()
     {
         var fixture = new Fixture();
@@ -594,6 +632,10 @@ public class GazetteDirectMessageCommandTests
         public bool SendFails { get; set; }
         public int Reads { get; private set; }
         public int Verifications { get; private set; }
+        public IReadOnlyList<GazettePublishedEdition> PreviousEditions { get; set; } = [];
+        public DateTimeOffset HistorySince { get; private set; }
+        public DateTimeOffset HistoryUntil { get; private set; }
+        public Exception? HistoryFailure { get; set; }
         public IReadOnlyList<NotebookSource> Sources { get; set; } =
         [new(Fixture.Url, 9, "Raider", new(2026, 10, 7, 12, 0, 0, DateTimeKind.Utc), "Dinner debate.")];
         public List<(ulong Destination, string Text)> Publications { get; } = [];
@@ -624,6 +666,21 @@ public class GazetteDirectMessageCommandTests
             return Task.FromResult(Valid);
         }
 
+        public Task<IReadOnlyList<GazettePublishedEdition>> ReadPreviousEditionsAsync(
+            ulong destinationId,
+            DateTimeOffset since,
+            DateTimeOffset until,
+            CancellationToken cancellationToken
+        )
+        {
+            Assert.Equal(Destination!.Id, destinationId);
+            HistorySince = since;
+            HistoryUntil = until;
+            return HistoryFailure is { } error
+                ? Task.FromException<IReadOnlyList<GazettePublishedEdition>>(error)
+                : Task.FromResult(PreviousEditions);
+        }
+
         public Task<ulong> PublishAsync(
             ulong destinationId,
             string edition,
@@ -643,6 +700,8 @@ public class GazetteDirectMessageCommandTests
         public Exception? Failure { get; set; }
         public int Calls { get; private set; }
         public DateTimeOffset Since { get; private set; }
+        public IReadOnlyList<GazettePublishedEdition>? PreviousEditions { get; private set; }
+        public IReadOnlyList<NotebookSource>? Sources { get; private set; }
         public GazetteEdition Edition { get; set; } =
             new(
                 [new("DINNER DEBATE CONTINUES", "A modest discussion acquired considerable importance.", [Fixture.Url])],
@@ -653,6 +712,7 @@ public class GazetteDirectMessageCommandTests
             IReadOnlyList<NotebookSource> sources,
             DateTimeOffset since,
             DateTimeOffset until,
+            IReadOnlyList<GazettePublishedEdition> previousEditions,
             CancellationToken cancellationToken
         )
         {
@@ -660,6 +720,8 @@ public class GazetteDirectMessageCommandTests
             if (Failure is { } error)
                 return Task.FromException<GazetteEdition>(error);
             Since = since;
+            PreviousEditions = previousEditions;
+            Sources = sources;
             return Task.FromResult(Edition);
         }
     }

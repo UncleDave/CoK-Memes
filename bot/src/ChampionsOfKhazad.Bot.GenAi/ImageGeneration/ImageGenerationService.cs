@@ -14,7 +14,12 @@ internal class ImageGenerationService(
 {
     private static readonly ConcurrentDictionary<ulong, byte> UsersGeneratingImages = [];
 
-    public async Task<GenerateImageResult> GenerateImageAsync(string prompt, IMessageContext messageContext, CancellationToken cancellationToken)
+    public async Task<GenerateImageResult> GenerateImageAsync(
+        string prompt,
+        IMessageContext messageContext,
+        Func<string, Task> sendConfirmation,
+        CancellationToken cancellationToken
+    )
     {
         var userId = messageContext.UserId;
         var remainingAllowance = (ushort)0;
@@ -52,10 +57,10 @@ internal class ImageGenerationService(
 
             ownsGenerationLock = true;
             stage = "sending the confirmation reply";
-            await messageContext.Reply(
+            await sendConfirmation(
                 remainingAllowance == ushort.MaxValue
                     ? Constants.ImageGenerationConfirmationMessage
-                    : $"{Constants.ImageGenerationConfirmationMessage} After your image is generated, your remaining daily allowance will be {remainingAllowance}."
+                    : $"{Constants.ImageGenerationConfirmationMessage} After the first image in this request, your remaining daily allowance will be {remainingAllowance}."
             );
 
             var timestamp = DateTimeOffset.Now;

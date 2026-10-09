@@ -114,6 +114,83 @@ public class GeneratedImageReplyTests
         Assert.Null(fixture.Handler.UploadedFilename);
     }
 
+    [Theory]
+    [InlineData(19, 1, 25)]
+    [InlineData(1, 19, 25)]
+    [InlineData(19, 1, -1)]
+    public async Task BatchGenerationSendsOneConfirmationAndStillGeneratesEveryImage(int toolRounds, int imagesPerRound, short allowance)
+    {
+        using var fixture = new Fixture(_ => "Here's your collection.", allowance);
+        fixture.ChatClient.ToolRounds = toolRounds;
+        fixture.ChatClient.ImagesPerRound = imagesPerRound;
+
+        var reply = await fixture.InvokeAsync("Generate 19 images");
+
+        Assert.Equal(19, fixture.Handler.GenerationRequests);
+        Assert.Equal(19, fixture.Store.Images.Count);
+        Assert.StartsWith(Constants.ImageGenerationConfirmationMessage, Assert.Single(fixture.Context.Replies));
+        foreach (var image in fixture.Store.Images)
+            Assert.Contains($"{Constants.GeneratedImagesBaseUrl}/{image.Filename}", reply);
+    }
+
+    [Fact]
+    public async Task EachChatRequestGetsItsOwnImageConfirmation()
+    {
+        using var fixture = new Fixture(_ => "Here's your collection.", allowance: -1);
+        fixture.ChatClient.ToolRounds = 2;
+
+        await fixture.InvokeAsync("Generate two images");
+        await fixture.InvokeAsync("Generate another two images");
+
+        Assert.Equal(4, fixture.Handler.GenerationRequests);
+        Assert.Equal(4, fixture.Store.Images.Count);
+        Assert.Equal(2, fixture.Context.Replies.Count);
+        Assert.All(fixture.Context.Replies, message => Assert.StartsWith(Constants.ImageGenerationConfirmationMessage, message));
+    }
+
+    [Fact]
+    public async Task BatchGenerationStillChecksTheAllowanceForEveryImage()
+    {
+        using var fixture = new Fixture(_ => "Here's what your allowance permits.", allowance: 2);
+        fixture.ChatClient.ToolRounds = 19;
+
+        await fixture.InvokeAsync("Generate 19 images");
+
+        Assert.Equal(2, fixture.Handler.GenerationRequests);
+        Assert.Equal(2, fixture.Store.Images.Count);
+        var confirmation = Assert.Single(fixture.Context.Replies);
+        Assert.Contains("After the first image in this request, your remaining daily allowance will be 1.", confirmation);
+    }
+
+    [Fact]
+    public async Task RepeatedGenerationFailuresDoNotRepeatTheConfirmation()
+    {
+        using var fixture = new Fixture(_ => "Image generation failed.");
+        fixture.ChatClient.ToolRounds = 3;
+        fixture.Handler.FailGeneration = true;
+
+        await fixture.InvokeAsync();
+
+        Assert.Equal(3, fixture.Handler.GenerationRequests);
+        Assert.Empty(fixture.Store.Images);
+        Assert.StartsWith(Constants.ImageGenerationConfirmationMessage, Assert.Single(fixture.Context.Replies));
+    }
+
+    [Fact]
+    public async Task FailedConfirmationIsNotRetriedByLaterImageCalls()
+    {
+        using var fixture = new Fixture(_ => "Here's your collection.", allowance: -1);
+        fixture.ChatClient.ToolRounds = 3;
+        fixture.Context.FailConfirmation = true;
+
+        await fixture.InvokeAsync();
+
+        Assert.Equal(1, fixture.Context.ReplyAttempts);
+        Assert.Empty(fixture.Context.Replies);
+        Assert.Equal(2, fixture.Handler.GenerationRequests);
+        Assert.Equal(2, fixture.Store.Images.Count);
+    }
+
     private sealed class Fixture : IDisposable
     {
         private readonly HttpClient _http;
@@ -173,6 +250,8 @@ public class GeneratedImageReplyTests
     {
         public bool GenerateImage { get; set; } = true;
         public bool SearchImages { get; set; }
+        public int ToolRounds { get; set; } = 1;
+        public int ImagesPerRound { get; set; } = 1;
 
         public Task<ChatResponse> GetResponseAsync(
             IEnumerable<ChatMessage> messages,
@@ -180,20 +259,29 @@ public class GeneratedImageReplyTests
             CancellationToken cancellationToken = default
         )
         {
-            if ((GenerateImage || SearchImages) && messages.Last().Role != ChatRole.Tool)
+            var completedCalls = messages
+                .Where(message => message.Role == ChatRole.Tool)
+                .SelectMany(message => message.Contents)
+                .OfType<FunctionResultContent>()
+                .Count();
+            if ((GenerateImage || SearchImages) && completedCalls < ToolRounds * ImagesPerRound)
                 return Task.FromResult(
                     new ChatResponse(
                         new ChatMessage(
                             ChatRole.Assistant,
-                            [
-                                new FunctionCallContent(
-                                    "image-call",
-                                    SearchImages ? "search_generated_images" : "generate_image",
-                                    SearchImages
-                                        ? new Dictionary<string, object?> { ["searchText"] = "", ["onlyMine"] = true }
-                                        : new Dictionary<string, object?> { ["prompt"] = "A dwarf with a newspaper" }
-                                ),
-                            ]
+                            Enumerable
+                                .Range(0, ImagesPerRound)
+                                .Select(index =>
+                                    (AIContent)
+                                        new FunctionCallContent(
+                                            $"image-call-{completedCalls + index}",
+                                            SearchImages ? "search_generated_images" : "generate_image",
+                                            SearchImages
+                                                ? new Dictionary<string, object?> { ["searchText"] = "", ["onlyMine"] = true }
+                                                : new Dictionary<string, object?> { ["prompt"] = "A dwarf with a newspaper" }
+                                        )
+                                )
+                                .ToList()
                         )
                     )
                     {
@@ -226,9 +314,15 @@ public class GeneratedImageReplyTests
         public string UserName => "Tester";
         public ulong? ChannelId => 3;
         public List<string> Replies { get; } = [];
+        public bool FailConfirmation { get; set; }
+        public int ReplyAttempts { get; private set; }
 
         public Task Reply(string message)
         {
+            ReplyAttempts++;
+            if (FailConfirmation)
+                throw new HttpRequestException("Controlled Discord send failure");
+
             Replies.Add(message);
             return Task.CompletedTask;
         }
@@ -236,7 +330,7 @@ public class GeneratedImageReplyTests
 
     private sealed class MemoryImageStore : IGeneratedImageStore
     {
-        public ushort GeneratedCount { get; init; }
+        public ushort GeneratedCount { get; set; }
         public List<GeneratedImage> Images { get; } = [];
         public bool Searched { get; private set; }
 
@@ -259,6 +353,7 @@ public class GeneratedImageReplyTests
         public Task SaveGeneratedImageAsync(GeneratedImage image)
         {
             Images.Add(image);
+            GeneratedCount++;
             return Task.CompletedTask;
         }
     }

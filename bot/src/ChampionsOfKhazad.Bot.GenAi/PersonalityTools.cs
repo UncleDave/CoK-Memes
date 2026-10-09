@@ -105,6 +105,7 @@ internal class PersonalityTools(
     {
         private int _noteAttempts;
         private int _notebookSearches;
+        private int _imageConfirmationAttempted;
 
         public Task<string> SearchNotebookAsync(
             [Description("Subject or keywords to search, up to 200 characters.")] string query,
@@ -156,12 +157,15 @@ internal class PersonalityTools(
             CancellationToken cancellationToken
         )
         {
-            var result = await imageGenerationService.GenerateImageAsync(prompt, messageContext, cancellationToken);
+            var result = await imageGenerationService.GenerateImageAsync(prompt, messageContext, SendImageConfirmationAsync, cancellationToken);
             if (result.ImageUri is { } imageUri)
                 onImageGenerated?.Invoke(imageUri);
 
             return result;
         }
+
+        private Task SendImageConfirmationAsync(string message) =>
+            Interlocked.Exchange(ref _imageConfirmationAttempted, 1) == 0 ? messageContext.Reply(message) : Task.CompletedTask;
 
         [Description("Searches previously generated images by their prompt.")]
         public Task<string> SearchGeneratedImagesAsync(

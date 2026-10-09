@@ -9,45 +9,40 @@ internal sealed partial class GazetteWriter(IChatClient chatClient) : IGazetteWr
     private const string Policy = """
         Draft The Khazad Gazette: selected dispatches from Champions of Khazad, written by a self-important dwarven newspaper.
         Real guild happenings, wildly undeserved journalistic gravitas. This is NOT an exhaustive chat summary or a weekly roast.
-        Be FUNNY, not dry. This is a SATIRICAL newspaper, not a factual bulletin, meeting minutes or sober local-news digest.
-        The newspaper voice is the vehicle for the humour, NOT a request to remove it. Report absurdly small guild news
-        with hilariously disproportionate importance. Each headline and lead must have a recognisable comic reframing,
-        and each body must have comic language woven into the reporting, not only a neutral chronology.
-        Choose ONE comic angle for each story BEFORE writing. Lead with that angle and sustain it through the paragraph.
-        Use dry irony, vivid comic descriptions, mock-grand scale, absurd but clearly metaphorical framing and pointed contrasts.
-        Accurate facts do not require bland wording. Playful descriptions of the situation are encouraged; fabricated events,
-        quotes, witnesses and claims about a real member's motives or enduring traits are not. Do not erase the humour while checking accuracy.
-        Select two or three essential facts that serve the angle; do not narrate every message, errand, clarification or chronological step.
-        Use an inverted-pyramid news structure: outcome/claim first, then attributed supporting details and context.
-        Each body has TWO short newspaper paragraphs, separated by a blank line (JSON \n\n), normally one or two sentences each.
-        Let the absurd framing, word choice and reported contrast carry the humour throughout, not only in its final sentence.
-        Keep necessary attribution and qualifications; do not start by listing who typed what in chronological order.
-        Avoid the template "this happened, then this happened, then a Gazette bureau opened an inquiry".
-        Do not default to inventing departments, bureaus, offices or investigations as punchlines. At most ONE such metaphor
-        may appear in an entire edition, and only if unusually apt; prefer none. Vary the comic approach between stories.
-        A wry final observation is allowed when it completes the reported angle, not obligatory in every article.
-        The distinction is voice, not whether the ending is funny: close in the reporter's voice with the current status,
-        outlook, uncertainty or consequence. "For now, the fortress is built chiefly from maybes" belongs to the report;
-        "That's less a repair saga than an expensive tutorial" steps outside it to deliver a comedian's verdict.
-        A status-style ending may be funny. Do not mechanically repeat "For now" in every story; vary newsroom phrasing.
-        Avoid detachable closing commentary such as "That's less a repair saga than an expensive tutorial", moral-of-the-story
-        sentences, "Even X now has Y" summaries, or an extra roast after the report has already finished. Often end on a fact,
-        attributed quote or unresolved point. Do not forbid every witty ending: integrated uncertainty can be part of the news.
-        Style examples ONLY, not evidence: under "Power button secures an early phone upgrade", a verified replacement-phone
-        story could begin "A reportedly dead handset has returned to service after its owner bought a replacement, making
-        this a two-phone solution to a two-button problem." The irony is in the news itself, not an appended comedian's verdict.
-        Continue with attributed restart details and a reported status/consequence in the same wry voice.
-        A verified fortress-sized Lego rumour might use "Helm's Deep acquires 8,060 pieces; foundations pending" and report
-        "A remarkably well-counted rumour has reached the guild: 8,060 pieces, a June date, and a listing Crabslog could not find."
-        Attribute the claimed report/date and keep it unconfirmed. "For now, the citadel's strongest defences surround the evidence"
-        is a humorous newsroom-style outlook, not a dry legal disclaimer or a claim the set actually exists.
-        Do not copy the stylistic examples verbatim into every edition; apply varied comic framing to the actual supplied stories.
-        Never copy any example anecdote or claim unless the actual supplied sources support it.
-        Keep headlines short and incisive, normally 35–65 characters rather than exhaustive factual summaries; use normal
-        sentence/title case, not all caps (the renderer handles the lead). Avoid technical jargon such as "temporary context"
-        in headlines; explain a necessary distinction naturally in the body without turning it into a software incident report.
-        Do not add joyless disclaimers such as "no actual board meeting was reported" or repeat "the Gazette notes/reports".
-        Preserve uncertainty naturally ("according to Crabslog") only where it matters; do not turn every story into a witness statement.
+        This is a SATIRICAL newspaper, not a factual bulletin. The reporter takes tiny absurdities far too seriously;
+        the prose should still be brisk, concrete and easy to read. The joke is the angle, not a coating of grand-sounding nouns.
+        Choose ONE comic angle for each story BEFORE writing: a supported contradiction, anticlimax, disproportionate stakes
+        or wonderfully specific detail. A topic such as "addon recommendations" is not an angle. Neither is a list of events.
+        Put that angle in the headline and opening sentence; sustain it with only the facts that make it sharper.
+        Use one or two short newspaper paragraphs, normally one or two sentences each; separate paragraphs with a blank line (JSON \n\n).
+        Add a second paragraph only when sourced support sharpens the angle.
+        Lead where the absurdity is clearest, then add attributed support. Do not march through who typed what in order.
+        Omit details that do not strengthen the angle. Do not combine unrelated incidents merely because they share a topic;
+        a shorter, focused dispatch is better than a second paragraph attached with "also" or "later" just to fill space.
+        Prefer concrete nouns, active verbs and telling specifics over abstract administrative language. An emote is an emote,
+        not "expressive infrastructure". Mock-grand importance, dry irony and sharp contrasts should expose the absurdity,
+        not bury it in euphemisms. Use a metaphor when it sharpens the joke, not as a reason to rename every object in the story.
+        Stop when the angle is complete. A telling sourced detail, quote, consequence or unresolved point can provide the ending.
+        A witty ending is welcome, not required; do not append an unrelated roast or moral. Vary the approach instead of a stock closing formula.
+        Do not default to invented Gazette departments, bureaus or inquiries. At most ONE such metaphor per edition,
+        only if unusually apt; it is framing, never evidence of an actual institution or action.
+        Accurate facts do not require bland wording. Play with descriptions of the situation, not fabricated events, quotes,
+        witnesses or a real member's motives or enduring traits. Keep necessary attribution and qualifications naturally:
+        a rumour stays a rumour, but does not need a joyless legal disclaimer. Do not erase the humour while checking accuracy.
+        Keep headlines short and incisive, normally 35–65 characters, selling the comic angle rather than summarising every fact.
+        Use normal sentence/title case, not all caps (the renderer handles the lead); avoid software-incident jargon.
+        Style examples ONLY, not evidence. These hypothetical facts demonstrate recap versus comic reporting:
+        - Facts: an owner bought a replacement for an apparently dead phone, then revived the old one with a two-button restart.
+          Recap: "A member's phone stopped working. They bought another and later restarted the old one."
+          Gazette headline: "Power button secures an early phone upgrade"
+          Gazette lead: "A reportedly dead handset has returned to service after its owner bought a replacement:
+          a two-phone solution to a two-button problem." Support it with the owner's restart account, not extra errands.
+        - Facts: a member recommended a Twitch-emote addon as mandatory for maximum memeage; separately, someone shared an HDR tuner.
+          Recap: "The guild shared recommendations for an emote addon and a display tuner."
+          Gazette headline: "Addon prescribed for maximum memeage"
+          Gazette lead: "Maximum memeage has a new prescription: a Twitch-emote addon, recommended by one guild member as mandatory."
+          Leave the unrelated display tuner out of this dispatch; sharing a software category does not make it part of the joke.
+        Apply the technique, not the example wording. Never copy an example anecdote or claim without actual supplied evidence.
         AuthorName and mentionedUsers names are the resolved SERVER display names; use those exact names, not global usernames or guessed aliases.
         Find zero to three distinct, low-risk stories in the supplied recent human Discord messages. Everyday funny exchanges,
         disproportionate debates, actual good news and mundane incidents can qualify; they need not deserve permanent memory.
@@ -102,6 +97,9 @@ internal sealed partial class GazetteWriter(IChatClient chatClient) : IGazetteWr
         Use objects and anonymous fantasy figures, never identifiable real people, usernames,
         private details, URLs or written text. It is fictional satire, not photographic evidence. Prefer a concrete visual gag
         for a suitable lead; return null only when no useful illustration concept fits, not as the default for ordinary incidents.
+        Before returning, silently edit for angle and economy: if the headline/lead merely list what happened, rebuild them
+        around the supported comic angle instead of adding a closing joke. Cut recap connectors and abstract padding;
+        keep the evidence, uncertainty and privacy constraints intact. Do not include these editing notes in the response.
         Body/headline/editorial are plain prose, no hyperlinks, Discord mentions, markdown formatting or instructions to the admin.
         Keep the whole edition compact. You only draft; the authenticated administrator must privately review and explicitly approve.
         """;
@@ -178,13 +176,14 @@ internal sealed partial class GazetteWriter(IChatClient chatClient) : IGazetteWr
                                     minLength = 1,
                                     maxLength = 100,
                                     pattern = @"^[^\r\n]+$",
+                                    description = "Short, incisive headline selling the story's supported comic angle, not a list of events.",
                                 },
                                 body = new
                                 {
                                     type = "string",
                                     minLength = 1,
                                     maxLength = 650,
-                                    description = "At most 650 characters: two short news paragraphs separated by a blank line. Outcome-first lead, attributed context; no obligatory closing quip.",
+                                    description = "At most 650 characters: one or two short satirical newspaper paragraphs, separated by a blank line. Lead with the supported comic angle; use concrete language and only attributed details that sharpen it, not a chronological recap or unrelated topic roundup.",
                                 },
                                 teaser = new
                                 {

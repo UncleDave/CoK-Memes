@@ -42,23 +42,7 @@ public class GazetteWriterTests
         Assert.Contains("must privately review and explicitly approve", policy);
         Assert.Contains("No archival stories", policy);
         Assert.Contains("do not relentlessly target one person", policy);
-        Assert.Contains("Be FUNNY, not dry", policy);
-        Assert.Contains("SATIRICAL newspaper, not a factual bulletin", policy);
-        Assert.Contains("Do not erase the humour while checking accuracy", policy);
-        Assert.Contains("two-phone solution to a two-button problem", policy);
         Assert.Contains("return null only when no useful illustration concept fits", policy);
-        Assert.Contains("Choose ONE comic angle", policy);
-        Assert.Contains("inverted-pyramid news structure", policy);
-        Assert.Contains("TWO short newspaper paragraphs", policy);
-        Assert.Contains("not obligatory in every article", policy);
-        Assert.Contains("Do not forbid every witty ending", policy);
-        Assert.Contains("The distinction is voice", policy);
-        Assert.Contains("current status", policy);
-        Assert.Contains("Do not mechanically repeat", policy);
-        Assert.Contains("At most ONE such metaphor", policy);
-        Assert.Contains("normally 35–65 characters", policy);
-        Assert.Contains("Style examples ONLY, not evidence", policy);
-        Assert.DoesNotContain("of Preventable Expenditure", policy);
         Assert.Contains("visual PUNCHLINE", policy);
         Assert.Contains("340-pixel newspaper thumbnail", policy);
         Assert.Contains("SERVER display names", policy);
@@ -77,6 +61,32 @@ public class GazetteWriterTests
         Assert.DoesNotContain(Source.Content, policy);
         using var input = JsonDocument.Parse(client.Messages[1].Text!);
         Assert.Equal(Source.Content, input.RootElement.GetProperty("sources")[0].GetProperty("Content").GetString());
+    }
+
+    [Fact]
+    public async Task WriterGuidesComicReportingRatherThanDecoratedRecapsOrTopicRoundups()
+    {
+        var client = new CapturingClient("""{"articles":[],"editorial":""}""");
+        await new GazetteWriter(client).WriteAsync([Source], Now.AddDays(-7), Now, [], TestContext.Current.CancellationToken);
+        var policy = client.Messages![0].Text!;
+        Assert.Contains("SATIRICAL newspaper, not a factual bulletin", policy);
+        Assert.Contains("Choose ONE comic angle", policy);
+        Assert.Contains("Put that angle in the headline and opening sentence", policy);
+        Assert.Contains("Do not combine unrelated incidents merely because they share a topic", policy);
+        Assert.Contains("Prefer concrete nouns, active verbs and telling specifics", policy);
+        Assert.Contains("Use one or two short newspaper paragraphs", policy);
+        Assert.Contains("Add a second paragraph only when sourced support sharpens the angle", policy);
+        Assert.Contains("normally 35–65 characters", policy);
+        Assert.Contains("A witty ending is welcome", policy);
+        Assert.Contains("Stop when the angle is complete", policy);
+        Assert.Contains("At most ONE such metaphor per edition", policy);
+        Assert.Contains("Do not erase the humour while checking accuracy", policy);
+        Assert.Contains("Style examples ONLY, not evidence", policy);
+        Assert.Contains("Recap:", policy);
+        Assert.Contains("Gazette lead:", policy);
+        Assert.Contains("Never copy an example anecdote or claim without actual supplied evidence", policy);
+        Assert.Contains("Before returning, silently edit for angle and economy", policy);
+        Assert.Contains("keep the evidence, uncertainty and privacy constraints intact", policy);
     }
 
     [Fact]
@@ -104,6 +114,10 @@ public class GazetteWriterTests
         // The OpenAI adapter strips unsupported validation keywords; application length checks remain required.
         Assert.False(body.TryGetProperty("maxLength", out _));
         Assert.Contains("650 characters", body.GetProperty("description").GetString());
+        Assert.Contains("one or two short satirical newspaper paragraphs", body.GetProperty("description").GetString());
+        Assert.Contains("comic angle", article.GetProperty("properties").GetProperty("headline").GetProperty("description").GetString());
+        Assert.Contains("concrete language", body.GetProperty("description").GetString());
+        Assert.Contains("not a chronological recap or unrelated topic roundup", body.GetProperty("description").GetString());
         var teaser = article.GetProperty("properties").GetProperty("teaser");
         Assert.Equal(new[] { "string", "null" }, teaser.GetProperty("type").EnumerateArray().Select(value => value.GetString()));
         Assert.Contains("Optional", teaser.GetProperty("description").GetString());

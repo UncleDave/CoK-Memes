@@ -53,28 +53,29 @@ messages still relies on the writer's judgement and administrator review.
 
 ## Editorial policy
 
-The editorial voice is straight-faced, disproportionate newspaper reporting, not a
-chronological chat recap with a funny final sentence. Choose a news/comic angle first,
-use an outcome-first inverted-pyramid lead, then attributed supporting details in two
-short paragraphs. Preserve uncertainty naturally, particularly for rumours. Let framing
-and word choice carry the humour; omit detachable concluding insults or morals. A wry
-ending is allowed when it completes the reporting angle, not obligatory or categorically
-banned. Vary the approach between stories. Imaginary Gazette departments/bureaus/inquiries are not the
-default punchline; at most one unusually apt metaphor per edition, preferably none.
-Such metaphors are framing, not evidence of actual guild institutions. Invented actions,
-witnesses or personal traits remain prohibited. Preserve necessary attribution and
-qualifications naturally without repetitive legal disclaimers. Prefer short, incisive
-35–65-character headlines in normal case, avoiding exhaustive summaries/software jargon.
-Endings stay in the reporter's voice: a current status, outlook, uncertainty or consequence,
-which may itself be funny. "For now, the fortress is built chiefly from maybes" fits;
-"That's less a repair saga than an expensive tutorial" is a detachable comedian's verdict.
-Do not mechanically repeat "For now" across all articles.
-This is explicitly a **satirical** newspaper, not a sober factual bulletin. The news
-structure is a vehicle for comedy: each headline/lead needs a recognisable comic
-reframing, with dry irony, mock-grand scale, vivid descriptions and pointed contrasts
-inside the reporting. Accurate source facts do not require bland phrasing. Style
-examples use "a two-phone solution to a two-button problem" and a fortress rumour's
-well-counted pieces versus elusive foundations; they remain examples, never evidence.
+The editorial voice is a self-important newspaper taking tiny guild absurdities far
+too seriously, with brisk, concrete prose. This is **satirical** reporting, not a chat
+recap decorated with grand-sounding nouns or a funny final sentence. Choose one supported
+comic angle—a contradiction, anticlimax, disproportionate stakes or telling detail—and
+put it in the headline and opening sentence. Follow with only attributed details that
+sharpen it, in one or two short paragraphs. Add a second paragraph only when sourced
+support earns it. A shorter dispatch beats unrelated items bundled together because
+they share a topic; a software category is not itself a comic angle.
+Prefer concrete nouns and active verbs over abstract administrative euphemisms. A witty
+ending is welcome when it completes the same angle, not required; stop when the angle is
+complete rather than demand an extra consequence. Avoid unrelated roasts, morals and
+stock closing formulas. Imaginary Gazette departments/bureaus/inquiries are
+not the default punchline; at most one unusually apt metaphor per edition, preferably
+none. Metaphors are framing, not evidence of actual guild institutions or actions.
+Invented actions, witnesses, motives or enduring personal traits remain prohibited.
+Preserve attribution and uncertainty naturally, particularly for rumours, without
+repetitive legal disclaimers. Prefer incisive 35–65-character headlines in normal case,
+avoiding exhaustive summaries/software jargon. The prompt contrasts hypothetical recaps
+with comic leads: a two-phone solution to a two-button problem, and an addon prescribed
+for maximum memeage. These demonstrate technique, never supply evidence. A final silent
+editing pass cuts recap connectors and abstract padding without relaxing factual/privacy
+constraints. The response schema's prose descriptions reinforce the same comic angle;
+they do not mechanically validate humour. Live admin trials remain the quality check.
 Every non-empty edition has one absurd fictional classified ad, not a real member's
 advert or a purported guild announcement.
 The published section is simply "Classifieds"; neither copy nor illustrations carry

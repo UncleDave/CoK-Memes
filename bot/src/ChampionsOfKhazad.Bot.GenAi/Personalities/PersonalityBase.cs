@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Microsoft.Extensions.AI;
 
 namespace ChampionsOfKhazad.Bot.GenAi;
@@ -73,10 +74,11 @@ internal abstract class PersonalityBase(
             .Replace("{{$currentMonth}}", DateTimeOffset.Now.ToString("MMMM"));
 
         var messages = new ChatHistory([new ChatMessage(ChatRole.System, systemPrompt), .. chatHistory]);
+        var generatedImages = new ConcurrentQueue<Uri>();
         var options = new ChatOptions
         {
             Reasoning = new ReasoningOptions { Effort = ReasoningEffort.Medium },
-            Tools = personalityTools.Create(messageContext, includeLorekeeperTools),
+            Tools = personalityTools.Create(messageContext, includeLorekeeperTools, generatedImages.Enqueue),
         };
 
         var response = await chatClient.GetResponseAsync(messages, options, cancellationToken);
@@ -94,6 +96,17 @@ internal abstract class PersonalityBase(
         var responseText =
             sourceUrls.Count == 0 ? response.Text : $"{response.Text}\n\nSources:\n{string.Join('\n', sourceUrls.Select(url => $"- <{url}>"))}";
 
-        return emojiHandler.ProcessMessage(responseText);
+        responseText = emojiHandler.ProcessMessage(responseText);
+        var missingImageUrls = generatedImages
+            .Select(uri => uri.AbsoluteUri)
+            .Distinct(StringComparer.Ordinal)
+            .Where(url => !responseText.Contains(url, StringComparison.Ordinal))
+            .ToList();
+
+        if (missingImageUrls.Count == 0)
+            return responseText;
+
+        var imageLinks = string.Join('\n', missingImageUrls);
+        return string.IsNullOrWhiteSpace(responseText) ? imageLinks : $"{responseText}\n\n{imageLinks}";
     }
 }

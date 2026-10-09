@@ -13,9 +13,17 @@ internal class PersonalityTools(
     ILogger<PersonalityTools> logger
 )
 {
-    public IList<AITool> Create(IMessageContext messageContext, bool includeLorekeeperTools)
+    public IList<AITool> Create(IMessageContext messageContext, bool includeLorekeeperTools, Action<Uri>? onImageGenerated = null)
     {
-        var requestTools = new RequestTools(relatedLoreGetter, imageGenerationService, discordMessageService, notebook, messageContext, logger);
+        var requestTools = new RequestTools(
+            relatedLoreGetter,
+            imageGenerationService,
+            discordMessageService,
+            notebook,
+            messageContext,
+            logger,
+            onImageGenerated
+        );
         List<AITool> tools =
         [
             AIFunctionFactory.Create(
@@ -91,7 +99,8 @@ internal class PersonalityTools(
         IDiscordMessageService discordMessageService,
         NotebookService notebook,
         IMessageContext messageContext,
-        ILogger logger
+        ILogger logger,
+        Action<Uri>? onImageGenerated
     )
     {
         private int _noteAttempts;
@@ -142,10 +151,17 @@ internal class PersonalityTools(
         }
 
         [Description("Generates an image from a text prompt.")]
-        public Task<GenerateImageResult> GenerateImageAsync(
+        public async Task<GenerateImageResult> GenerateImageAsync(
             [Description("The text prompt describing the image to generate.")] string prompt,
             CancellationToken cancellationToken
-        ) => imageGenerationService.GenerateImageAsync(prompt, messageContext, cancellationToken);
+        )
+        {
+            var result = await imageGenerationService.GenerateImageAsync(prompt, messageContext, cancellationToken);
+            if (result.ImageUri is { } imageUri)
+                onImageGenerated?.Invoke(imageUri);
+
+            return result;
+        }
 
         [Description("Searches previously generated images by their prompt.")]
         public Task<string> SearchGeneratedImagesAsync(

@@ -283,9 +283,14 @@ internal sealed class GazettePageRenderer : IGazettePageRenderer
                     rune.Value is >= 0x1F000 and <= 0x1FFFF or >= 0x2600 and <= 0x27BF or 0xFE0F
                     || Rune.GetUnicodeCategory(rune) == UnicodeCategory.PrivateUse
                 );
-            // Only unsupported pictographic/decorative graphemes are omitted in print. Keep letters, accents and the archived text intact.
             if (!decorative || font.ContainsGlyphs(element))
                 result.Append(element);
+            else if (
+                element is "👀" or "👀\uFE0F" or "👀\uFE0E"
+                && IsEmojiBoundary(text, elements.ElementIndex - 1)
+                && IsEmojiBoundary(text, elements.ElementIndex + element.Length)
+            )
+                result.Append("[eyes emoji]");
             else
             {
                 // A keycap/emoji-style decoration can contain a meaningful base digit/letter; retain it rather than dropping the value.
@@ -295,6 +300,12 @@ internal sealed class GazettePageRenderer : IGazettePageRenderer
         }
         return result.ToString();
     }
+
+    private static bool IsEmojiBoundary(string text, int index) =>
+        index < 0
+        || index >= text.Length
+        || char.IsWhiteSpace(text, index)
+        || (char.IsPunctuation(text, index) && char.GetUnicodeCategory(text, index) != UnicodeCategory.ConnectorPunctuation);
 
     private static float DrawLines(SKCanvas canvas, IReadOnlyList<string> lines, float x, float y, float spacing, SKFont font, SKPaint paint)
     {

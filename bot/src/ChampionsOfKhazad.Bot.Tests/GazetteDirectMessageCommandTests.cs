@@ -125,11 +125,12 @@ public class GazetteDirectMessageCommandTests
     [Fact]
     public void ReadableEditionKeepsOriginalUnicodeNamesAndParagraphsWhilePrintUsesItsOwnGlyphCleanup()
     {
-        var body = "Beaverhausen🦫 supplied the proposal.\n\nAlexie attributed it to the code-merge agent.";
+        var body = "Beaverhausen🦫 supplied the proposal.\n\nAlexie attributed it to the code-merge agent. Crabslog replied with 👀.";
         var date = DateTimeOffset.UtcNow;
         var text = GazetteDirectMessageCommand.Render(new([new("Headline", body, ["source"])], "Ad"), date.AddDays(-7), date);
         Assert.Contains("Beaverhausen🦫", text);
         Assert.Contains("proposal.\n\nAlexie", text);
+        Assert.Contains("Crabslog replied with 👀.", text);
     }
 
     [Fact]

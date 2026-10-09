@@ -53,34 +53,35 @@ messages still relies on the writer's judgement and administrator review.
 
 ## Editorial policy
 
-The editorial voice is a self-important newspaper taking tiny guild absurdities far
-too seriously, with brisk, concrete prose. This is **satirical** reporting, not a chat
-recap decorated with grand-sounding nouns or a funny final sentence. Choose one supported
-comic angle—a contradiction, anticlimax, disproportionate stakes or telling detail—and
-put it in the headline and opening sentence. Follow with only attributed details that
-sharpen it, in one or two short paragraphs. Add a second paragraph only when sourced
-support earns it. A shorter dispatch beats unrelated items bundled together because
-they share a topic; a software category is not itself a comic angle.
-Prefer concrete nouns and active verbs over abstract administrative euphemisms. A witty
-ending is welcome when it completes the same angle, not required; stop when the angle is
-complete rather than demand an extra consequence. Avoid unrelated roasts, morals and
-stock closing formulas. Imaginary Gazette departments/bureaus/inquiries are
-not the default punchline; at most one unusually apt metaphor per edition, preferably
-none. Metaphors are framing, not evidence of actual guild institutions or actions.
-Invented actions, witnesses, motives or enduring personal traits remain prohibited.
-Preserve attribution and uncertainty naturally, particularly for rumours, without
-repetitive legal disclaimers. Prefer incisive 35–65-character headlines in normal case,
-avoiding exhaustive summaries/software jargon. The prompt contrasts hypothetical recaps
-with comic leads: a two-phone solution to a two-button problem, and an addon prescribed
-for maximum memeage. These demonstrate technique, never supply evidence. A final silent
-editing pass cuts recap connectors and abstract padding without relaxing factual/privacy
-constraints. The response schema's prose descriptions reinforce the same comic angle;
-they do not mechanically validate humour. Live admin trials remain the quality check.
-Every non-empty edition has one absurd fictional classified ad, not a real member's
-advert or a purported guild announcement.
+The voice is a confident, self-important dwarven newspaper finding disproportionate
+importance in small guild happenings. Satire is affectionate: take the situation
+absurdly seriously, not the member to pieces. Each article has one evidence-supported
+angle running through its headline, opening and choice of details. Use brisk, concrete
+language, natural attribution and telling contrasts, not a recap explaining why the
+exchange was amusing. Genuine good news can be celebrated without manufacturing conflict.
+Write a complete miniature article in one or two short paragraphs and end where it
+lands; neither an extra punchline nor a concluding explanation is mandatory. Keep
+unrelated incidents separate, even on the same topic. Headlines normally run 35–65
+characters in normal case. Metaphors and mock-serious judgments are framing, never
+permission to invent events, institutions, witnesses, motives or enduring member traits.
+Describe story-bearing emoji/custom emotes in words without inventing intent; preserve
+resolved display names unchanged. Every nonempty edition includes one absurd fictional
+classified: a separate comic idea unrelated to its news stories or real members, never
+a purported guild announcement.
 The published section is simply "Classifieds"; neither copy nor illustrations carry
 "fictional satire"/"satirical classified" disclaimers. Fictional framing remains an
 internal generation constraint, not a repetitive explanation printed next to jokes.
+
+### Maintaining the prompt
+
+`GazetteWriter.Policy` holds evidence/privacy, freshness, selection and output contracts;
+`EditorialBrief` holds the voice and complete hypothetical headline/body examples.
+Refine that brief or replace an example rather than append a prohibition for each trial
+draft. The examples teach finished articles, never supply guild evidence. The dated
+shared activity context is interpretation-only, not a source or story candidate.
+Schema descriptions reinforce the brief but cannot validate humour. Judge live admin
+trials across varied incidents, not only the latest exchange; contract tests do not prove
+editorial quality.
 
 Aim for one lead plus two distinct smaller dispatches when the sample supports them.
 The lead gets the strongest incident; secondary stories have a lower newsworthiness
@@ -259,8 +260,13 @@ DejaVu fonts; Windows rendering uses Georgia. PNGs are at most 1,200 by 4,000 pi
 with an 8 MB total attachment budget, and complete text wrapping rather than silently clipping copy.
 Paragraph breaks in article copy become visible paragraph spacing, included in height
 calculations rather than flattened into one block. Unsupported emoji/private-use
-display-name decorations are omitted from the PNG to avoid missing-glyph boxes; this
-operates on complete Unicode graphemes so joiners/variation selectors are not orphaned.
+decorations are omitted from the PNG to avoid missing-glyph boxes; this operates on
+complete Unicode graphemes so joiners/variation selectors are not orphaned. As a narrow
+safety net for story content, an unsupported eyes emoji standing alone or delimited by
+whitespace/punctuation prints as `[eyes emoji]` before wrapping. Eyes attached directly
+to word characters remain omitted as name decorations. This lexical distinction is not
+member-name recognition, and other unsupported emoji still rely on the writer's prose
+description to preserve their meaning.
 Readable letters/accents and supported symbols are kept, and the approved text/source
 copy retains original display names and decorations unchanged. This does not switch
 identities to global usernames or alter stored source evidence. Text remains

@@ -18,6 +18,9 @@ public class GazettePageRendererTests
     [Theory]
     [InlineData("Beaverhausen🦫", "Beaverhausen")]
     [InlineData("Beaverhausen👩‍🔧", "Beaverhausen")]
+    [InlineData("Crabslog👀", "Crabslog")]
+    [InlineData("👀Crabslog", "Crabslog")]
+    [InlineData("Crabslog_👀", "Crabslog_")]
     [InlineData("Beaverhausen\uE000", "Beaverhausen")]
     [InlineData("Press 1️⃣, then 2️⃣", "Press 1, then 2")]
     public void UnsupportedNameDecorationsDoNotPrintMissingGlyphBoxesOrOrphanedEmojiParts(string input, string expected)
@@ -39,6 +42,50 @@ public class GazettePageRendererTests
         const string text = "Béaverhausen — Ørjan Åse";
         Assert.True(font.ContainsGlyphs(text));
         Assert.Equal(text, GazettePageRenderer.PreparePrintText(text, font));
+    }
+
+    [Theory]
+    [InlineData("Crabslog replied with 👀.", "Crabslog replied with [eyes emoji].")]
+    [InlineData("Crabslog replied with 👀\uFE0F.", "Crabslog replied with [eyes emoji].")]
+    [InlineData("Crabslog replied with 👀\uFE0E.", "Crabslog replied with [eyes emoji].")]
+    [InlineData("The reply was \"👀\".", "The reply was \"[eyes emoji]\".")]
+    [InlineData("The reply (👀) was unconfirmed.", "The reply ([eyes emoji]) was unconfirmed.")]
+    [InlineData("👀", "[eyes emoji]")]
+    public void UnsupportedStandaloneEyesEmojiRemainReadableInsteadOfDisappearing(string input, string expected)
+    {
+        using var typeface = OperatingSystem.IsWindows()
+            ? SKTypeface.FromFamilyName("Georgia")
+            : SKTypeface.FromFile("/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf");
+        using var font = new SKFont(typeface, 30);
+        Assert.False(font.ContainsGlyphs("👀"));
+        Assert.Equal(expected, GazettePageRenderer.PreparePrintText(input, font));
+        Assert.True(font.ContainsGlyphs(expected));
+    }
+
+    [Fact]
+    public void SupportedPictographicSymbolsAreKeptInsteadOfReplacedOrOmitted()
+    {
+        using var typeface = OperatingSystem.IsWindows()
+            ? SKTypeface.FromFamilyName("Segoe UI Symbol")
+            : SKTypeface.FromFile("/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf");
+        using var font = new SKFont(typeface, 30);
+        const string text = "The card was ♠.";
+        Assert.True(font.ContainsGlyphs(text));
+        Assert.Equal(text, GazettePageRenderer.PreparePrintText(text, font));
+    }
+
+    [Fact]
+    public void EyesEmojiFallbackIsMeasuredAndWrappedAlongWithTheStory()
+    {
+        using var typeface = OperatingSystem.IsWindows()
+            ? SKTypeface.FromFamilyName("Georgia")
+            : SKTypeface.FromFile("/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf");
+        using var font = new SKFont(typeface, 30);
+        using var paint = new SKPaint();
+        var lines = GazettePageRenderer.Wrap("Crabslog replied with 👀.\n\nNothing was confirmed.", font, 280, paint);
+        Assert.Equal("Crabslog replied with [eyes emoji]. Nothing was confirmed.", string.Join(' ', lines.Where(line => line.Length > 0)));
+        Assert.Contains("", lines);
+        Assert.All(lines, line => Assert.True(font.MeasureText(line, paint) <= 280));
     }
 
     [Fact]

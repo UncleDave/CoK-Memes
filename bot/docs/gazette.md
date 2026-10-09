@@ -125,8 +125,10 @@ within a 40,000-character content/metadata allowance, newest first and supplied 
 writer chronologically. This is bounded sampling, not a seven-day exhaustive backfill;
 busy channels may cover much less than seven days. The private response reports messages,
 channels read/eligible and read failures. A failed channel does not prevent drafting
-from other safe channels. Drafts are limited to one model call per minute and commands
-have a six-minute deadline. Optional artwork has its own two-minute deadline.
+from other safe channels. Draft commands remain serialised but have no artificial
+cooldown, command deadline or illustration deadline. Caller cancellation and underlying
+provider/SDK/Discord timeouts still apply; a slow request can hold the command gate
+until it completes, fails or is cancelled.
 
 Draft failure diagnostics identify the operation stage (chat/name reading, story writing,
 issue-number lookup, formatting, evidence checks, rendering or private delivery), exception
@@ -136,12 +138,13 @@ URLs, unknown model-supplied property names, prompts or raw exception messages. 
 admin DM explains the stage and validation category instead of reporting only a generic
 InvalidOperationException. No draft becomes approvable after a failure.
 
-The high-reasoning writer has an 8,192-token generation ceiling to leave room for
-reasoning plus its JSON response. A reported length-limited response is identified as
+The writer uses high reasoning effort without an application-set output-token ceiling;
+the provider's default and model limits govern reasoning plus its JSON response.
+A provider-reported length-limited response is identified as
 incomplete before parsing. Invalid JSON, wrong shape/type, field lengths, citations and
 missing classifieds have separate fixed rejection categories. The existing 650-character
 story-body limit, other field limits, overall response/input bounds and source checks
-are unchanged: increased generation headroom is not permission for longer published
+are unchanged: removing the generation ceiling is not permission for longer published
 copy or unsafe citations, and it may allow more billed reasoning tokens. No automatic
 retries or rewrites of rejected output are performed.
 
@@ -174,7 +177,7 @@ send cannot be made atomic with the external API; checks run immediately before 
 ## Approval and delivery
 
 There is one in-memory pending draft, serialised across command instances. A new draft
-replaces the earlier approval; a rate-limited request leaves it unchanged. Approval
+replaces the earlier approval, including immediately repeated requests. Approval
 expires after 30 minutes or restart, and is installed only after the entire private
 preview is successfully sent. The random token binds approval to that exact edition
 and destination channel ID. No natural-language approval, scheduled event, observer
@@ -243,9 +246,12 @@ short previews and "Read more · page 2". Page 2 actually exists and contains th
 stories in full under "Around the guild", with up to two columns. A single-story
 edition has no invented inside page or page-number references. Page numbers and
 filenames are assigned deterministically by the renderer, never by the model.
-Teasers are single-line, at most 160 characters, and must preview the same sourced
-story without introducing new claims. If omitted, the renderer uses a bounded excerpt
-of that story's existing body rather than generating additional copy.
+Teasers are optional, single-line, at most 160 characters, and must preview the same
+sourced story without introducing new claims. The schema permits null and the writer
+is asked to use it for the lead, which is printed in full. Missing, null or blank
+teasers use the renderer's bounded excerpt of that story's existing body rather than
+rejecting an otherwise valid edition or generating additional copy. Wrong types,
+overlong or multiline nonblank teaser text still fail validation.
 The image model only supplies
 an illustration, never the text or newspaper layout. The Linux bot image installs
 DejaVu fonts; Windows rendering uses Georgia. PNGs are at most 1,200 by 4,000 pixels
@@ -291,7 +297,7 @@ newspaper with the image model or ask it to typeset the articles.
 Generation uses the existing image client but a separate private pipeline: no public
 Azure upload, generated-image gallery entry or public confirmation is created. Artwork
 is private transient state with the draft/PNG and one short-lived reuse cache. At most
-one new illustration request per draft, still subject to the one-minute draft spacing;
+one new illustration request per draft for the lead-story layout;
 there is **no daily illustration quota**. The former three-per-day limit and its
 `Gazette:DailyIllustrationLimit` setting have been removed. Disabled art,
 generation failures or invalid image data fall back to the text-only newspaper

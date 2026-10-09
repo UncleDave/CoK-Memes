@@ -520,14 +520,88 @@ public class GazetteDirectMessageCommandTests
     }
 
     [Fact]
-    public async Task RapidDraftRequestsDoNotSpendMoreModelCallsOrReplacePreview()
+    public async Task RapidDraftRequestsRegenerateAndReplacePreviewWithoutACooldown()
     {
         var fixture = new Fixture();
         await fixture.Run("gazette draft");
         var pending = fixture.Session.Pending;
         await fixture.Run("gazette draft");
-        Assert.Same(pending, fixture.Session.Pending);
+        Assert.NotNull(fixture.Session.Pending);
+        Assert.NotEqual(pending!.Token, fixture.Session.Pending.Token);
+        Assert.Equal(2, fixture.Writer.Calls);
+    }
+
+    [Fact]
+    public async Task GenerationUsesCallerCancellationWithoutFeatureSpecificDeadlines()
+    {
+        var fixture = new Fixture();
+        using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        fixture.Writer.Generate = token =>
+        {
+            Assert.Equal(cancellation.Token, token);
+            return Task.FromResult(fixture.Writer.Edition with { IllustrationPrompt = "A visual gag." });
+        };
+        fixture.Illustrator.Generate = token =>
+        {
+            Assert.Equal(cancellation.Token, token);
+            return Task.FromResult<byte[]>([1, 2, 3]);
+        };
+        await fixture.Command.TryExecuteAsync(
+            1,
+            "gazette draft",
+            (_, token) =>
+            {
+                Assert.Equal(cancellation.Token, token);
+                return Task.CompletedTask;
+            },
+            cancellation.Token,
+            sendPage: (_, token) =>
+            {
+                Assert.Equal(cancellation.Token, token);
+                return Task.CompletedTask;
+            }
+        );
+        Assert.NotNull(fixture.Session.Pending);
         Assert.Equal(1, fixture.Writer.Calls);
+        Assert.Equal(1, fixture.Illustrator.Calls);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task CallerCancellationDuringGenerationLeavesNoApprovalAndReleasesTheCommandGate(bool illustrating)
+    {
+        var fixture = new Fixture();
+        using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        fixture.Writer.Edition = fixture.Writer.Edition with { IllustrationPrompt = "A visual gag." };
+        if (illustrating)
+            fixture.Illustrator.Generate = token =>
+            {
+                cancellation.Cancel();
+                return Task.FromCanceled<byte[]>(token);
+            };
+        else
+            fixture.Writer.Generate = token =>
+            {
+                cancellation.Cancel();
+                return Task.FromCanceled<GazetteEdition>(token);
+            };
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            fixture.Command.TryExecuteAsync(
+                1,
+                "gazette draft",
+                (_, _) => Task.CompletedTask,
+                cancellation.Token,
+                sendPage: (_, _) => Task.CompletedTask
+            )
+        );
+        Assert.Null(fixture.Session.Pending);
+        Assert.Empty(fixture.Gateway.Publications);
+        Assert.Equal(1, fixture.Session.Gate.CurrentCount);
+        fixture.Writer.Generate = null;
+        fixture.Illustrator.Generate = null;
+        await fixture.Run("gazette draft");
+        Assert.NotNull(fixture.Session.Pending);
     }
 
     [Theory]
@@ -698,6 +772,7 @@ public class GazetteDirectMessageCommandTests
     private sealed class Writer : IGazetteWriter
     {
         public Exception? Failure { get; set; }
+        public Func<CancellationToken, Task<GazetteEdition>>? Generate { get; set; }
         public int Calls { get; private set; }
         public DateTimeOffset Since { get; private set; }
         public IReadOnlyList<GazettePublishedEdition>? PreviousEditions { get; private set; }
@@ -722,7 +797,7 @@ public class GazetteDirectMessageCommandTests
             Since = since;
             PreviousEditions = previousEditions;
             Sources = sources;
-            return Task.FromResult(Edition);
+            return Generate is { } generate ? generate(cancellationToken) : Task.FromResult(Edition);
         }
     }
 

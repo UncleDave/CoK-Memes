@@ -46,32 +46,29 @@ public sealed partial class GazetteDirectMessageCommand(
         {
             if (session.Pending is { } old && clock.GetUtcNow() >= old.ExpiresAtUtc)
                 session.Pending = null;
-            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            timeout.CancelAfter(TimeSpan.FromMinutes(6));
-            var token = timeout.Token;
             if (drafting)
             {
-                await DraftAsync(reply, sendPage, token);
+                await DraftAsync(reply, sendPage, cancellationToken);
             }
             else if (parts.Length == 2 && parts[1].Equals("discard", StringComparison.OrdinalIgnoreCase))
             {
                 session.Pending = null;
-                await reply("Gazette draft discarded.", token);
+                await reply("Gazette draft discarded.", cancellationToken);
             }
             else if (parts.Length == 2 && parts[1].Equals("show", StringComparison.OrdinalIgnoreCase))
             {
                 if (session.Pending is { } pending)
-                    await SendPreviewAsync(pending, reply, sendPage, token);
+                    await SendPreviewAsync(pending, reply, sendPage, cancellationToken);
                 else
-                    await reply(NoDraft, token);
+                    await reply(NoDraft, cancellationToken);
             }
             else if (parts.Length == 3 && parts[1].Equals("approve", StringComparison.OrdinalIgnoreCase))
             {
                 var pending = session.Pending;
                 if (pending is null)
-                    await reply(NoDraft, token);
+                    await reply(NoDraft, cancellationToken);
                 else if (!pending.Token.Equals(parts[2], StringComparison.Ordinal))
-                    await reply("Use the exact `gazette approve <token>` from your preview. Nothing was published.", token);
+                    await reply("Use the exact `gazette approve <token>` from your preview. Nothing was published.", cancellationToken);
                 else
                 {
                     // Consume approval before any network work. An ambiguous send must never be automatically retried.
@@ -79,27 +76,27 @@ public sealed partial class GazetteDirectMessageCommand(
                     _stage = "checking publication evidence";
                     if (
                         gateway.GetDestination()?.Id != pending.Destination.Id
-                        || !await gateway.VerifyAsync(pending.Destination.Id, pending.Sources, token)
+                        || !await gateway.VerifyAsync(pending.Destination.Id, pending.Sources, cancellationToken)
                         || clock.GetUtcNow() >= pending.ExpiresAtUtc
                     )
                     {
                         await reply(
                             "The destination or cited evidence changed, became unavailable, or approval expired. Nothing was published. Request `gazette draft` again.",
-                            token
+                            cancellationToken
                         );
                     }
                     else if (gateway.GetPublicationError(pending.Destination.Id) is { } error)
                     {
                         await reply(
                             $"Cannot publish this edition: {error} The approval was cleared; request a fresh draft after fixing the bot's posting permissions.",
-                            token
+                            cancellationToken
                         );
                     }
-                    else if (!await ReserveIssueAsync(pending, token))
+                    else if (!await ReserveIssueAsync(pending, cancellationToken))
                     {
                         await reply(
                             "This issue number has already been reserved by another publication. Request a fresh draft; this preview was not sent.",
-                            token
+                            cancellationToken
                         );
                     }
                     else
@@ -111,20 +108,20 @@ public sealed partial class GazetteDirectMessageCommand(
                             pending.Edition,
                             pending.PrintEdition,
                             pending.Token,
-                            token
+                            cancellationToken
                         );
                         _stage = "saving publication acknowledgement";
-                        await issues.MarkPublishedAsync(pending.IssueNumber, pending.Token, messageId, token);
+                        await issues.MarkPublishedAsync(pending.IssueNumber, pending.Token, messageId, cancellationToken);
                         await reply(
                             $"Gazette published to #{pending.Destination.Name} (message {messageId}). This approval cannot be reused.",
-                            token
+                            cancellationToken
                         );
                     }
                 }
             }
             else
             {
-                await reply(Help, token);
+                await reply(Help, cancellationToken);
             }
             return true;
         }
@@ -190,11 +187,6 @@ public sealed partial class GazetteDirectMessageCommand(
     )
     {
         var until = clock.GetUtcNow();
-        if (until < session.NextDraftAtUtc)
-        {
-            await reply("Please wait a minute between draft requests. Your existing preview, if any, is unchanged.", cancellationToken);
-            return;
-        }
         session.Pending = null;
         if (session.Illustration is { } expired && clock.GetUtcNow() >= expired.ExpiresAtUtc)
             session.Illustration = null;
@@ -217,7 +209,6 @@ public sealed partial class GazetteDirectMessageCommand(
         }
         _stage = "reading previous Gazette coverage";
         var previousEditions = await gateway.ReadPreviousEditionsAsync(destination.Id, since, until, cancellationToken);
-        session.NextDraftAtUtc = clock.GetUtcNow().AddMinutes(1);
         _stage = "writing stories";
         var edition = await writer.WriteAsync(batch.Sources, since, until, previousEditions, cancellationToken);
         if (edition.Articles.Count == 0)
@@ -258,9 +249,7 @@ public sealed partial class GazetteDirectMessageCommand(
                 else
                 {
                     _stage = "generating the lead illustration";
-                    using var artTimeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                    artTimeout.CancelAfter(TimeSpan.FromMinutes(2));
-                    artwork = await illustrator.GenerateAsync(concept, artTimeout.Token).WaitAsync(artTimeout.Token);
+                    artwork = await illustrator.GenerateAsync(concept, cancellationToken).WaitAsync(cancellationToken);
                     artworkStatus = "Illustration: newly generated for this lead.";
                 }
             }

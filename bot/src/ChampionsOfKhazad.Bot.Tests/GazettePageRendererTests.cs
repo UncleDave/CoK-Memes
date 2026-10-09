@@ -95,6 +95,8 @@ public class GazettePageRendererTests
     {
         var article = new GazetteArticle("Headline", "First sentence. The rest of the full story.", ["source"]);
         Assert.Equal("First sentence.", GazettePageRenderer.GetTeaser(article));
+        Assert.Equal("First sentence.", GazettePageRenderer.GetTeaser(article with { Teaser = "" }));
+        Assert.Equal("First sentence.", GazettePageRenderer.GetTeaser(article with { Teaser = "   " }));
         Assert.Equal("A punchy preview.", GazettePageRenderer.GetTeaser(article with { Teaser = "A punchy preview." }));
         var longArticle = article with { Body = new string('x', 155) + "😀" + new string('x', 200) };
         Assert.True(GazettePageRenderer.GetTeaser(longArticle).Length <= 160);

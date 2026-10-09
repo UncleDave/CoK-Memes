@@ -62,7 +62,6 @@ internal class NotebookDiscoverer(IChatClient chatClient) : INotebookDiscoverer
                     Reasoning = new ReasoningOptions { Effort = ReasoningEffort.High },
                     ResponseFormat = ChatResponseFormat.Json,
                     Tools = [],
-                    MaxOutputTokens = 8192,
                 },
                 cancellationToken
             )

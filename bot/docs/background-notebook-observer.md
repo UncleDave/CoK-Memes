@@ -179,10 +179,10 @@ before the call; empty responses, invalid responses, failures, and cancellations
 Background reviews and notes share guild limits but do not consume a member's personal budget.
 
 Discovery and independent review explicitly use high reasoning effort on the shared Luna
-text model. Discovery retains its 8,192-token output budget, and the 180-second production
-scan deadline still covers discovery plus sequential reviews. Extra reasoning can consume
-output-token budget and scan time; watch invalid discovery responses and partial/timed-out
-scans before changing these limits.
+text model. Discovery does not set an explicit output-token cap; response validation,
+workflow budgets, and the 180-second production scan deadline remain unchanged. The deadline
+still covers discovery plus sequential reviews. Extra reasoning can consume scan time;
+watch invalid discovery responses and partial/timed-out scans before changing these limits.
 
 ### Progress, partial work, and failure behavior
 

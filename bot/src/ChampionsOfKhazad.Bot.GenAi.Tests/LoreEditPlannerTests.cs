@@ -23,6 +23,7 @@ public class LoreEditPlannerTests
         Assert.Empty(client.Options!.Tools!);
         Assert.Equal(ChatResponseFormat.Json, client.Options.ResponseFormat);
         Assert.Equal(ReasoningEffort.High, client.Options.Reasoning!.Effort);
+        Assert.Null(client.Options.MaxOutputTokens);
         Assert.Equal(2, client.Messages!.Count);
         var policy = client.Messages[0].Text!;
         Assert.Contains("Only explicit requests", policy);

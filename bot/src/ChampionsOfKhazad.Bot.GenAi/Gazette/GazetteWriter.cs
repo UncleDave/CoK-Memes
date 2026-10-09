@@ -6,7 +6,6 @@ namespace ChampionsOfKhazad.Bot.GenAi;
 
 internal sealed partial class GazetteWriter(IChatClient chatClient) : IGazetteWriter
 {
-    internal const int MaximumOutputTokens = 8192;
     private const string Policy = """
         Draft The Khazad Gazette: selected dispatches from Champions of Khazad, written by a self-important dwarven newspaper.
         Real guild happenings, wildly undeserved journalistic gravitas. This is NOT an exhaustive chat summary or a weekly roast.
@@ -71,6 +70,8 @@ internal sealed partial class GazetteWriter(IChatClient chatClient) : IGazetteWr
         If the evidence truly supports only one or two stories, keep that smaller issue; never invent events or pad with unrelated facts.
         The first article is the front-page lead; remaining articles are printed in full on page 2, with short front-page teasers.
         For each secondary article write a punchy one-sentence teaser that previews its SAME sourced story without new claims.
+        Teasers are optional: return null for the lead, which is printed in full, or when no useful separate teaser is needed.
+        A null or blank teaser uses a bounded excerpt of the same story body; never invent a new claim to fill this field.
         Do not write page numbers or "read more" inside the teaser: the renderer assigns real pages, not imaginary page 4/7 references.
         Two good stories beat padded sections. If nothing is suitable, return articles=[] and editorial="". Never invent news
         to fill an edition. Spread attention where possible; do not relentlessly target one person or amplify genuine disputes.
@@ -91,7 +92,7 @@ internal sealed partial class GazetteWriter(IChatClient chatClient) : IGazetteWr
         {"articles":[{"headline":"Headline","body":"Story","teaser":"Punchy preview of this same story","sourceUrls":["supplied URL"]}],"editorial":"Classified advert","illustrationPrompt":null}.
         articles: zero to three; headline: nonblank, at most 100 characters, single line; body: nonblank, at most 650 characters;
         sourceUrls: one to three distinct supplied URLs per story. editorial: at most 200 characters, may be empty.
-        teaser: nonblank, single line, at most 160 characters, same evidentiary/privacy constraints as the body.
+        teaser: null or a single line of at most 160 characters, same evidentiary/privacy constraints as the body.
         illustrationPrompt: null, or at most 400 characters describing ONE small wordless editorial cartoon for the lead story
         when a visual joke genuinely suits it. Specify a visual PUNCHLINE, not simply a dwarf standing with the story's object.
         Contrast cause/effect, unnecessary expense, scale or expectations using two or three large props and at most one anonymous figure.
@@ -139,7 +140,6 @@ internal sealed partial class GazetteWriter(IChatClient chatClient) : IGazetteWr
                     AdditionalProperties = new() { ["strict"] = true },
                     Reasoning = new ReasoningOptions { Effort = ReasoningEffort.High },
                     Tools = [],
-                    MaxOutputTokens = MaximumOutputTokens,
                 },
                 cancellationToken
             )
@@ -188,10 +188,10 @@ internal sealed partial class GazetteWriter(IChatClient chatClient) : IGazetteWr
                                 },
                                 teaser = new
                                 {
-                                    type = "string",
-                                    minLength = 1,
+                                    type = new[] { "string", "null" },
                                     maxLength = 160,
-                                    pattern = @"^[^\r\n]+$",
+                                    pattern = @"^[^\r\n]*$",
+                                    description = "Optional single-line preview of the same story, at most 160 characters. Return null for the lead or when no separate teaser is useful; absent text uses an excerpt of the body.",
                                 },
                                 sourceUrls = new
                                 {
@@ -262,7 +262,12 @@ internal sealed partial class GazetteWriter(IChatClient chatClient) : IGazetteWr
                     hasTeaser ? ["headline", "body", "teaser", "sourceUrls"] : ["headline", "body", "sourceUrls"],
                     GazetteValidationField.Article
                 );
-                var teaser = hasTeaser ? ReadString(teaserElement, 160, GazetteValidationField.Teaser) : null;
+                var teaser =
+                    hasTeaser && teaserElement.ValueKind != JsonValueKind.Null
+                        ? ReadString(teaserElement, 160, GazetteValidationField.Teaser, allowEmpty: true)
+                        : null;
+                if (teaser?.Length == 0)
+                    teaser = null;
                 var headline = ReadString(article.GetProperty("headline"), 100, GazetteValidationField.Headline);
                 var body = ReadString(article.GetProperty("body"), 650, GazetteValidationField.Body);
                 var urls = article.GetProperty("sourceUrls");

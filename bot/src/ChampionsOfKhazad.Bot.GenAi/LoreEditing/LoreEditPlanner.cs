@@ -67,7 +67,6 @@ internal class LoreEditPlanner(IChatClient chatClient) : ILoreEditPlanner
                     ResponseFormat = ChatResponseFormat.Json,
                     Reasoning = new ReasoningOptions { Effort = ReasoningEffort.High },
                     Tools = [],
-                    MaxOutputTokens = 8192,
                 },
                 cancellationToken
             )

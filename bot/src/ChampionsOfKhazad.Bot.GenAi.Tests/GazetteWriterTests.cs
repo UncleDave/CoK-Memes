@@ -104,6 +104,9 @@ public class GazetteWriterTests
         // The OpenAI adapter strips unsupported validation keywords; application length checks remain required.
         Assert.False(body.TryGetProperty("maxLength", out _));
         Assert.Contains("650 characters", body.GetProperty("description").GetString());
+        var teaser = article.GetProperty("properties").GetProperty("teaser");
+        Assert.Equal(new[] { "string", "null" }, teaser.GetProperty("type").EnumerateArray().Select(value => value.GetString()));
+        Assert.Contains("Optional", teaser.GetProperty("description").GetString());
         Assert.Equal(Url, article.GetProperty("properties").GetProperty("sourceUrls").GetProperty("items").GetProperty("enum")[0].GetString());
     }
 
@@ -132,6 +135,10 @@ public class GazetteWriterTests
         Assert.Equal(100, fields.GetProperty("headline").GetProperty("maxLength").GetInt32());
         Assert.Equal(650, fields.GetProperty("body").GetProperty("maxLength").GetInt32());
         Assert.Equal(160, fields.GetProperty("teaser").GetProperty("maxLength").GetInt32());
+        Assert.Equal(
+            new[] { "string", "null" },
+            fields.GetProperty("teaser").GetProperty("type").EnumerateArray().Select(value => value.GetString())
+        );
         Assert.Equal(
             new[] { Url, secondUrl },
             fields.GetProperty("sourceUrls").GetProperty("items").GetProperty("enum").EnumerateArray().Select(value => value.GetString())
@@ -172,10 +179,47 @@ public class GazetteWriterTests
     }
 
     [Theory]
+    [InlineData(null)]
     [InlineData("")]
+    [InlineData("   ")]
+    public async Task AbsentTeasersDoNotRejectOtherwiseValidLeadOrInsideStories(string? teaser)
+    {
+        var client = new CapturingClient(
+            JsonSerializer.Serialize(
+                new
+                {
+                    articles = Enumerable
+                        .Range(1, 3)
+                        .Select(index => new
+                        {
+                            headline = $"Story {index}",
+                            body = $"Full supported story {index}.",
+                            teaser,
+                            sourceUrls = new[] { Url },
+                        }),
+                    editorial = "Ad",
+                    illustrationPrompt = (string?)null,
+                }
+            )
+        );
+        var edition = await new GazetteWriter(client).WriteAsync([Source], Now.AddDays(-7), Now, [], TestContext.Current.CancellationToken);
+        Assert.Equal(3, edition.Articles.Count);
+        Assert.All(
+            edition.Articles,
+            article =>
+            {
+                Assert.Null(article.Teaser);
+                Assert.Equal(Url, Assert.Single(article.SourceUrls));
+                Assert.StartsWith("Full supported story", article.Body);
+            }
+        );
+        Assert.Contains("return null for the lead", client.Messages![0].Text!);
+    }
+
+    [Theory]
     [InlineData("Preview\nwith a second line")]
     [InlineData("Preview\rwith a second line")]
-    public async Task BlankOrMultilineTeasersFailClosed(string teaser)
+    public async Task MultilineTeasersFailClosed(string teaser)
     {
         var client = new CapturingClient(
             JsonSerializer.Serialize(
@@ -199,6 +243,42 @@ public class GazetteWriterTests
         await Assert.ThrowsAsync<GazetteDraftValidationException>(() =>
             new GazetteWriter(client).WriteAsync([Source], Now.AddDays(-7), Now, [], TestContext.Current.CancellationToken)
         );
+    }
+
+    [Theory]
+    [InlineData("42", GazetteValidationFailure.InvalidFieldType)]
+    [InlineData("{}", GazetteValidationFailure.InvalidFieldType)]
+    [InlineData("[]", GazetteValidationFailure.InvalidFieldType)]
+    [InlineData("true", GazetteValidationFailure.InvalidFieldType)]
+    public async Task OptionalTeaserStillRejectsWrongTypes(string teaserJson, GazetteValidationFailure expected)
+    {
+        var client = new CapturingClient(
+            $$"""
+            {"articles":[{"headline":"Headline","body":"Supported story.","teaser":{{teaserJson}},"sourceUrls":["{{Url}}"]}],"editorial":"Ad"}
+            """
+        );
+        var failure = await Assert.ThrowsAsync<GazetteDraftValidationException>(() =>
+            new GazetteWriter(client).WriteAsync([Source], Now.AddDays(-7), Now, [], TestContext.Current.CancellationToken)
+        );
+        Assert.Equal(expected, failure.Failure);
+        Assert.Equal(GazetteValidationField.Teaser, failure.Field);
+    }
+
+    [Fact]
+    public async Task OptionalTeaserStillRejectsOversizedText()
+    {
+        var teaser = new string('x', 161);
+        var client = new CapturingClient(
+            $$"""
+            {"articles":[{"headline":"Headline","body":"Supported story.","teaser":"{{teaser}}","sourceUrls":["{{Url}}"]}],"editorial":"Ad"}
+            """
+        );
+        var failure = await Assert.ThrowsAsync<GazetteDraftValidationException>(() =>
+            new GazetteWriter(client).WriteAsync([Source], Now.AddDays(-7), Now, [], TestContext.Current.CancellationToken)
+        );
+        Assert.Equal(GazetteValidationFailure.FieldTooLong, failure.Failure);
+        Assert.Equal(GazetteValidationField.Teaser, failure.Field);
+        Assert.Equal(160, failure.Limit);
     }
 
     [Fact]
@@ -396,13 +476,15 @@ public class GazetteWriterTests
     }
 
     [Fact]
-    public async Task HighReasoningGetsMoreOutputHeadroomAndAnIncompleteResponseIsIdentifiedBeforeParsing()
+    public async Task HighReasoningHasNoApplicationTokenCapAndProviderTruncationStillFailsWithoutRetry()
     {
         var client = new CapturingClient("SECRET unfinished generated prose", ChatFinishReason.Length);
         var failure = await Assert.ThrowsAsync<GazetteDraftValidationException>(() =>
             new GazetteWriter(client).WriteAsync([Source], Now.AddDays(-7), Now, [], TestContext.Current.CancellationToken)
         );
-        Assert.Equal(8192, client.Options!.MaxOutputTokens);
+        Assert.Null(client.Options!.MaxOutputTokens);
+        Assert.Equal(ReasoningEffort.High, client.Options.Reasoning!.Effort);
+        Assert.Equal(1, client.Calls);
         Assert.Equal(GazetteValidationFailure.IncompleteResponse, failure.Failure);
         Assert.Equal(GazetteValidationField.Response, failure.Field);
         Assert.DoesNotContain("SECRET", failure.ToString());
@@ -464,6 +546,7 @@ public class GazetteWriterTests
     {
         public IReadOnlyList<ChatMessage>? Messages { get; private set; }
         public ChatOptions? Options { get; private set; }
+        public int Calls { get; private set; }
 
         public Task<ChatResponse> GetResponseAsync(
             IEnumerable<ChatMessage> messages,
@@ -472,6 +555,7 @@ public class GazetteWriterTests
         )
         {
             cancellationToken.ThrowIfCancellationRequested();
+            Calls++;
             Messages = messages.ToArray();
             Options = options;
             return Task.FromResult(new ChatResponse(new ChatMessage(ChatRole.Assistant, response)) { FinishReason = finishReason });

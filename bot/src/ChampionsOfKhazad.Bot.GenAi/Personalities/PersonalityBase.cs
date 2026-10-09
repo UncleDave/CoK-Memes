@@ -1,9 +1,10 @@
 using System.Collections.Concurrent;
+using System.Text.RegularExpressions;
 using Microsoft.Extensions.AI;
 
 namespace ChampionsOfKhazad.Bot.GenAi;
 
-internal abstract class PersonalityBase(
+internal abstract partial class PersonalityBase(
     string personalityPrompt,
     bool includeLorekeeperTools,
     IEmojiHandler emojiHandler,
@@ -57,6 +58,7 @@ internal abstract class PersonalityBase(
         "- Stay in character consistently",
         "- Reference the author ({{$userName}}) appropriately based on your role",
         "- Use emojis naturally when they enhance your message",
+        "- Use Discord-compatible Markdown. Never use ![alt text](url) for images; use [description](url) or a bare image URL. Both labelled links and bare image URLs can produce image previews.",
         "- Make your response engaging and contextually appropriate for Discord"
     );
 
@@ -97,6 +99,8 @@ internal abstract class PersonalityBase(
             sourceUrls.Count == 0 ? response.Text : $"{response.Text}\n\nSources:\n{string.Join('\n', sourceUrls.Select(url => $"- <{url}>"))}";
 
         responseText = emojiHandler.ProcessMessage(responseText);
+        responseText = DiscordImageMarkdownRegex()
+            .Replace(responseText, match => match.Groups["link"].Success ? match.Groups["link"].Value : match.Value);
         var missingImageUrls = generatedImages
             .Select(uri => uri.AbsoluteUri)
             .Distinct(StringComparer.Ordinal)
@@ -109,4 +113,10 @@ internal abstract class PersonalityBase(
         var imageLinks = string.Join('\n', missingImageUrls);
         return string.IsNullOrWhiteSpace(responseText) ? imageLinks : $"{responseText}\n\n{imageLinks}";
     }
+
+    [GeneratedRegex(
+        @"(?<!`)(?<ticks>`+)(?!`)[\s\S]*?(?<!`)\k<ticks>(?!`)|\\[\s\S]|!(?<link>\[(?:\\[^\r\n]|[^\]\\\r\n])*\]\([ \t]*<?https?://[^\r\n]*?\))",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant
+    )]
+    private static partial Regex DiscordImageMarkdownRegex();
 }

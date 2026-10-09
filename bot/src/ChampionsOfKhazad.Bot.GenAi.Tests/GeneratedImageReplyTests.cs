@@ -29,15 +29,35 @@ public class GeneratedImageReplyTests
         Assert.StartsWith(Constants.ImageGenerationConfirmationMessage, Assert.Single(fixture.Context.Replies));
     }
 
-    [Fact]
-    public async Task ImageLinkAlreadyInTheNaturalReplyIsNotRepeated()
+    [Theory]
+    [InlineData("")]
+    [InlineData("!")]
+    public async Task ImageLinkAlreadyInTheNaturalReplyIsNormalizedAndNotRepeated(string imagePrefix)
     {
-        using var fixture = new Fixture(url => $"Behold [your masterpiece]({url}), you muppet.");
+        using var fixture = new Fixture(url => $"Behold {imagePrefix}[your masterpiece]({url}), you muppet.");
 
         var reply = await fixture.InvokeAsync();
 
         var image = Assert.Single(fixture.Store.Images);
         Assert.Equal($"Behold [your masterpiece]({Constants.GeneratedImagesBaseUrl}/{image.Filename}), you muppet.", reply);
+    }
+
+    [Fact]
+    public async Task SearchedImageLinksAreNormalizedWithoutChangingTheirUrls()
+    {
+        var catUrl = $"{Constants.GeneratedImagesBaseUrl}/cat.png";
+        var dogUrl = $"{Constants.GeneratedImagesBaseUrl}/dog.png";
+        using var fixture = new Fixture(_ => $"1. ![Anime cat]({catUrl})\n2. ![Dog]({dogUrl})");
+        fixture.Store.Images.Add(new GeneratedImage("Anime cat", 1, DateTimeOffset.UtcNow, "cat.png"));
+        fixture.Store.Images.Add(new GeneratedImage("Dog", 1, DateTimeOffset.UtcNow, "dog.png"));
+        fixture.ChatClient.GenerateImage = false;
+        fixture.ChatClient.SearchImages = true;
+
+        var reply = await fixture.InvokeAsync("Find my generated images");
+
+        Assert.Equal($"1. [Anime cat]({catUrl})\n2. [Dog]({dogUrl})", reply);
+        Assert.True(fixture.Store.Searched);
+        Assert.Equal(0, fixture.Handler.GenerationRequests);
     }
 
     [Fact]
@@ -129,12 +149,8 @@ public class GeneratedImageReplyTests
             _personality = new TestPersonality(new ChatClientBuilder(ChatClient).UseFunctionInvocation().Build(), tools);
         }
 
-        public Task<string> InvokeAsync() =>
-            _personality.InvokeAsync(
-                new ChatHistory([new ChatMessage(ChatRole.User, "Draw a dwarf with a newspaper")]),
-                Context,
-                TestContext.Current.CancellationToken
-            );
+        public Task<string> InvokeAsync(string request = "Draw a dwarf with a newspaper") =>
+            _personality.InvokeAsync(new ChatHistory([new ChatMessage(ChatRole.User, request)]), Context, TestContext.Current.CancellationToken);
 
         public void Dispose()
         {
@@ -156,6 +172,7 @@ public class GeneratedImageReplyTests
     private sealed class ImageToolChatClient(MemoryImageStore store, Func<string?, string> modelReply) : IChatClient
     {
         public bool GenerateImage { get; set; } = true;
+        public bool SearchImages { get; set; }
 
         public Task<ChatResponse> GetResponseAsync(
             IEnumerable<ChatMessage> messages,
@@ -163,7 +180,7 @@ public class GeneratedImageReplyTests
             CancellationToken cancellationToken = default
         )
         {
-            if (GenerateImage && messages.Last().Role != ChatRole.Tool)
+            if ((GenerateImage || SearchImages) && messages.Last().Role != ChatRole.Tool)
                 return Task.FromResult(
                     new ChatResponse(
                         new ChatMessage(
@@ -171,8 +188,10 @@ public class GeneratedImageReplyTests
                             [
                                 new FunctionCallContent(
                                     "image-call",
-                                    "generate_image",
-                                    new Dictionary<string, object?> { ["prompt"] = "A dwarf with a newspaper" }
+                                    SearchImages ? "search_generated_images" : "generate_image",
+                                    SearchImages
+                                        ? new Dictionary<string, object?> { ["searchText"] = "", ["onlyMine"] = true }
+                                        : new Dictionary<string, object?> { ["prompt"] = "A dwarf with a newspaper" }
                                 ),
                             ]
                         )
@@ -219,6 +238,7 @@ public class GeneratedImageReplyTests
     {
         public ushort GeneratedCount { get; init; }
         public List<GeneratedImage> Images { get; } = [];
+        public bool Searched { get; private set; }
 
         public Task<IReadOnlyCollection<GeneratedImage>> GetAsync(
             ushort skip = 0,
@@ -227,7 +247,11 @@ public class GeneratedImageReplyTests
             bool sortAscending = false,
             string? searchText = null,
             CancellationToken cancellationToken = default
-        ) => Task.FromResult<IReadOnlyCollection<GeneratedImage>>(Images);
+        )
+        {
+            Searched = true;
+            return Task.FromResult<IReadOnlyCollection<GeneratedImage>>(Images);
+        }
 
         public Task<ushort> GetDailyGeneratedImageCountAsync(ulong userId, CancellationToken cancellationToken = default) =>
             Task.FromResult(GeneratedCount);

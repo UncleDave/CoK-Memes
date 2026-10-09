@@ -117,6 +117,79 @@ public class PersonalityBaseTests
         Assert.Equal("Answer\n\nSources:\n- <https://example.com/article>", result);
     }
 
+    [Theory]
+    [InlineData("![Cat](https://example.com/cat.png)", "[Cat](https://example.com/cat.png)")]
+    [InlineData("![Cat](http://example.com/cat.png)", "[Cat](http://example.com/cat.png)")]
+    [InlineData("![](https://example.com/cat.png)", "[](https://example.com/cat.png)")]
+    [InlineData("![Cat](<https://example.com/cat.png>)", "[Cat](<https://example.com/cat.png>)")]
+    [InlineData("![Cat](https://example.com/cat.png \"Title\")", "[Cat](https://example.com/cat.png \"Title\")")]
+    [InlineData("![Cat](https://example.com/cat_(anime).png)", "[Cat](https://example.com/cat_(anime).png)")]
+    [InlineData("![Cat \\] anime](https://example.com/cat.png)", "[Cat \\] anime](https://example.com/cat.png)")]
+    [InlineData(
+        "1. **Cat**\n![Anime cat](https://example.com/cat.png)\n2. **Dog**\n![Dog](https://example.com/dog.png)",
+        "1. **Cat**\n[Anime cat](https://example.com/cat.png)\n2. **Dog**\n[Dog](https://example.com/dog.png)"
+    )]
+    public async Task MarkdownImageLinksBecomeDiscordLabelledLinks(string modelReply, string expectedReply)
+    {
+        var personality = CreatePersonality(
+            new CapturingChatClient(new ChatResponse(new ChatMessage(ChatRole.Assistant, modelReply))),
+            includeLorekeeperTools: true
+        );
+
+        var reply = await personality.InvokeAsync(new ChatHistory(), new TestMessageContext(), TestContext.Current.CancellationToken);
+
+        Assert.Equal(expectedReply, reply);
+    }
+
+    [Theory]
+    [InlineData("Aye! [Cat](https://example.com/cat.png)\nhttps://example.com/dog.png")]
+    [InlineData("\\![Cat](https://example.com/cat.png)")]
+    [InlineData("Use `![Cat](https://example.com/cat.png)` for a Markdown image.")]
+    [InlineData("Use ``![Cat `anime`](https://example.com/cat.png)`` for a Markdown image.")]
+    [InlineData("```md\n![Cat](https://example.com/cat.png)\n```")]
+    [InlineData("![Cat](https://example.com/cat.png")]
+    [InlineData("![Cat](cat.png)")]
+    public async Task OtherTextAndMarkdownExamplesAreNotChanged(string modelReply)
+    {
+        var personality = CreatePersonality(
+            new CapturingChatClient(new ChatResponse(new ChatMessage(ChatRole.Assistant, modelReply))),
+            includeLorekeeperTools: true
+        );
+
+        var reply = await personality.InvokeAsync(new ChatHistory(), new TestMessageContext(), TestContext.Current.CancellationToken);
+
+        Assert.Equal(modelReply, reply);
+    }
+
+    [Fact]
+    public async Task ImageLinksOutsideCodeExamplesAreStillNormalized()
+    {
+        const string example = "```md\n![Example](https://example.com/example.png)\n```";
+        var personality = CreatePersonality(
+            new CapturingChatClient(new ChatResponse(new ChatMessage(ChatRole.Assistant, $"{example}\n![Cat](https://example.com/cat.png)"))),
+            includeLorekeeperTools: true
+        );
+
+        var reply = await personality.InvokeAsync(new ChatHistory(), new TestMessageContext(), TestContext.Current.CancellationToken);
+
+        Assert.Equal($"{example}\n[Cat](https://example.com/cat.png)", reply);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task PersonalityPromptExplainsDiscordImageLinkFormatting(bool includeLorekeeperTools)
+    {
+        var chatClient = new CapturingChatClient(new ChatResponse(new ChatMessage(ChatRole.Assistant, "Answer")));
+        var personality = CreatePersonality(chatClient, includeLorekeeperTools);
+
+        await personality.InvokeAsync(new ChatHistory(), new TestMessageContext(), TestContext.Current.CancellationToken);
+
+        Assert.Contains("Use Discord-compatible Markdown", chatClient.Messages![0].Text);
+        Assert.Contains("Never use ![alt text](url)", chatClient.Messages[0].Text);
+        Assert.Contains("labelled links and bare image URLs can produce image previews", chatClient.Messages[0].Text);
+    }
+
     [Fact]
     public async Task NotebookToolAllowsOnlyOneProposalAttemptPerInvocation()
     {

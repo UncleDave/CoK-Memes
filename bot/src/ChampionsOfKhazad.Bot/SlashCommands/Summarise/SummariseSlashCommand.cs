@@ -21,12 +21,7 @@ public class SummariseSlashCommand(BotContext botContext, ICompletionService com
             return;
         }
 
-        var messagesSinceLastSummary = messages
-            .TakeWhile(x =>
-                !(x.Author.Id == botContext.Client.CurrentUser.Id && (x.Embeds.SingleOrDefault()?.Footer?.Text.StartsWith(FooterText) ?? false))
-            )
-            .Reverse()
-            .ToList();
+        var messagesSinceLastSummary = GetMessagesSinceLastSummary(messages, botContext.Client.CurrentUser.Id);
 
         if (messagesSinceLastSummary.Count < 10)
         {
@@ -76,4 +71,15 @@ public class SummariseSlashCommand(BotContext botContext, ICompletionService com
 
         await notification.Command.FollowupAsync(embeds: [embed]);
     }
+
+    internal static List<IMessage> GetMessagesSinceLastSummary(IEnumerable<IMessage> messages, ulong botUserId) =>
+        messages
+            .TakeWhile(message =>
+                !(
+                    message.Author.Id == botUserId
+                    && message.Embeds.Any(embed => embed.Footer?.Text?.StartsWith(FooterText, StringComparison.Ordinal) == true)
+                )
+            )
+            .Reverse()
+            .ToList();
 }

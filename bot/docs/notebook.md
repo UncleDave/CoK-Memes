@@ -25,6 +25,12 @@ continue to use medium effort.
 
 ## Diagnostics and review
 
+Review notifications are embed-only: entry text, type, expiry, selection/review reasons,
+origin, source excerpts and admin actions. Routine canon, quoted-data and activation
+disclaimers are not repeated on each card. Background origin is labelled once; actual
+activation status remains available through `notebook show` and history. Pause/discard
+confirmations report the action without repeating retention or budget policy.
+
 The configured admin can DM `notebook` for status, evaluation budget usage in the last
 24 hours, and recent completed proposal outcomes. Budget slots are reserved before review;
 failed canon lookups can consume a slot without an AI call.

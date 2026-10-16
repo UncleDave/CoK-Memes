@@ -16,14 +16,7 @@ internal class DiscordNotebookReviewer(BotContext context, IOptions<DirectMessag
             var admin = await context.Client.GetUserAsync(options.Value.AdminUserId, options: requestOptions);
             if (admin is null)
                 return false;
-            await admin.SendMessageAsync(
-                note.Origin == NotebookOrigin.Background
-                    ? "The Lorekeeper noticed a new notebook entry during background observation. Established lore is unchanged."
-                    : "The Lorekeeper chose a new notebook entry. Established lore is unchanged.",
-                embed: NotebookReview.CreateEmbed(note),
-                allowedMentions: AllowedMentions.None,
-                options: requestOptions
-            );
+            await admin.SendMessageAsync(embed: NotebookReview.CreateEmbed(note), allowedMentions: AllowedMentions.None, options: requestOptions);
             return true;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)

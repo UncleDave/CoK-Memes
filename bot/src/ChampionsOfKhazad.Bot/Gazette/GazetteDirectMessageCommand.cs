@@ -112,10 +112,7 @@ public sealed partial class GazetteDirectMessageCommand(
                         );
                         _stage = "saving publication acknowledgement";
                         await issues.MarkPublishedAsync(pending.IssueNumber, pending.Token, messageId, cancellationToken);
-                        await reply(
-                            $"Gazette published to #{pending.Destination.Name} (message {messageId}). This approval cannot be reused.",
-                            cancellationToken
-                        );
+                        await reply($"Gazette published to #{pending.Destination.Name} (message {messageId}).", cancellationToken);
                     }
                 }
             }
@@ -214,7 +211,7 @@ public sealed partial class GazetteDirectMessageCommand(
         if (edition.Articles.Count == 0)
         {
             await reply(
-                $"No suitable fresh stories were found in this sample; already-covered stories are excluded, and no edition was padded or invented. {Coverage(batch)}",
+                $"No suitable fresh stories were found in this sample; already-covered stories are excluded. {Coverage(batch)}",
                 cancellationToken
             );
             return;
@@ -244,7 +241,7 @@ public sealed partial class GazetteDirectMessageCommand(
                 if (session.Illustration is { } cached && cached.ExpiresAtUtc > clock.GetUtcNow() && cached.EvidenceKey == evidenceKey)
                 {
                     artwork = cached.Image;
-                    artworkStatus = "Illustration: reused from the same verified lead-story evidence; no new image request.";
+                    artworkStatus = "Illustration: reused for this lead.";
                 }
                 else
                 {
@@ -310,26 +307,21 @@ public sealed partial class GazetteDirectMessageCommand(
         };
         await SendPreviewAsync(pending, reply, sendPage, cancellationToken);
         _stage = "sending private sampling diagnostics";
-        var slimEdition = edition.Articles.Count == 1 ? " Only one supported story was selected; this is a slim, single-page edition." : "";
-        await reply(
-            Coverage(batch) + $" Checked {previousEditions.Count} recent approved editions to avoid repeat stories." + slimEdition,
-            cancellationToken
-        );
+        await reply(Coverage(batch) + $" Checked {previousEditions.Count} recent approved editions.", cancellationToken);
         // Only a successfully delivered private preview becomes approvable.
         cancellationToken.ThrowIfCancellationRequested();
         session.Pending = pending;
     }
 
     private static string Coverage(GazetteChatBatch batch) =>
-        $"Sample: {batch.Sources.Count} human messages, {batch.ChannelsRead}/{batch.AvailableChannels} eligible channels read; {batch.ReadFailures} read failures. "
-        + "At most 12 channels, the latest 100 messages per channel, and a bounded text sample; not exhaustive coverage.";
+        $"Sample: {batch.Sources.Count} human messages, {batch.ChannelsRead}/{batch.AvailableChannels} eligible channels read; {batch.ReadFailures} read failures.";
 
     private string Preview(GazettePendingDraft pending) =>
-        $"PRIVATE DRAFT — not published. Destination: #{pending.Destination.Name}. "
+        $"PRIVATE DRAFT — #{pending.Destination.Name}. "
         + $"The guild post will show only the {pending.PrintEdition.Pages.Count} newspaper {(pending.PrintEdition.Pages.Count == 1 ? "page" : "pages")} and a Read text & sources button; this text opens privately on click.\n"
         + $"{pending.IllustrationStatus}\n\n{pending.Edition}\n\n"
         + $"Review all pages, stories and source links. Reply `gazette approve {pending.Token}` within {Math.Max(0, (int)Math.Ceiling((pending.ExpiresAtUtc - clock.GetUtcNow()).TotalMinutes))} minutes "
-        + "to publish exactly the edition above, or `gazette discard`. No edits or regeneration happen during approval.";
+        + "to publish, or `gazette discard`.";
 
     private async Task SendPreviewAsync(
         GazettePendingDraft pending,

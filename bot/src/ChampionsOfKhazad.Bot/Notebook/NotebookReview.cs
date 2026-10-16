@@ -8,27 +8,24 @@ internal static class NotebookReview
     public static Embed CreateEmbed(NotebookNote note)
     {
         var builder = new EmbedBuilder()
-            .WithTitle($"Notebook candidate: {DisplayText(note.Subject, singleLine: true)}")
+            .WithTitle($"Notebook entry: {DisplayText(note.Subject, singleLine: true)}")
             .WithColor(Color.Gold)
             .WithDescription(DisplayText(note.Content))
-            .AddField("Type", $"{note.Kind} — tentative, not canon", true)
+            .AddField("Type", note.Kind, true)
             .AddField("Expires", $"<t:{new DateTimeOffset(note.ExpiresAtUtc, TimeSpan.Zero).ToUnixTimeSeconds()}:R>", true)
-            .AddField("Why he chose to remember it", DisplayText(note.Reason))
+            .AddField("Why he chose it", DisplayText(note.Reason))
             .AddField("Independent review", DisplayText(note.ReviewReason))
             .AddField("Origin", GetOrigin(note))
-            .AddField("Review", $"Discard: `notebook discard {note.Id}`\nInspect: `notebook show {note.Id}`\nPause new notes: `notebook pause`")
-            .WithFooter(
-                $"Note {note.Id}. Delivery and activation are recorded separately; inspect its status with notebook show. Not an approval request."
-            );
+            .AddField("Actions", $"Discard: `notebook discard {note.Id}`\nInspect: `notebook show {note.Id}`\nPause new notes: `notebook pause`");
         foreach (var source in note.Sources)
             builder.AddField(
-                "Source excerpt (quoted data)",
+                "Source excerpt",
                 $"{DisplayText(source.AuthorName, singleLine: true)} ({source.TimestampUtc:u})\n<{source.Url}>\n> {DisplayText(Excerpt(source.Content), singleLine: true)}"
             );
         var mentions = note.Sources.SelectMany(source => source.MentionedUsers).DistinctBy(user => user.Id).ToArray();
         if (mentions.Length > 0)
             builder.AddField(
-                "Mentioned users (source labels)",
+                "Mentioned users",
                 string.Join(
                     '\n',
                     mentions.Take(4).Select(user => $"{DisplayText(user.Name ?? "name unavailable", singleLine: true)} — Discord user {user.Id}")
@@ -50,7 +47,7 @@ internal static class NotebookReview
         : "audit-only; review/activation not confirmed";
 
     private static string GetOrigin(NotebookNote note) =>
-        note.Origin == NotebookOrigin.Background ? "Background observation (no member request)" : $"Response to Discord user {note.RequestedBy}";
+        note.Origin == NotebookOrigin.Background ? "Background observation" : $"Response to Discord user {note.RequestedBy}";
 
     internal static string DisplayText(string text, bool singleLine = false) =>
         Discord

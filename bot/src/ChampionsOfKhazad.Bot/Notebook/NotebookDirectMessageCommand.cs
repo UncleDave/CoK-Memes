@@ -45,11 +45,11 @@ public class NotebookDirectMessageCommand(
         {
             var paused = parts[1].Equals("pause", StringComparison.OrdinalIgnoreCase);
             await notebook.SetPausedAsync(paused, cancellationToken);
-            return paused ? "Notebook writes paused. Existing notes remain searchable." : "Notebook writes resumed.";
+            return paused ? "Notebook writes paused." : "Notebook writes resumed.";
         }
         if (parts.Length == 3 && parts[1].Equals("discard", StringComparison.OrdinalIgnoreCase))
             return await notebook.DiscardAsync(parts[2].ToLowerInvariant(), cancellationToken)
-                ? "Note discarded. It will no longer appear in notebook searches. Its audit record and daily budget remain."
+                ? "Note discarded."
                 : "No note with that ID was found.";
 
         var state = await notebook.GetAsync(cancellationToken);

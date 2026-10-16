@@ -7,6 +7,34 @@ namespace ChampionsOfKhazad.Bot.Tests;
 public class GazetteDirectMessageCommandTests
 {
     [Fact]
+    public async Task RoutineDraftAndPublicationMessagesKeepStatusAndActionsWithoutPolicyBoilerplate()
+    {
+        var fixture = new Fixture();
+        await fixture.Run("gazette draft");
+        var pending = Assert.IsType<GazettePendingDraft>(fixture.Session.Pending);
+        var preview = Assert.Single(fixture.Replies, reply => reply.StartsWith("PRIVATE DRAFT", StringComparison.Ordinal));
+        Assert.StartsWith("PRIVATE DRAFT — #ai-tavern.", preview);
+        Assert.Contains("1 newspaper page", preview);
+        Assert.Contains("Read text & sources", preview);
+        Assert.Contains(pending.Edition, preview);
+        Assert.Contains($"gazette approve {pending.Token}", preview);
+        Assert.Contains("within 30 minutes", preview);
+        Assert.Contains("`gazette discard`", preview);
+        Assert.DoesNotContain("not published", preview);
+        Assert.DoesNotContain("No edits or regeneration", preview);
+        Assert.DoesNotContain("single-page edition", string.Join('\n', fixture.Replies));
+        Assert.DoesNotContain("not exhaustive coverage", string.Join('\n', fixture.Replies));
+        Assert.Contains("read failures", fixture.Replies[^1]);
+        Assert.Contains("recent approved editions.", fixture.Replies[^1]);
+
+        fixture.Replies.Clear();
+        await fixture.Run($"gazette approve {pending.Token}");
+        Assert.Equal("Gazette published to #ai-tavern (message 100).", Assert.Single(fixture.Replies));
+        Assert.Null(fixture.Session.Pending);
+        Assert.Single(fixture.Gateway.Publications);
+    }
+
+    [Fact]
     public async Task DraftChecksDurableCoverageWithoutCuttingOffOlderUnreportedMessages()
     {
         var fixture = new Fixture();
@@ -42,6 +70,7 @@ public class GazetteDirectMessageCommandTests
         Assert.Null(fixture.Session.Pending);
         Assert.Empty(fixture.Pages);
         Assert.Contains(fixture.Replies, reply => reply.Contains("already-covered stories are excluded"));
+        Assert.DoesNotContain("padded or invented", string.Join('\n', fixture.Replies));
     }
 
     [Fact]

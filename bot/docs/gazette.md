@@ -88,8 +88,7 @@ The lead gets the strongest incident; secondary stories have a lower newsworthin
 bar and can come from a funny handful of ordinary messages. The writer is instructed
 to continue searching the sample after choosing the lead, not stop at one headline
 event or retell it three ways. This is an editorial target, not permission to invent
-two filler stories. A genuinely thin sample can still yield a single-page edition;
-the private diagnostics explicitly say when only one story was selected.
+two filler stories. A genuinely thin sample can still yield a single-page edition.
 Select moments with a distinctive incident, amusing contrast or memorable exchange
 that stands on its own as guild news. Routine bot administration or bot troubleshooting
 should not become a story merely to fill a slot, but can qualify when there is a genuinely
@@ -201,6 +200,10 @@ an ephemeral response visible only to the clicking member, never a public follow
 or DM. All sends use `AllowedMentions.None`. The private admin preview still delivers
 all PNG pages and the readable edition together for review. Every page must be delivered
 successfully before approval is activated.
+Routine preview/publication messages identify the draft, destination and available actions
+without repeating no-padding, no-regeneration or single-use-approval assurances. Sampling
+diagnostics give actual message/channel/failure counts and previous editions checked;
+the fixed sampling limits are documented above rather than repeated after every draft.
 `gazette show` reuses those assets; approval never regenerates text, layout or artwork.
 Only the edition is published; tokens, approval instructions
 and sampling diagnostics stay in the administrator's DM. Draft text and cited evidence

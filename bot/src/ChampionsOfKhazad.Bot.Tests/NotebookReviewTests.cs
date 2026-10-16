@@ -36,13 +36,37 @@ public class NotebookReviewTests
         Assert.True(
             embed.Title.Length
                 + embed.Description.Length
-                + embed.Footer!.Value.Text.Length
+                + (embed.Footer?.Text.Length ?? 0)
                 + embed.Fields.Sum(field => field.Name.Length + field.Value.Length)
                 <= 6000
         );
-        Assert.Equal(3, embed.Fields.Count(field => field.Name == "Source excerpt (quoted data)"));
+        Assert.Equal(3, embed.Fields.Count(field => field.Name == "Source excerpt"));
         Assert.Contains(embed.Fields, field => field.Value.Contains($"notebook discard {note.Id}", StringComparison.Ordinal));
-        Assert.Contains(embed.Fields, field => field.Name == "Why he chose to remember it" && field.Value == note.Reason);
+        Assert.Contains(embed.Fields, field => field.Name == "Why he chose it" && field.Value == note.Reason);
+    }
+
+    [Fact]
+    public void ReviewCardKeepsEntryEvidenceAndActionsWithoutRoutineDisclaimers()
+    {
+        var note = CreateNote();
+        var embed = NotebookReview.CreateEmbed(note);
+        Assert.Equal($"Notebook entry: {note.Subject}", embed.Title);
+        Assert.Equal(note.Content, embed.Description);
+        Assert.Null(embed.Footer);
+        Assert.Equal(
+            new[] { "Type", "Expires", "Why he chose it", "Independent review", "Origin", "Actions", "Source excerpt" },
+            embed.Fields.Select(field => field.Name)
+        );
+        Assert.Equal(note.Kind, embed.Fields.Single(field => field.Name == "Type").Value);
+        Assert.Equal(note.ReviewReason, embed.Fields.Single(field => field.Name == "Independent review").Value);
+        Assert.Equal(
+            $"Discard: `notebook discard {note.Id}`\nInspect: `notebook show {note.Id}`\nPause new notes: `notebook pause`",
+            embed.Fields.Single(field => field.Name == "Actions").Value
+        );
+        var source = Assert.Single(note.Sources);
+        var sourceField = embed.Fields.Single(field => field.Name == "Source excerpt");
+        Assert.Contains(source.Url, sourceField.Value);
+        Assert.Contains(source.Content, sourceField.Value);
     }
 
     [Fact]
@@ -172,12 +196,9 @@ public class NotebookReviewTests
     {
         var note = CreateNote() with { RequestedBy = 0, Origin = NotebookOrigin.Background };
         var embed = NotebookReview.CreateEmbed(note);
-        Assert.Contains(
-            embed.Fields,
-            field => field.Name == "Origin" && field.Value.Contains("Background observation (no member request)", StringComparison.Ordinal)
-        );
+        Assert.Contains(embed.Fields, field => field.Name == "Origin" && field.Value == "Background observation");
         var display = NotebookReview.Format(note, Now);
-        Assert.Contains("Background observation (no member request)", display);
+        Assert.Contains("Origin: Background observation\n", display);
         Assert.DoesNotContain("Discord user 0", display);
     }
 
@@ -204,10 +225,7 @@ public class NotebookReviewTests
         Assert.DoesNotContain("\n", embed.Title);
         Assert.DoesNotContain("@everyone", embed.Title, StringComparison.Ordinal);
         Assert.Contains("\\[", embed.Description);
-        Assert.Contains(
-            embed.Fields,
-            field => field.Name == "Mentioned users (source labels)" && field.Value.Contains("Discord user 123", StringComparison.Ordinal)
-        );
+        Assert.Contains(embed.Fields, field => field.Name == "Mentioned users" && field.Value.Contains("Discord user 123", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -221,10 +239,10 @@ public class NotebookReviewTests
         Assert.Contains("1/100", await command.ExecuteAsync("notebook", token));
         Assert.Contains("Raid anecdote", await command.ExecuteAsync("  NOTEBOOK LIST  ", token));
         Assert.Contains("Why he chose it: Useful", await command.ExecuteAsync("notebook show id", token));
-        Assert.Contains("discarded", await command.ExecuteAsync("notebook discard ID", token));
+        Assert.Equal("Note discarded.", await command.ExecuteAsync("notebook discard ID", token));
         Assert.Contains("No notes", await command.ExecuteAsync("notebook list", token));
         Assert.Contains("discarded", await command.ExecuteAsync("notebook history", token));
-        Assert.Contains("paused", await command.ExecuteAsync("notebook pause", token));
+        Assert.Equal("Notebook writes paused.", await command.ExecuteAsync("notebook pause", token));
         Assert.True(store.State.Paused);
         Assert.Contains("resumed", await command.ExecuteAsync("notebook resume", token));
         Assert.False(store.State.Paused);

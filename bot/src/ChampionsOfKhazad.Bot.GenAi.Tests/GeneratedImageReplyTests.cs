@@ -191,6 +191,71 @@ public class GeneratedImageReplyTests
         Assert.Equal(2, fixture.Store.Images.Count);
     }
 
+    [Fact]
+    public async Task OverlappingAllowanceReadsCannotGenerateBeyondTheDailyLimit()
+    {
+        using var fixture = new Fixture(_ => "Done.", allowance: 1);
+        var releaseFirstRead = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseSecondRead = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var reads = 0;
+        fixture.Store.ReadCount = async token =>
+        {
+            var snapshot = fixture.Store.GeneratedCount;
+            var release = Interlocked.Increment(ref reads) == 1 ? releaseFirstRead : releaseSecondRead;
+            await release.Task.WaitAsync(token);
+            return snapshot;
+        };
+
+        var first = fixture.GenerateAsync();
+        var second = fixture.GenerateAsync();
+        try
+        {
+            releaseFirstRead.SetResult();
+            Assert.NotNull((await first).ImageUri);
+            releaseSecondRead.SetResult();
+            Assert.Null((await second).ImageUri);
+            Assert.Equal(1, fixture.Handler.GenerationRequests);
+            Assert.Single(fixture.Store.Images);
+            Assert.Equal("User has reached their daily image generation limit.", (await fixture.GenerateAsync()).ErrorMessage);
+        }
+        finally
+        {
+            releaseFirstRead.TrySetResult();
+            releaseSecondRead.TrySetResult();
+            await Task.WhenAll(first, second);
+        }
+    }
+
+    [Fact]
+    public async Task FailedAllowanceReadReleasesTheGenerationLock()
+    {
+        using var fixture = new Fixture(_ => "Done.", allowance: 1);
+        fixture.Store.ReadCount = _ => throw new HttpRequestException("Controlled store failure");
+
+        Assert.Null((await fixture.GenerateAsync()).ImageUri);
+        fixture.Store.ReadCount = null;
+
+        Assert.NotNull((await fixture.GenerateAsync()).ImageUri);
+        Assert.Equal(1, fixture.Handler.GenerationRequests);
+    }
+
+    [Fact]
+    public async Task CancelledAllowanceReadReleasesTheGenerationLock()
+    {
+        using var fixture = new Fixture(_ => "Done.", allowance: 1);
+        var blocked = new TaskCompletionSource<ushort>(TaskCreationOptions.RunContinuationsAsynchronously);
+        fixture.Store.ReadCount = token => blocked.Task.WaitAsync(token);
+        using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+
+        var generation = fixture.GenerateAsync(cancellation.Token);
+        cancellation.Cancel();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => generation);
+        fixture.Store.ReadCount = null;
+
+        Assert.NotNull((await fixture.GenerateAsync()).ImageUri);
+        Assert.Equal(1, fixture.Handler.GenerationRequests);
+    }
+
     private sealed class Fixture : IDisposable
     {
         private readonly HttpClient _http;
@@ -200,13 +265,14 @@ public class GeneratedImageReplyTests
         public MemoryImageStore Store { get; }
         public TestMessageContext Context { get; } = new();
         public ImageToolChatClient ChatClient { get; }
+        public ImageGenerationService Service { get; }
 
         public Fixture(Func<string?, string> modelReply, short allowance = 2, ushort generatedCount = 0)
         {
             _http = new HttpClient(Handler);
             Store = new MemoryImageStore { GeneratedCount = generatedCount };
             ChatClient = new ImageToolChatClient(Store, modelReply);
-            var service = new ImageGenerationService(
+            Service = new ImageGenerationService(
                 new GenAiImageGenerationConfig { DailyAllowances = new() { [1] = allowance } },
                 Store,
                 new ImageClient(
@@ -222,12 +288,20 @@ public class GeneratedImageReplyTests
                 ),
                 NullLogger<ImageGenerationService>.Instance
             );
-            var tools = new PersonalityTools(null!, service, null!, null!, NullLogger<PersonalityTools>.Instance);
+            var tools = new PersonalityTools(null!, Service, null!, null!, NullLogger<PersonalityTools>.Instance);
             _personality = new TestPersonality(new ChatClientBuilder(ChatClient).UseFunctionInvocation().Build(), tools);
         }
 
         public Task<string> InvokeAsync(string request = "Draw a dwarf with a newspaper") =>
             _personality.InvokeAsync(new ChatHistory([new ChatMessage(ChatRole.User, request)]), Context, TestContext.Current.CancellationToken);
+
+        public Task<GenerateImageResult> GenerateAsync(CancellationToken? cancellationToken = null) =>
+            Service.GenerateImageAsync(
+                "A dwarf with a newspaper",
+                Context,
+                Context.Reply,
+                cancellationToken ?? TestContext.Current.CancellationToken
+            );
 
         public void Dispose()
         {
@@ -333,6 +407,7 @@ public class GeneratedImageReplyTests
         public ushort GeneratedCount { get; set; }
         public List<GeneratedImage> Images { get; } = [];
         public bool Searched { get; private set; }
+        public Func<CancellationToken, Task<ushort>>? ReadCount { get; set; }
 
         public Task<IReadOnlyCollection<GeneratedImage>> GetAsync(
             ushort skip = 0,
@@ -348,7 +423,7 @@ public class GeneratedImageReplyTests
         }
 
         public Task<ushort> GetDailyGeneratedImageCountAsync(ulong userId, CancellationToken cancellationToken = default) =>
-            Task.FromResult(GeneratedCount);
+            ReadCount?.Invoke(cancellationToken) ?? Task.FromResult(GeneratedCount);
 
         public Task SaveGeneratedImageAsync(GeneratedImage image)
         {

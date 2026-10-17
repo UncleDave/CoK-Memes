@@ -38,6 +38,15 @@ internal class ImageGenerationService(
                 return new GenerateImageResult(0, "User is not allowed to generate images.");
             }
 
+            // The allowance read belongs to the same critical section as generation and saving.
+            // Otherwise a delayed read can outlive another generation and spend its stale balance.
+            if (!UsersGeneratingImages.TryAdd(userId, 0))
+            {
+                logger.LogInformation("Image generation denied for Discord user {UserId}: another request is already in progress", userId);
+                return new GenerateImageResult(0, "User is already generating an image.");
+            }
+
+            ownsGenerationLock = true;
             var availableAllowance =
                 userAllowance == -1 ? ushort.MaxValue : await GetAvailableAllowanceAsync(userId, userAllowance, cancellationToken);
 
@@ -49,13 +58,6 @@ internal class ImageGenerationService(
 
             remainingAllowance = availableAllowance == ushort.MaxValue ? ushort.MaxValue : (ushort)(availableAllowance - 1);
 
-            if (!UsersGeneratingImages.TryAdd(userId, 0))
-            {
-                logger.LogInformation("Image generation denied for Discord user {UserId}: another request is already in progress", userId);
-                return new GenerateImageResult(remainingAllowance, "User is already generating an image.");
-            }
-
-            ownsGenerationLock = true;
             stage = "sending the confirmation reply";
             await sendConfirmation(
                 remainingAllowance == ushort.MaxValue

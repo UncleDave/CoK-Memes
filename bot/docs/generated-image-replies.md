@@ -37,10 +37,17 @@ image search. The missing-link safety net applies when the chat invocation compl
 chat or Discord send failures are still handled by the existing error paths, and
 Discord image previews still depend on permissions, settings, and URL availability.
 
+The process-local per-user lock covers the daily-allowance read through generation
+and saving. An overlapping request is rejected before reading the allowance, so a
+delayed read cannot spend a balance made stale by another completed generation.
+Allowance-read failures and cancellations release the lock. This is not a distributed
+quota reservation across multiple bot processes.
+
 `GeneratedImageReplyTests` exercises function invocation with controlled OpenAI
 and blob-storage HTTP responses, including missing/existing links, generated/searched
 image-link normalization, empty replies, request isolation, allowance denials, and
 generation failures. It also checks 19-image requests across tool rounds and within
 one batch, confirmation isolation between requests, per-image allowances, repeated
-generation failures, and failed confirmation sends. `PersonalityBaseTests` covers
+generation failures, failed confirmation sends, overlapping allowance reads, and
+lock recovery after allowance-read failure. `PersonalityBaseTests` covers
 response formatting and preserving ordinary text, links, and code examples.

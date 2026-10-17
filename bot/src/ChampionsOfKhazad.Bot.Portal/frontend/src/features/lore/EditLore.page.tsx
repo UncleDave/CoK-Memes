@@ -43,11 +43,13 @@ const EditLorePage = () => {
     >
       {isMember ? (
         <MemberLoreForm
+          key={isCreating ? "new" : lore.name}
           lore={loreData as MemberLoreContract}
           isCreating={isCreating}
         />
       ) : (
         <GuildLoreForm
+          key={isCreating ? "new" : lore.name}
           lore={loreData as GuildLoreContract}
           isCreating={isCreating}
         />

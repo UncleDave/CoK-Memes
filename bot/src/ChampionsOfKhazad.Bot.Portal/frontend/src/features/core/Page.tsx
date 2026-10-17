@@ -16,7 +16,6 @@ const Page = ({ title, crumbs, children }: PropsWithChildren<PageProps>) => (
       variant="outlined"
       css={css`
         padding: 10px;
-        margin-top: ${crumbs?.length ? "0" : "48px"};
       `}
     >
       <Typography

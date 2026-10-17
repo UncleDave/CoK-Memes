@@ -7,11 +7,13 @@ import GeneratedImagesPage from "../generated-images/GeneratedImages.page.tsx";
 import fetchGeneratedImages from "../generated-images/fetch-generated-images.ts";
 import requestApi from "./request-api.ts";
 import submitLore from "../lore/submit-lore.ts";
+import fetchCurrentUser from "./fetch-current-user.ts";
 
 const router = createBrowserRouter([
   {
     path: "/",
     element: <Root />,
+    loader: ({ request }) => fetchCurrentUser(request.signal),
     children: [
       {
         index: true,

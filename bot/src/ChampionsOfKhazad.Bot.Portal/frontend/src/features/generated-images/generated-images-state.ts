@@ -14,6 +14,7 @@ interface ImageState {
   request: { id: number; parameters: ImageParameters };
   error: string | null;
   hasMore: boolean;
+  isLoading: boolean;
 }
 
 type ImageAction =
@@ -36,6 +37,7 @@ export const createImageState = (
   },
   error: null,
   hasMore: true,
+  isLoading: Object.values(parameters).some((value) => value !== undefined),
 });
 
 export const imageReducer = (
@@ -51,15 +53,17 @@ export const imageReducer = (
         images: [...state.images, ...action.images],
         hasMore: action.images.length >= (parameters.take ?? 20),
         error: null,
+        isLoading: false,
       };
     case "failed":
       return action.requestId === state.request.id
-        ? { ...state, error: action.error }
+        ? { ...state, error: action.error, isLoading: false }
         : state;
     case "retry":
       return {
         ...state,
         error: null,
+        isLoading: true,
         request: { ...state.request, id: state.request.id + 1 },
       };
     case "page": {
@@ -77,6 +81,7 @@ export const imageReducer = (
       return {
         ...state,
         error: null,
+        isLoading: true,
         request: { id: state.request.id + 1, parameters: next },
       };
     }
@@ -91,6 +96,7 @@ export const imageReducer = (
         gridKey: state.gridKey + 1,
         error: null,
         hasMore: true,
+        isLoading: true,
         request: {
           id: state.request.id + 1,
           parameters: { ...parameters, skip: 0, [filter]: action.value },

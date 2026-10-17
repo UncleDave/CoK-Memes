@@ -10,7 +10,10 @@ current filter is a no-op, including an unchanged or already-empty search.
 Changing filters or leaving the page cancels the previous fetch. Responses from older
 requests cannot append images or display errors in the new grid. Load failures preserve
 the images already shown and offer Retry for the failed page rather than silently
-showing an empty result. Initial route-load failures use the router's error handling.
+showing an empty result. Pending filter and paging requests show a loading status;
+empty responses show a distinct no-images, no-matches, or Only mine empty state.
+Failures never also display an empty-results message. Initial route-load failures
+use the portal error page with Retry.
 
 `frontend/tests/generated-images.test.mjs` covers filter/paging state, stale responses,
 retry, end-of-results handling, and request encoding/cancellation contracts.

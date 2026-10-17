@@ -91,6 +91,7 @@ const useGeneratedImages = (
     gridKey: state.gridKey.toString(),
     error: state.error,
     hasMore: state.hasMore,
+    isLoading: state.isLoading,
     mine: request.parameters.mine,
     sortAscending: request.parameters.sortAscending,
     query: request.parameters.query,

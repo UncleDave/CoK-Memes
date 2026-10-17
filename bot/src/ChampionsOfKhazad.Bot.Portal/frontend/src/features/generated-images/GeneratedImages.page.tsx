@@ -4,9 +4,10 @@ import { useLoaderData } from "react-router";
 import GeneratedImage from "./generated-image.ts";
 import { useInfiniteLoader } from "masonic";
 import useGeneratedImages from "./use-generated-images.ts";
-import { Alert, Button, List, ListItem, Input } from "@mui/joy";
+import { List, ListItem, Input } from "@mui/joy";
 import ChoiceChip from "../core/ChoiceChip.tsx";
 import { useState } from "react";
+import ImageResultsStatus from "./ImageResultsStatus.tsx";
 
 const GeneratedImagesPage = () => {
   const {
@@ -17,6 +18,7 @@ const GeneratedImagesPage = () => {
     query,
     error,
     hasMore,
+    isLoading,
     retry,
     setSkip,
     setTake,
@@ -28,7 +30,7 @@ const GeneratedImagesPage = () => {
   const [searchInput, setSearchInput] = useState(query ?? "");
 
   const maybeLoadMore = useInfiniteLoader((startIndex, stopIndex) => {
-    if (error || !hasMore) return;
+    if (error || isLoading || !hasMore) return;
     const skip = startIndex;
     const take = stopIndex - startIndex + 1;
 
@@ -88,16 +90,17 @@ const GeneratedImagesPage = () => {
           />
         </ListItem>
       </List>
-      {error && (
-        <Alert
-          color="danger"
-          sx={{ mb: 2 }}
-          endDecorator={<Button onClick={retry}>Retry</Button>}
-        >
-          {error}
-        </Alert>
+      <ImageResultsStatus
+        imageCount={images.length}
+        isLoading={isLoading}
+        error={error}
+        mine={mine}
+        query={query}
+        onRetry={retry}
+      />
+      {images.length > 0 && (
+        <ImageGrid images={images} onRender={maybeLoadMore} key={gridKey} />
       )}
-      <ImageGrid images={images} onRender={maybeLoadMore} key={gridKey} />
     </Page>
   );
 };

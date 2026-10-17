@@ -14,6 +14,30 @@ test("the route loader's initial images do not request a duplicate page", () => 
   const state = createImageState(images);
   assert.equal(state.request.id, 0);
   assert.equal(state.images, images);
+  assert.equal(state.isLoading, false);
+});
+
+test("filter requests stay loading until the matching response settles", () => {
+  const state = imageReducer(createImageState(images), {
+    type: "query",
+    value: "dwarf",
+  });
+  assert.equal(state.isLoading, true);
+  assert.equal(
+    imageReducer(state, {
+      type: "loaded",
+      requestId: state.request.id,
+      images: [],
+    }).isLoading,
+    false,
+  );
+  const failed = imageReducer(state, {
+    type: "failed",
+    requestId: state.request.id,
+    error: "Unavailable",
+  });
+  assert.equal(failed.isLoading, false);
+  assert.equal(imageReducer(failed, { type: "retry" }).isLoading, true);
 });
 
 test("repeating the current search preserves images and does not request another page", () => {

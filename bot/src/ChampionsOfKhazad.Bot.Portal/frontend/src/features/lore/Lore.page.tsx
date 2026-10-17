@@ -5,6 +5,7 @@ import {
   ListItemButton,
   ListItemContent,
   Stack,
+  Typography,
 } from "@mui/joy";
 import { Link, useLoaderData } from "react-router";
 import Page from "../core/Page.tsx";
@@ -23,6 +24,9 @@ const LorePage = () => {
             Create Member Lore
           </Button>
         </Stack>
+        {lore.length === 0 && (
+          <Typography role="status">No lore yet.</Typography>
+        )}
         <List>
           {lore.map((x) => (
             <ListItem key={x.name}>

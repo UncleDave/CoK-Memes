@@ -51,3 +51,36 @@ test("multi-input add and remove icons render inside the Joy theme", async () =>
   assert.match(html, /Remove aliases/);
   assert.equal((html.match(/<svg/g) ?? []).length, 2);
 });
+
+test("image search has labelled native controls and Joy-compatible icons", async () => {
+  const { default: ImageSearch } = await server.ssrLoadModule(
+    "/src/features/generated-images/ImageSearch.tsx",
+  );
+  const renderSearch = (query) =>
+    renderToString(
+      createElement(
+        CssVarsProvider,
+        null,
+        createElement(ImageSearch, { query, onSearch: () => {} }),
+      ),
+    );
+
+  const html = renderSearch("dwarf");
+  assert.match(html, /<form[^>]*role="search"[^>]*aria-label="Image search"/);
+  assert.match(html, /<input[^>]*aria-label="Search images by prompt"/);
+  assert.match(
+    html,
+    /<button[^>]*type="button"[^>]*aria-label="Clear image search"/,
+  );
+  assert.match(html, /<button[^>]*type="submit"/);
+  assert.match(html, />Search<\/button>/);
+  assert.match(html, /value="dwarf"/);
+  assert.match(html, /<svg/);
+  assert.doesNotMatch(html, /<span[^>]*cursor: ?pointer/);
+
+  const empty = renderSearch("");
+  assert.match(
+    empty,
+    /<button(?=[^>]*Mui-disabled)(?=[^>]*aria-label="Clear image search")[^>]*>/,
+  );
+});

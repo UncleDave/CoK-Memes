@@ -6,6 +6,10 @@ At the store boundary, a zero page size returns no images without querying Mongo
 it must never become Mongo's special unlimited `Limit(0)` query.
 Search, Only mine, and Oldest first reset the grid and restart paging. Reapplying the
 current filter is a no-op, including an unchanged or already-empty search.
+Image search uses a labelled search form: Enter or Search applies the trimmed
+prompt query. Clear image search clears both the draft and applied query and
+returns keyboard focus to the field, without resetting Only mine or sort order.
+Clearing remains available when the draft is empty but a query is still applied.
 
 Changing filters or leaving the page cancels the previous fetch. Responses from older
 requests cannot append images or display errors in the new grid. Load failures preserve

@@ -9,7 +9,10 @@ const Container = styled("a")`
 `;
 
 const Image = styled("img")`
-  min-height: 140px;
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: auto 1 / 1;
 `;
 
 const Footer = styled("div")`
@@ -21,7 +24,6 @@ const Footer = styled("div")`
   padding: 0.5rem;
   display: flex;
   align-items: end;
-  margin-bottom: 6px;
   background: linear-gradient(0, rgba(0, 0, 0, 0.5) 0%, rgba(0, 0, 0, 0) 100%);
   height: 100px;
 `;
@@ -45,7 +47,6 @@ const promptOverlayStyles: SxProps = {
   bottom: 0,
   left: 0,
   right: 0,
-  marginBottom: "6px",
   transitionDuration: "0.2s",
   transitionTimingFunction: "ease-out",
 };

@@ -27,7 +27,7 @@ const ImageGrid = ({ images, onRender }: ImageGridProps) => (
     render={ImageGridItem}
     onRender={onRender}
     columnGutter={6}
-    rowGutter={0}
+    rowGutter={6}
     maxColumnCount={4}
   />
 );

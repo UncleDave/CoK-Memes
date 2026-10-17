@@ -19,6 +19,15 @@ empty responses show a distinct no-images, no-matches, or Only mine empty state.
 Failures never also display an empty-results message. Initial route-load failures
 use the portal error page with Retry.
 
+When images are already visible, paging/loading failures and progress appear in
+a compact, fixed-bottom status panel outside the document flow. Showing or hiding
+that panel must not change the gallery’s offset or move existing images. Requests
+without any displayed images retain their inline loading/error/empty states.
+Cards reserve a square fallback before image dimensions are available instead of
+starting at a short fixed height. Loaded images retain their natural aspect ratio
+without cropping; non-square images can still resize when their dimensions become
+known because the gallery API does not currently include image dimensions.
+
 `frontend/tests/generated-images.test.mjs` covers filter/paging state, stale responses,
 retry, end-of-results handling, and request encoding/cancellation contracts.
 `frontend/tests/joy-controls.test.mjs` renders selected filters and multi-input icons

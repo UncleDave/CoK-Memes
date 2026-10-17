@@ -17,7 +17,9 @@ navigation between sections, and the current-user request contract.
 
 ## Loading and recovery
 
-Initial loading displays a portal loading status. Subsequent route loads keep the
+Initial loading retains the portal header and displays a page-shaped skeleton
+with an announced loading status rather than a blank viewport. Admin navigation
+is not guessed while the current-user request is pending. Subsequent route loads keep the
 current page and navigation visible with a progress indicator. Child-route failures
 keep the shared header available and offer Retry without discarding successfully
 loaded gallery pages. An initial current-user failure has the same recovery UI,

@@ -3,7 +3,7 @@ import { after, before, test } from "node:test";
 import { createElement } from "react";
 import { renderToString } from "react-dom/server";
 import { CssVarsProvider } from "@mui/joy";
-import { createMemoryRouter, RouterProvider } from "react-router";
+import { createMemoryRouter, MemoryRouter, RouterProvider } from "react-router";
 import { createServer } from "vite";
 import { ApiError } from "../src/features/core/request-api.ts";
 import getRouteErrorDetails from "../src/features/core/route-error-details.ts";
@@ -67,13 +67,78 @@ test("image failures retain an alert and retry rather than an empty state", asyn
   assert.doesNotMatch(html, /No images|Loading images/);
 });
 
-test("initial portal loading is announced", async () => {
+test("paging feedback stays outside the gallery layout once images are visible", async () => {
+  for (const state of [
+    { isLoading: true },
+    { error: "Unable to load more images" },
+  ]) {
+    const html = await renderImageStatus({ imageCount: 20, ...state });
+    assert.match(html, /position:fixed/);
+    if (state.error) {
+      assert.match(html, /role="alert"/);
+      assert.match(html, /Retry/);
+    } else {
+      assert.match(html, /role="status"/);
+      assert.match(html, /Loading more images…/);
+    }
+  }
+  assert.doesNotMatch(
+    await renderImageStatus({ isLoading: true }),
+    /position:fixed/,
+  );
+  assert.doesNotMatch(
+    await renderImageStatus({ error: "Unavailable" }),
+    /position:fixed/,
+  );
+});
+
+test("gallery images reserve a square fallback without overriding their natural aspect ratio", async () => {
+  const { default: GridImage } = await server.ssrLoadModule(
+    "/src/features/generated-images/GridImage.tsx",
+  );
+  const html = render(
+    createElement(GridImage, {
+      width: 300,
+      image: {
+        url: "https://example.com/image.png",
+        prompt: "A dwarf at a forge",
+        user: { name: "Tester", avatarUrl: "" },
+        timestamp: new Date("2026-10-17T12:00:00Z"),
+      },
+    }),
+  );
+  assert.match(html, /aspect-ratio:auto\s+1\s*\/\s*1/);
+  assert.match(html, /height:auto/);
+  assert.match(html, /alt="A dwarf at a forge"/);
+  assert.doesNotMatch(html, /min-height:140px|object-fit:cover/);
+});
+
+test("initial loading keeps the portal shell with an announced, page-shaped skeleton", async () => {
   const { default: PortalLoading } = await server.ssrLoadModule(
     "/src/features/core/PortalLoading.tsx",
   );
-  const html = render(createElement(PortalLoading));
-  assert.match(html, /role="status"/);
-  assert.match(html, /Loading portal…/);
+  for (const [path, title] of [
+    ["/images", "Images"],
+    ["/lore", "Lore"],
+    ["/lore/Grim", "Lore"],
+  ]) {
+    const html = render(
+      createElement(
+        MemoryRouter,
+        { initialEntries: [path] },
+        createElement(PortalLoading),
+      ),
+    );
+    assert.match(html, /Champions of Khazad/);
+    assert.match(html, /aria-label="Main navigation"/);
+    assert.match(html, /href="\/images"/);
+    assert.doesNotMatch(html, /href="\/lore"/);
+    assert.match(html, /role="status"/);
+    assert.match(html, new RegExp(`Loading ${title.toLowerCase()}…`));
+    assert.match(html, /<main[^>]*aria-busy="true"/);
+    assert.match(html, /aria-hidden="true"/);
+    assert.match(html, /MuiSkeleton-root/);
+  }
 });
 
 test("route errors distinguish session, permission, and missing-page failures", () => {

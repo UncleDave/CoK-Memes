@@ -1,5 +1,5 @@
 import GeneratedImage from "./generated-image.ts";
-import GeneratedImageContract from "./generated-image-contract.ts";
+import type GeneratedImageContract from "./generated-image-contract.ts";
 
 const path = "/api/generated-images";
 

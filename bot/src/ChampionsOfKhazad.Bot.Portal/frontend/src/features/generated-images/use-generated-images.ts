@@ -1,8 +1,9 @@
 import GeneratedImage from "./generated-image.ts";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useReducer, useCallback } from "react";
 import fetchGeneratedImages from "./fetch-generated-images.ts";
+import { createImageState, imageReducer } from "./generated-images-state.ts";
 
-type UseGeneratedImages = (
+const useGeneratedImages = (
   initialImages: GeneratedImage[],
   initialSkip?: number,
   initialTake?: number,
@@ -10,47 +11,32 @@ type UseGeneratedImages = (
   initialSortAscending?: boolean,
   initialQuery?: string,
 ) => {
-  images: GeneratedImage[];
-  gridKey: string;
-  mine?: boolean;
-  sortAscending?: boolean;
-  query?: string;
-  setSkip: (skip: number) => void;
-  setTake: (take: number) => void;
-  setMine: (mine: boolean) => void;
-  setSortAscending: (sortAscending: boolean) => void;
-  setQuery: (query: string) => void;
-};
-
-const useGeneratedImages: UseGeneratedImages = (
-  initialImages,
-  initialSkip?,
-  initialTake?,
-  initialMine?,
-  initialSortAscending?,
-  initialQuery?,
-) => {
-  const [images, setImages] = useState<GeneratedImage[]>(initialImages);
-  const [skip, setSkip] = useState(initialSkip);
-  const [take, setTake] = useState(initialTake);
-  const [mine, setMine] = useState(initialMine);
-  const [sortAscending, setSortAscending] = useState(initialSortAscending);
-  const [query, setQuery] = useState(initialQuery);
-  const [gridKey, setGridKey] = useState(() => crypto.randomUUID());
+  const [state, dispatch] = useReducer(
+    imageReducer,
+    {
+      initialImages,
+      initialSkip,
+      initialTake,
+      initialMine,
+      initialSortAscending,
+      initialQuery,
+    },
+    (initial) =>
+      createImageState(initial.initialImages, {
+        skip: initial.initialSkip,
+        take: initial.initialTake,
+        mine: initial.initialMine,
+        sortAscending: initial.initialSortAscending,
+        query: initial.initialQuery,
+      }),
+  );
+  const { request } = state;
 
   useEffect(() => {
-    if (
-      skip === undefined &&
-      take === undefined &&
-      mine === undefined &&
-      sortAscending === undefined &&
-      query === undefined &&
-      initialImages.length > 0
-    ) {
-      return;
-    }
-
+    // The route loader has already fetched the initial, unfiltered page.
+    if (request.id === 0) return;
     const abortController = new AbortController();
+    const { skip, take, mine, sortAscending, query } = request.parameters;
 
     fetchGeneratedImages(
       skip,
@@ -59,54 +45,61 @@ const useGeneratedImages: UseGeneratedImages = (
       sortAscending,
       query,
       abortController.signal,
-    ).then((fetchedImages) => {
-      setImages((existingImages) => [...existingImages, ...fetchedImages]);
-    });
+    )
+      .then((images) => {
+        if (!abortController.signal.aborted)
+          dispatch({ type: "loaded", requestId: request.id, images });
+      })
+      .catch((error: unknown) => {
+        if (!abortController.signal.aborted)
+          dispatch({
+            type: "failed",
+            requestId: request.id,
+            error:
+              error instanceof Error ? error.message : "Failed to load images.",
+          });
+      });
 
     return () => abortController.abort();
-  }, [initialImages.length, mine, skip, sortAscending, take, query]);
+  }, [request]);
 
-  const resetImages = useCallback(() => {
-    setSkip(0);
-    setImages([]);
-    setGridKey(crypto.randomUUID());
-  }, []);
-
-  const setMineCallback = useCallback(
-    (newMine: boolean) => {
-      setMine(newMine);
-      resetImages();
-    },
-    [resetImages],
+  const setSkip = useCallback(
+    (skip: number) => dispatch({ type: "page", skip }),
+    [],
   );
-
-  const setSortAscendingCallback = useCallback(
-    (newSortAscending: boolean) => {
-      setSortAscending(newSortAscending);
-      resetImages();
-    },
-    [resetImages],
+  const setTake = useCallback(
+    (take: number) => dispatch({ type: "page", take }),
+    [],
   );
-
-  const setQueryCallback = useCallback(
-    (newQuery: string) => {
-      setQuery(newQuery);
-      resetImages();
-    },
-    [resetImages],
+  const setMine = useCallback(
+    (value: boolean) => dispatch({ type: "filter", filter: "mine", value }),
+    [],
   );
+  const setSortAscending = useCallback(
+    (value: boolean) =>
+      dispatch({ type: "filter", filter: "sortAscending", value }),
+    [],
+  );
+  const setQuery = useCallback(
+    (value: string) => dispatch({ type: "query", value }),
+    [],
+  );
+  const retry = useCallback(() => dispatch({ type: "retry" }), []);
 
   return {
-    images,
-    gridKey,
-    mine,
-    sortAscending,
-    query,
+    images: state.images,
+    gridKey: state.gridKey.toString(),
+    error: state.error,
+    hasMore: state.hasMore,
+    mine: request.parameters.mine,
+    sortAscending: request.parameters.sortAscending,
+    query: request.parameters.query,
     setSkip,
     setTake,
-    setMine: setMineCallback,
-    setSortAscending: setSortAscendingCallback,
-    setQuery: setQueryCallback,
+    setMine,
+    setSortAscending,
+    setQuery,
+    retry,
   };
 };
 

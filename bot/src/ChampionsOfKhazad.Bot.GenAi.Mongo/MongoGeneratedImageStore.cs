@@ -13,6 +13,11 @@ internal class MongoGeneratedImageStore(IMongoCollection<GeneratedImage> generat
         CancellationToken cancellationToken = default
     )
     {
+        cancellationToken.ThrowIfCancellationRequested();
+        // Mongo interprets Limit(0) as unlimited, not an empty page.
+        if (take == 0)
+            return [];
+
         FilterDefinition<GeneratedImage> filter;
         SortDefinition<GeneratedImage> sort;
 

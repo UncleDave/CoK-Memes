@@ -62,7 +62,15 @@ const router = createBrowserRouter([
       {
         path: "images",
         element: <GeneratedImagesPage />,
-        loader: () => fetchGeneratedImages(),
+        loader: ({ request }) =>
+          fetchGeneratedImages(
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            request.signal,
+          ),
       },
     ],
   },

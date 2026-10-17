@@ -1,4 +1,5 @@
-import GeneratedImageContract, {
+import type {
+  default as GeneratedImageContract,
   GeneratedImageUserContract,
 } from "./generated-image-contract.ts";
 

@@ -1,5 +1,4 @@
-import { Add, Delete } from "@mui/icons-material";
-import { FormLabel, IconButton, Input, Stack } from "@mui/joy";
+import { FormLabel, IconButton, Input, Stack, SvgIcon } from "@mui/joy";
 import { forwardRef, useCallback, useRef, useState } from "react";
 
 interface InputRowProps {
@@ -44,8 +43,13 @@ const InputRow = forwardRef<HTMLInputElement, InputRowProps>(
           defaultValue={value}
           sx={{ flexGrow: 1 }}
         />
-        <IconButton onClick={() => removeValue(id)}>
-          <Delete />
+        <IconButton
+          onClick={() => removeValue(id)}
+          aria-label={`Remove ${name}`}
+        >
+          <SvgIcon>
+            <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
+          </SvgIcon>
         </IconButton>
       </Stack>
     );
@@ -99,8 +103,11 @@ const FormMultiInput = ({
         onClick={addValue}
         variant="outlined"
         sx={{ alignSelf: "start" }}
+        aria-label={`Add ${name}`}
       >
-        <Add />
+        <SvgIcon>
+          <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
+        </SvgIcon>
       </IconButton>
     </Stack>
   );

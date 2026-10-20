@@ -1,6 +1,6 @@
-﻿# Champions of Khazad bot
+﻿# Grub the Fryer
 
-A Discord bot for the Champions of Khazad guild, with guild lore, AI responses,
+A Discord bot for the Crossroads Mega Chippy guild, with guild lore, AI responses,
 memes and raid sign-ups. An ASP.NET Core/React portal provides access to guild lore
 and generated images.
 
@@ -105,6 +105,9 @@ Portal. Invite the bot with the `bot` and `applications.commands` scopes and the
 - Manage Messages
 
 Permission bitmask: `274878032960`.
+
+For the rebrand rollout and external Discord profile changes, see
+[Guild identity and Grub](docs/guild-identity.md#rollout).
 
 ## Run locally
 

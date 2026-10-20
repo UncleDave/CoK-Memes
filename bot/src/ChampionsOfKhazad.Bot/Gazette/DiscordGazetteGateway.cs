@@ -274,7 +274,7 @@ internal sealed class DiscordGazetteGateway(
                     .Pages.Select(
                         (page, index) =>
                             new EmbedBuilder()
-                                .WithTitle(index == 0 ? "The Khazad Gazette — front page" : $"The Khazad Gazette — page {index + 1}")
+                                .WithTitle(index == 0 ? $"{GazetteBranding.Title} — front page" : $"{GazetteBranding.Title} — page {index + 1}")
                                 .WithImageUrl($"attachment://{page.FileName}")
                                 .Build()
                     )

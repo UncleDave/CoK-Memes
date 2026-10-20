@@ -2,8 +2,8 @@
 
 public static class Constants
 {
-    public const string LorekeeperName = "Lorekeeper Hammerstone";
-    public const string OpenAiFriendlyLorekeeperName = "Hammerstone";
+    public const string LorekeeperName = "Grub the Fryer";
+    public const string OpenAiFriendlyLorekeeperName = "Grub";
     public const string ImageGenerationConfirmationMessage = "Generating your image. This may take a minute.";
 
     internal const string DefaultCompletionsModel = "gpt-6-luna";

@@ -5,6 +5,7 @@ import { renderToString } from "react-dom/server";
 import { CssVarsProvider } from "@mui/joy";
 import { createMemoryRouter, MemoryRouter, RouterProvider } from "react-router";
 import { createServer } from "vite";
+import { readFile } from "node:fs/promises";
 import { ApiError } from "../src/features/core/request-api.ts";
 import getRouteErrorDetails from "../src/features/core/route-error-details.ts";
 
@@ -129,7 +130,8 @@ test("initial loading keeps the portal shell with an announced, page-shaped skel
         createElement(PortalLoading),
       ),
     );
-    assert.match(html, /Champions of Khazad/);
+    assert.match(html, /Crossroads Mega Chippy/);
+    assert.doesNotMatch(html, /Champions of Khazad|CoK Bot/);
     assert.match(html, /aria-label="Main navigation"/);
     assert.match(html, /href="\/images"/);
     assert.doesNotMatch(html, /href="\/lore"/);
@@ -202,6 +204,23 @@ test("route loading overlays progress without displacing the current page", asyn
     await navigation;
     router.dispose();
   }
+});
+
+test("portal title and access-denied page use the new guild identity", async () => {
+  const index = await readFile(
+    new URL("../index.html", import.meta.url),
+    "utf8",
+  );
+  const denied = await readFile(
+    new URL("../../wwwroot/access-denied.html", import.meta.url),
+    "utf8",
+  );
+  assert.match(
+    index,
+    /<title>Grub the Fryer · Crossroads Mega Chippy<\/title>/,
+  );
+  assert.match(denied, /restricted to members of Crossroads Mega Chippy/);
+  assert.doesNotMatch(index + denied, /Champions of Khazad|CoK Bot/);
 });
 
 test("route errors distinguish session, permission, and missing-page failures", () => {

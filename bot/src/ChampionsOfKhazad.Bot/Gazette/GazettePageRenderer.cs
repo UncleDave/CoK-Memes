@@ -67,9 +67,9 @@ internal sealed class GazettePageRenderer : IGazettePageRenderer
         using var canvas = new SKCanvas(bitmap);
         canvas.Clear(Paper);
         canvas.DrawRect(new SKRect(25, 25, Width - 25, height - 25), rules);
-        while (masthead.MeasureText("THE KHAZAD GAZETTE", paint) > contentWidth)
+        while (masthead.MeasureText(GazetteBranding.Masthead, paint) > contentWidth)
             masthead.Size -= 1;
-        Center(canvas, "THE KHAZAD GAZETTE", 115, masthead, paint);
+        Center(canvas, GazetteBranding.Masthead, 115, masthead, paint);
         Center(canvas, "INDEPENDENT JOURNALISM. DEPENDENT ON GOSSIP.", 162, small, paint);
         canvas.DrawLine(Margin, 189, Width - Margin, 189, rules);
         canvas.DrawText($"Issue No. {issueNumber}", Margin, 225, small, paint);
@@ -134,7 +134,7 @@ internal sealed class GazettePageRenderer : IGazettePageRenderer
         canvas.DrawText("CLASSIFIEDS", Margin + 25, y + 43, small, paint);
         DrawLines(canvas, advert, Margin + 25, y + 92, 44, body, paint);
         var pageCount = secondary.Length > 0 ? 2 : 1;
-        Center(canvas, $"CHAMPIONS OF KHAZAD · PAGE 1 OF {pageCount}", height - 55, small, paint);
+        Center(canvas, $"{GuildPromptContext.GuildName.ToUpperInvariant()} · PAGE 1 OF {pageCount}", height - 55, small, paint);
         var pages = new List<GazettePage> { Encode(bitmap, issueNumber, 1) };
         if (secondary.Length > 0)
             pages.Add(RenderInsidePage(edition.Articles.Skip(1).ToArray(), issueNumber, dates, body, smallHeadline, small, paint, rules));
@@ -171,7 +171,7 @@ internal sealed class GazettePageRenderer : IGazettePageRenderer
         using var canvas = new SKCanvas(bitmap);
         canvas.Clear(Paper);
         canvas.DrawRect(new SKRect(25, 25, Width - 25, height - 25), rules);
-        Center(canvas, "THE KHAZAD GAZETTE", 105, headline, paint);
+        Center(canvas, GazetteBranding.Masthead, 105, headline, paint);
         Center(canvas, "AROUND THE GUILD", 160, small, paint);
         canvas.DrawLine(Margin, 189, Width - Margin, 189, rules);
         canvas.DrawText($"Issue No. {issueNumber} · Page {InsidePageNumber}", Margin, 225, small, paint);
@@ -185,7 +185,7 @@ internal sealed class GazettePageRenderer : IGazettePageRenderer
         }
         if (columns.Length == 2)
             canvas.DrawLine(Width / 2, 275, Width / 2, height - 100, rules);
-        Center(canvas, $"CHAMPIONS OF KHAZAD · PAGE {InsidePageNumber} OF 2", height - 55, small, paint);
+        Center(canvas, $"{GuildPromptContext.GuildName.ToUpperInvariant()} · PAGE {InsidePageNumber} OF 2", height - 55, small, paint);
         return Encode(bitmap, issueNumber, InsidePageNumber);
     }
 
@@ -211,7 +211,7 @@ internal sealed class GazettePageRenderer : IGazettePageRenderer
         var bytes = encoded.ToArray();
         if (bytes.Length > 8_000_000)
             throw new InvalidOperationException("Newspaper image exceeds the attachment limit.");
-        return new($"khazad-gazette-{issueNumber}-page-{pageNumber}.png", bytes);
+        return new($"{GazetteBranding.FileNamePrefix}-{issueNumber}-page-{pageNumber}.png", bytes);
     }
 
     private static SKBitmap? DecodeIllustration(byte[]? bytes)

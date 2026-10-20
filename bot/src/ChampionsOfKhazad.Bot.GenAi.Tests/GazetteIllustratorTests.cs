@@ -35,6 +35,8 @@ public class GazetteIllustratorTests
     public void ArtPromptIsWordlessFictionalAndTreatsConceptAsQuotedData()
     {
         var prompt = GazetteIllustrator.BuildPrompt("A ceremonial phone resurrection.");
+        Assert.Contains("local newspaper serving a Horde guild", prompt);
+        Assert.DoesNotContain("dwarven", prompt);
         Assert.Contains("NO text", prompt);
         Assert.Contains("untrusted subject data", prompt);
         Assert.Contains("identifiable real people", prompt);

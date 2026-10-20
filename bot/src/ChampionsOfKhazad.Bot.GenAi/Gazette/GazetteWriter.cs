@@ -6,8 +6,8 @@ namespace ChampionsOfKhazad.Bot.GenAi;
 
 internal sealed partial class GazetteWriter(IChatClient chatClient) : IGazetteWriter
 {
-    private const string Policy = """
-        Draft The Khazad Gazette from recent human Discord messages. Return only JSON matching the supplied schema, without fences.
+    private const string Policy = $"""
+        Draft {GazetteBranding.Title} from recent human Discord messages. Return only JSON matching the supplied schema, without fences.
         No tools, browsing or other actions. You only draft; the authenticated administrator must privately review and explicitly approve.
 
         Evidence and privacy
@@ -52,7 +52,9 @@ internal sealed partial class GazetteWriter(IChatClient chatClient) : IGazetteWr
 
     private const string EditorialBrief = """
         Editorial brief
-        Write as a confident, self-important dwarven newspaper finding wildly disproportionate importance in small guild happenings.
+        Write as a confident, self-important local newspaper serving a Horde guild, finding wildly disproportionate importance in small guild happenings.
+        The Crossroads Gazette also happens to wrap chips at Crossroads Mega Chippy. This is character framing, not news evidence.
+        Keep a distinct editorial voice, not Grub's furious counter-service monologue. Food references are occasional, never mandatory article punchlines.
         The voice is satirical and affectionate: take the situation absurdly seriously, not the member to pieces.
         Find one clear angle in the evidence and report the absurd situation directly. Let the headline, opening and supporting details
         share that angle: sharp contrasts, mock-serious judgments and telling particulars. Genuine good news can be celebrated without a manufactured conflict.

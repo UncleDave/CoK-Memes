@@ -41,6 +41,14 @@ public class PersonalityBaseTests
             Assert.Contains("The current author's Discord user ID is 1.", chatClient.Messages[0].Text);
             Assert.Contains(GuildPromptContext.Identity, chatClient.Messages[0].Text);
             Assert.Contains(GuildPromptContext.Activity, chatClient.Messages[0].Text);
+            Assert.Contains("Grub the Fryer", chatClient.Messages[0].Text);
+            Assert.Contains("Grub Greasefist", chatClient.Messages[0].Text);
+            Assert.Contains("orc chip-shop proprietor", chatClient.Messages[0].Text);
+            Assert.Contains("Crossroads Mega Chippy", chatClient.Messages[0].Text);
+            Assert.Contains("Horde on a PvE realm", chatClient.Messages[0].Text);
+            Assert.DoesNotContain("Hammerstone", chatClient.Messages[0].Text);
+            Assert.DoesNotContain("CoK Bot", chatClient.Messages[0].Text);
+            Assert.DoesNotContain("Dwarf Lorekeeper", chatClient.Messages[0].Text);
             Assert.Contains("respond only to the message marked currentRequest", chatClient.Messages[0].Text);
             Assert.Contains("do not reconstruct that closed conversation with tools", chatClient.Messages[0].Text);
             Assert.Contains("consider whether the conversation contains a useful new", chatClient.Messages[0].Text);

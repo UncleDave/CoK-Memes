@@ -34,11 +34,11 @@ public class DirectMessageHandler(
         + "lore undo <name> (or undo) — reverse the latest edit\n"
         + "lore confirm <token> / lore cancel — approve or cancel a destructive proposal\n"
         + "lore reset — clear the short-lived editor conversation\n\n"
-        + "gazette draft/show — privately draft or review The Khazad Gazette\n"
+        + $"gazette draft/show — privately draft or review {GenAi.GazetteBranding.Title}\n"
         + "gazette approve <token> / gazette discard — publish to #ai-tavern or discard\n\n"
         + "Duration: whole minutes, hours, or days (e.g. 30m, 2h, 1d), up to 30 days; expires to baseline. "
         + "Without a duration, the personality stays active until changed. Example: personality furious 2h.\n\n"
-        + "In guild chat: @Lorekeeper you've had a stroke. — cut that channel's conversation context here (admin only; confirmed with 🧠).";
+        + $"In guild chat: @{GenAi.Constants.LorekeeperName} you've had a stroke. — cut that channel's conversation context here (admin only; confirmed with 🧠).";
 
     public async Task Handle(MessageReceived notification, CancellationToken cancellationToken)
     {

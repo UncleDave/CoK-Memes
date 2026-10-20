@@ -1,8 +1,8 @@
-# The Khazad Gazette
+# The Crossroads Gazette
 
 ## On-demand private editorial flow
 
-The Gazette reports real guild happenings with disproportionate dwarven journalistic
+The Gazette reports real guild happenings with disproportionate local journalistic
 gravitas. It is a selection of funny exchanges, small incidents and genuine good news,
 not an exhaustive chat summary, recurring roast, or source of permanent lore.
 
@@ -53,7 +53,7 @@ messages still relies on the writer's judgement and administrator review.
 
 ## Editorial policy
 
-The voice is a confident, self-important dwarven newspaper finding disproportionate
+The voice is a confident, self-important local newspaper serving a Horde guild, finding disproportionate
 importance in small guild happenings. Satire is affectionate: take the situation
 absurdly seriously, not the member to pieces. Each article has one evidence-supported
 angle running through its headline, opening and choice of details. Use brisk, concrete
@@ -68,6 +68,9 @@ Describe story-bearing emoji/custom emotes in words without inventing intent; pr
 resolved display names unchanged. Every nonempty edition includes one absurd fictional
 classified: a separate comic idea unrelated to its news stories or real members, never
 a purported guild announcement.
+The newspaper also happens to wrap chips at Crossroads Mega Chippy. This is character
+framing, not evidence of member purchases or guild events; food jokes are occasional,
+not mandatory. Its editorial voice stays distinct from Grub's selectable temperaments.
 The published section is simply "Classifieds"; neither copy nor illustrations carry
 "fictional satire"/"satirical classified" disclaimers. Fictional framing remains an
 internal generation constraint, not a repetitive explanation printed next to jokes.
@@ -82,6 +85,11 @@ shared activity context is interpretation-only, not a source or story candidate.
 Schema descriptions reinforce the brief but cannot validate humour. Judge live admin
 trials across varied incidents, not only the latest exchange; contract tests do not prove
 editorial quality.
+
+`GazetteBranding` owns the current title, printed masthead, and new attachment prefix.
+The Mongo state ID `khazad-gazette`, collection names, schema identifier, issue sequence,
+publication snapshots, and old attachments are retained. Display rebranding does not
+start a new publication history or rewrite previous editions.
 
 Aim for one lead plus two distinct smaller dispatches when the sample supports them.
 The lead gets the strongest incident; secondary stories have a lower newsworthiness

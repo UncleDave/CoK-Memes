@@ -17,6 +17,8 @@ public class GazetteDirectMessageCommandTests
         Assert.Contains("1 newspaper page", preview);
         Assert.Contains("Read text & sources", preview);
         Assert.Contains(pending.Edition, preview);
+        Assert.Contains("**THE CROSSROADS GAZETTE**", preview);
+        Assert.DoesNotContain("KHAZAD", preview);
         Assert.Contains($"gazette approve {pending.Token}", preview);
         Assert.Contains("within 30 minutes", preview);
         Assert.Contains("`gazette discard`", preview);

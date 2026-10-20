@@ -118,7 +118,9 @@ public class DirectMessageHandlerTests
         Assert.Contains("personality reset", help);
         Assert.Contains("30m, 2h, 1d", help);
         Assert.Contains("personality furious 2h", help);
-        Assert.Contains("@Lorekeeper you've had a stroke.", help);
+        Assert.Contains("@Grub the Fryer you've had a stroke.", help);
+        Assert.Contains("The Crossroads Gazette", help);
+        Assert.DoesNotContain("The Khazad Gazette", help);
         Assert.Contains("notebook show/discard", help);
         Assert.Contains("lore undo", help);
         Assert.Contains("gazette approve", help);

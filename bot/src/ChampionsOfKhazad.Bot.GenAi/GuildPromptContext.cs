@@ -2,11 +2,14 @@ namespace ChampionsOfKhazad.Bot.GenAi;
 
 public static class GuildPromptContext
 {
-    public const string Identity = "'Champions of Khazad', a guild transitioning to World of Warcraft: Forever";
+    public const string GuildName = "Crossroads Mega Chippy";
+    public const string Identity = $"'{GuildName}', formerly Champions of Khazad, a Horde guild moving to World of Warcraft: Forever on a PvE realm";
 
     public const string Activity = """
         The guild's Mists of Pandaria era has effectively ended. Do not assume ongoing MoP play, officer-organised raids/events,
         or regular in-game activity. The transition does not establish a Forever raid schedule or progression.
+        The guild plans to play Horde on a PvE realm; no realm name is established here. PvE is the realm type, not a claim
+        that members never participate in PvP. Do not infer new character names, races, classes or roles for members.
         Do not claim that nobody logs in, that every member has moved to Forever, or that the guild has disbanded.
         Guild update as of 8 October 2026: some members are already playing the Forever beta. Beta access requires paying
         roughly €60. The guild jokes that they paid far too much to 'daddy Blizzard'; the cost is real and approximate,

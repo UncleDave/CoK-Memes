@@ -130,7 +130,7 @@ public class GazettePageRendererTests
         for (var index = 0; index < printEdition.Pages.Count; index++)
         {
             var page = printEdition.Pages[index];
-            Assert.Equal($"khazad-gazette-7-page-{index + 1}.png", page.FileName);
+            Assert.Equal($"crossroads-gazette-7-page-{index + 1}.png", page.FileName);
             using var bitmap = SKBitmap.Decode(page.Png);
             Assert.Equal(1200, bitmap.Width);
             Assert.InRange(bitmap.Height, 600, 4000);
@@ -195,8 +195,8 @@ public class GazettePageRendererTests
         Assert.Equal(1200, result.Width);
         Assert.InRange(result.Height, 800, 4000);
         Assert.InRange(page.Png.Length, 1000, 8_000_000);
-        Assert.Equal("khazad-gazette-1-page-1.png", page.FileName);
-        Assert.Equal("khazad-gazette-1-page-2.png", printEdition.Pages[1].FileName);
+        Assert.Equal("crossroads-gazette-1-page-1.png", page.FileName);
+        Assert.Equal("crossroads-gazette-1-page-2.png", printEdition.Pages[1].FileName);
         if (Environment.GetEnvironmentVariable("COK_GAZETTE_RENDER_SAMPLE") is { Length: > 0 } path)
         {
             File.WriteAllBytes(path, page.Png);

@@ -70,9 +70,12 @@ public class LorekeeperPersonalityServiceTests
         Assert.Contains("Use generate_image", prompt);
         Assert.Contains("Do not make decisions about image allowances yourself", prompt);
         Assert.Contains("Do not imitate their tone", prompt);
+        Assert.Contains("Use food references sparingly", prompt);
+        Assert.Contains("not evidence of actual member purchases", prompt);
+        Assert.Contains("Use Grub's identity immediately", prompt);
         if (temperament == LorekeeperTemperament.Baseline)
         {
-            Assert.Contains("wise Dwarf Lorekeeper", prompt);
+            Assert.Contains("weary, dependable orc chip-shop proprietor", prompt);
             Assert.DoesNotContain("rude", prompt);
             Assert.DoesNotContain("furious", prompt);
         }

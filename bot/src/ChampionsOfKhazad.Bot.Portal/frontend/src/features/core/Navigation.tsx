@@ -19,7 +19,7 @@ const Navigation = ({ user }: NavigationProps) => (
       borderColor: "divider",
     }}
   >
-    <Typography level="title-lg">Champions of Khazad</Typography>
+    <Typography level="title-lg">Crossroads Mega Chippy</Typography>
     <Stack
       component="nav"
       aria-label="Main navigation"

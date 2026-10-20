@@ -355,7 +355,7 @@ public sealed partial class GazetteDirectMessageCommand(
     {
         if (edition.Articles.Count is < 1 or > 3)
             throw new InvalidOperationException("Invalid Gazette article count.");
-        var text = new StringBuilder($"**THE KHAZAD GAZETTE**\n*Issue No. {issueNumber} · {FormatDates(since, until)}*\n");
+        var text = new StringBuilder($"**{GazetteBranding.Masthead}**\n*Issue No. {issueNumber} · {FormatDates(since, until)}*\n");
         foreach (var article in edition.Articles)
         {
             if (string.IsNullOrWhiteSpace(article.Headline) || string.IsNullOrWhiteSpace(article.Body) || article.SourceUrls.Count is < 1 or > 3)

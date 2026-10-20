@@ -1,7 +1,10 @@
 # Guild context in AI prompts
 
-Champions of Khazad is transitioning to **World of Warcraft: Forever**. Its Mists of
-Pandaria era has effectively ended; prompts must not present it as a currently active
+**Crossroads Mega Chippy**, formerly Champions of Khazad, is moving to
+**World of Warcraft: Forever**, playing **Horde on a PvE realm**. The realm name is
+not established in code. PvE describes the realm type, not a ban on members playing
+PvP. Do not infer new member character names, races, classes or roles.
+Its Mists of Pandaria era has effectively ended; prompts must not present it as a currently active
 MoP raiding guild or assume officer-organised events and regular in-game activity.
 This does not establish that nobody logs in, all members have moved, or the guild has
 disbanded. Forever schedules, progression, participation, and mechanics must not be invented.
@@ -19,8 +22,9 @@ upcoming after that time, and requires evidence before claiming the gathering ha
 
 `ChampionsOfKhazad.Bot.GenAi/GuildPromptContext.cs` owns the shared, minimal identity
 and activity framing. It is included by the common personality prompt (Lorekeeper and
-followers). The Lorekeeper retains its name, dwarf persona, selectable temperaments,
-tools, and lookup policies. The retired `/rip` command and its obituary prompt have
+followers). The main personality is now [Grub the Fryer](guild-identity.md), an orc
+chip-shop proprietor and guild lorekeeper. Selectable temperaments, tools, and lookup
+policies are retained. The retired `/rip` command and its obituary prompt have
 been removed; existing persisted character deaths are retained without migration.
 
 Past-expansion anecdotes remain guild history, not events to relabel as Forever stories.

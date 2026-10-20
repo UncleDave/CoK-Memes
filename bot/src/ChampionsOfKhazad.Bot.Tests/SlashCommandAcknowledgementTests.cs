@@ -8,10 +8,9 @@ public class SlashCommandAcknowledgementTests
     [InlineData("raids", "RespondAsync", true)]
     [InlineData("suggest", "RespondAsync", true)]
     [InlineData("summarise", "DeferAsync", false)]
-    [InlineData("rip", "DeferAsync", false)]
     public async Task EveryCommandDefinesOneInitialAcknowledgementWithItsOriginalVisibility(string name, string expectedMethod, bool ephemeral)
     {
-        var slashCommand = SlashCommands.All.Append(SlashCommands.Rip).Single(x => x.Properties.Name.Value == name);
+        var slashCommand = SlashCommands.All.Single(x => x.Properties.Name.Value == name);
         var calls = new List<string>();
         var command = DiscordConversationFixture.Stub<ISlashCommandInteraction>(
             (method, args) =>
@@ -29,5 +28,11 @@ public class SlashCommandAcknowledgementTests
         await slashCommand.AcknowledgeAsync(command);
 
         Assert.Equal([expectedMethod], calls);
+    }
+
+    [Fact]
+    public void HardcoreDeathCommandIsNotRegistered()
+    {
+        Assert.DoesNotContain(SlashCommands.All, command => command.Properties.Name.Value == "rip");
     }
 }

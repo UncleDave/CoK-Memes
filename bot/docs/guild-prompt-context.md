@@ -13,15 +13,15 @@ approximate cost; “far too much” is the comic judgment, not a denial of the 
 Many members plan to play the release together at **00:00 CET on 5 November 2026**:
 the same instant is **23:00 GMT on 4 November 2026** for UK members. This is a guild
 plan, not a verified official launch announcement, organised raid, or guaranteed turnout.
-Each personality/obituary invocation includes the current UTC time; the prompt treats
+Each personality invocation includes the current UTC time; the prompt treats
 beta status and release plans as dated context, does not keep calling the release
 upcoming after that time, and requires evidence before claiming the gathering happened.
 
 `ChampionsOfKhazad.Bot.GenAi/GuildPromptContext.cs` owns the shared, minimal identity
 and activity framing. It is included by the common personality prompt (Lorekeeper and
-followers) and the standalone `/rip` obituary prompt. The Lorekeeper retains its name,
-dwarf persona, selectable temperaments, tools, and lookup policies. Obituary requirements
-and command behaviour are unchanged.
+followers). The Lorekeeper retains its name, dwarf persona, selectable temperaments,
+tools, and lookup policies. The retired `/rip` command and its obituary prompt have
+been removed; existing persisted character deaths are retained without migration.
 
 Past-expansion anecdotes remain guild history, not events to relabel as Forever stories.
 Changing member details and specific guild plans belong in permanent lore, with current

@@ -26,50 +26,6 @@ public static class SlashCommands
         command => command.RespondAsync("Thanks for your suggestion!", ephemeral: true)
     );
 
-    // Disabled
-    public static readonly SlashCommand Rip = new(
-        new SlashCommandBuilder()
-            .WithName("rip")
-            .WithDescription("Announce the untimely demise of your hardcore character")
-            .AddOption("character", ApplicationCommandOptionType.String, "Your character's name", true)
-            .AddOption("level", ApplicationCommandOptionType.Integer, "Your character's level", true, minValue: 1, maxValue: 60)
-            .AddOption(
-                new SlashCommandOptionBuilder()
-                    .WithName("race")
-                    .WithType(ApplicationCommandOptionType.String)
-                    .WithDescription("Your character's race")
-                    .WithRequired(true)
-                    .AddChoice("Human")
-                    .AddChoice("Dwarf")
-                    .AddChoice("Gnome")
-                    .AddChoice("Night Elf")
-                    .AddChoice("Orc")
-                    .AddChoice("Troll")
-                    .AddChoice("Tauren")
-                    .AddChoice("Undead")
-            )
-            .AddOption(
-                new SlashCommandOptionBuilder()
-                    .WithName("class")
-                    .WithType(ApplicationCommandOptionType.String)
-                    .WithDescription("Your character's class")
-                    .WithRequired(true)
-                    .AddChoice("Druid")
-                    .AddChoice("Hunter")
-                    .AddChoice("Mage")
-                    .AddChoice("Paladin")
-                    .AddChoice("Priest")
-                    .AddChoice("Rogue")
-                    .AddChoice("Shaman")
-                    .AddChoice("Warlock")
-                    .AddChoice("Warrior")
-            )
-            .AddOption("cause", ApplicationCommandOptionType.String, "The cause of death", true)
-            .Build(),
-        command => new RipSlashCommandExecuted(command),
-        command => command.DeferAsync()
-    );
-
     public static readonly SlashCommand Summarise = new(
         new SlashCommandBuilder().WithName("summarise").WithDescription("Summarise the last 50 messages in this channel").Build(),
         command => new SummariseSlashCommandExecuted(command),

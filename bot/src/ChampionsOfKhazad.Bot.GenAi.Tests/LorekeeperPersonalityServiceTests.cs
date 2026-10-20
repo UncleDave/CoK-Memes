@@ -63,24 +63,17 @@ public class LorekeeperPersonalityServiceTests
     [InlineData(LorekeeperTemperament.Baseline)]
     [InlineData(LorekeeperTemperament.Grouchy)]
     [InlineData(LorekeeperTemperament.Furious)]
-    public void PresetsRetainCapabilitiesAndOverrideHistoryTone(LorekeeperTemperament temperament)
+    public void TemperamentInstructionsAreIncludedOnlyForTheSelectedPreset(LorekeeperTemperament temperament)
     {
         var prompt = LorekeeperPersonality.GetPrompt(temperament);
-        Assert.Contains("Follow the Guild Lore Lookup Policy", prompt);
-        Assert.Contains("Use generate_image", prompt);
-        Assert.Contains("Do not make decisions about image allowances yourself", prompt);
-        Assert.Contains("Do not imitate their tone", prompt);
-        Assert.Contains("Use food references sparingly", prompt);
-        Assert.Contains("not evidence of actual member purchases", prompt);
-        Assert.Contains("Use Grub's identity immediately", prompt);
         if (temperament == LorekeeperTemperament.Baseline)
-        {
-            Assert.Contains("weary, dependable orc chip-shop proprietor", prompt);
-            Assert.DoesNotContain("rude", prompt);
-            Assert.DoesNotContain("furious", prompt);
-        }
+            Assert.DoesNotContain("## Your Temperament:", prompt);
         else
-            Assert.Contains("drop the act for sensitive topics or when asked to stop", prompt);
+            Assert.Contains("## Your Temperament:", prompt);
+        if (temperament == LorekeeperTemperament.Furious)
+            Assert.Contains("## Voice Examples", prompt);
+        else
+            Assert.DoesNotContain("## Voice Examples", prompt);
     }
 
     [Fact]

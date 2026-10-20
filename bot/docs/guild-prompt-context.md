@@ -22,7 +22,7 @@ upcoming after that time, and requires evidence before claiming the gathering ha
 
 `ChampionsOfKhazad.Bot.GenAi/GuildPromptContext.cs` owns the shared, minimal identity
 and activity framing. It is included by the common personality prompt (Lorekeeper and
-followers). The main personality is now [Grub the Fryer](guild-identity.md), an orc
+followers). The main personality is now [Grub](guild-identity.md), an orc
 chip-shop proprietor and guild lorekeeper. Selectable temperaments, tools, and lookup
 policies are retained. The retired `/rip` command and its obituary prompt have
 been removed; existing persisted character deaths are retained without migration.
@@ -40,10 +40,10 @@ guild slash-command registration. Its MoP implementation and settings are retain
 not adapted to Forever. Other scheduled events are unchanged. Notebook discovery/review and DM editing use expansion-neutral tasks
 and do not contain a separate MoP/Classic guild identity to replace.
 
-Existing tests check that the shared context reaches actual model requests for every
-Lorekeeper temperament and the five conversation follower personalities. They test
-prompt assembly, not the spelling of individual lore facts; live model interpretation
-is not guaranteed by these tests.
+Tests exercise model-request assembly for every Lorekeeper temperament and the five
+conversation follower personalities: runtime author substitution, selected temperament,
+history preservation, and conditional tools/instructions. Fixed prompt prose is not
+duplicated in assertions; these tests do not establish live model interpretation.
 
 ## Linked member context
 

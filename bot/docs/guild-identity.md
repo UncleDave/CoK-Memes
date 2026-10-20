@@ -6,11 +6,11 @@ The rebrand is prepared on a branch for officer review; deploying this version i
 the cutover, not a claim that the tentative name has already been adopted in Discord.
 Keep the branch unmerged until the rebrand is approved.
 
-## Grub the Fryer
+## Grub
 
-The main bot persona is **Grub the Fryer**, full name **Grub Greasefist**: a broad
+The main bot persona is **Grub**, full name **Grub Greasefist**: a broad
 green orc, chip-shop proprietor, and keeper of the guild's grease-stained ledger.
-Suggested Discord display name: **Grub the Fryer**; model speaker name: **Grub**.
+Discord display name and model speaker name: **Grub**.
 He replaces Hammerstone as the active character, without rewriting old conversations
 or inventing an in-world handover as established guild history.
 
@@ -61,8 +61,8 @@ after that review; registration cleanup skips the command when it is enabled.
 ## Rollout
 
 1. Obtain officer approval for the guild name and persona, then merge and deploy.
-2. Change the existing bot's Discord profile/application presentation to Grub the
-   Fryer and set an approved avatar. Rename the guild server separately if wanted.
+2. Change the existing bot's Discord profile/application presentation to Grub
+   and set an approved avatar. Rename the guild server separately if wanted.
    Keep the same application and server IDs; no token replacement is required for
    a cosmetic rebrand. Review any visible webhook/Auth0 application branding manually.
 3. Confirm mentions, admin help, the portal title/header/access-denied copy, and a

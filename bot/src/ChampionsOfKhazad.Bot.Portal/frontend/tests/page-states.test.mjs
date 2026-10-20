@@ -215,12 +215,9 @@ test("portal title and access-denied page use the new guild identity", async () 
     new URL("../../wwwroot/access-denied.html", import.meta.url),
     "utf8",
   );
-  assert.match(
-    index,
-    /<title>Grub the Fryer · Crossroads Mega Chippy<\/title>/,
-  );
+  assert.match(index, /<title>Grub · Crossroads Mega Chippy<\/title>/);
   assert.match(denied, /restricted to members of Crossroads Mega Chippy/);
-  assert.doesNotMatch(index + denied, /Champions of Khazad|CoK Bot/);
+  assert.doesNotMatch(index + denied, /Champions of Khazad|CoK Bot|the Fryer/);
 });
 
 test("route errors distinguish session, permission, and missing-page failures", () => {

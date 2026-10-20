@@ -2,7 +2,7 @@
 
 public static class Constants
 {
-    public const string LorekeeperName = "Grub the Fryer";
+    public const string LorekeeperName = "Grub";
     public const string OpenAiFriendlyLorekeeperName = "Grub";
     public const string ImageGenerationConfirmationMessage = "Generating your image. This may take a minute.";
 

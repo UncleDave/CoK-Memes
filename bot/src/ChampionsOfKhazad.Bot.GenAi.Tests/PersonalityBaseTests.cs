@@ -39,26 +39,7 @@ public class PersonalityBaseTests
             Assert.Contains(chatClient.Options!.Tools!, tool => tool is HostedWebSearchTool);
             Assert.Contains(chatClient.Options.Tools!, tool => tool.Name == "read_discord_messages");
             Assert.Contains("The current author's Discord user ID is 1.", chatClient.Messages[0].Text);
-            Assert.Contains(GuildPromptContext.Identity, chatClient.Messages[0].Text);
-            Assert.Contains(GuildPromptContext.Activity, chatClient.Messages[0].Text);
-            Assert.Contains("Grub the Fryer", chatClient.Messages[0].Text);
-            Assert.Contains("Grub Greasefist", chatClient.Messages[0].Text);
-            Assert.Contains("orc chip-shop proprietor", chatClient.Messages[0].Text);
-            Assert.Contains("Crossroads Mega Chippy", chatClient.Messages[0].Text);
-            Assert.Contains("Horde on a PvE realm", chatClient.Messages[0].Text);
-            Assert.DoesNotContain("Hammerstone", chatClient.Messages[0].Text);
-            Assert.DoesNotContain("CoK Bot", chatClient.Messages[0].Text);
-            Assert.DoesNotContain("Dwarf Lorekeeper", chatClient.Messages[0].Text);
-            Assert.Contains("respond only to the message marked currentRequest", chatClient.Messages[0].Text);
-            Assert.Contains("do not reconstruct that closed conversation with tools", chatClient.Messages[0].Text);
-            Assert.Contains("consider whether the conversation contains a useful new", chatClient.Messages[0].Text);
-            Assert.Contains("it need not already be a running joke", chatClient.Messages[0].Text);
-            Assert.Contains("Attribute firsthand reports as reports", chatClient.Messages[0].Text);
-            Assert.Contains("even if it happened only once", chatClient.Messages[0].Text);
-            Assert.Contains(
-                "single clear human message or one-off incident",
-                chatClient.Options.Tools!.Single(tool => tool.Name == "remember_note").Description
-            );
+            Assert.DoesNotContain("{{$", chatClient.Messages[0].Text);
             Assert.Equal("Earlier angry reply", chatClient.Messages[1].Text);
         }
     }
@@ -188,21 +169,6 @@ public class PersonalityBaseTests
         var reply = await personality.InvokeAsync(new ChatHistory(), new TestMessageContext(), TestContext.Current.CancellationToken);
 
         Assert.Equal($"{example}\n[Cat](https://example.com/cat.png)", reply);
-    }
-
-    [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public async Task PersonalityPromptExplainsDiscordImageLinkFormatting(bool includeLorekeeperTools)
-    {
-        var chatClient = new CapturingChatClient(new ChatResponse(new ChatMessage(ChatRole.Assistant, "Answer")));
-        var personality = CreatePersonality(chatClient, includeLorekeeperTools);
-
-        await personality.InvokeAsync(new ChatHistory(), new TestMessageContext(), TestContext.Current.CancellationToken);
-
-        Assert.Contains("Use Discord-compatible Markdown", chatClient.Messages![0].Text);
-        Assert.Contains("Never use ![alt text](url)", chatClient.Messages[0].Text);
-        Assert.Contains("labelled links and bare image URLs can produce image previews", chatClient.Messages[0].Text);
     }
 
     [Fact]

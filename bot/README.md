@@ -1,4 +1,4 @@
-﻿# Grub the Fryer
+﻿# Grub
 
 A Discord bot for the Crossroads Mega Chippy guild, with guild lore, AI responses,
 memes and raid sign-ups. An ASP.NET Core/React portal provides access to guild lore

@@ -10,7 +10,7 @@ public class SlashCommandAcknowledgementTests
     [InlineData("summarise", "DeferAsync", false)]
     public async Task EveryCommandDefinesOneInitialAcknowledgementWithItsOriginalVisibility(string name, string expectedMethod, bool ephemeral)
     {
-        var slashCommand = SlashCommands.All.Single(x => x.Properties.Name.Value == name);
+        var slashCommand = SlashCommands.All.Append(SlashCommands.Raids).Single(x => x.Properties.Name.Value == name);
         var calls = new List<string>();
         var command = DiscordConversationFixture.Stub<ISlashCommandInteraction>(
             (method, args) =>
@@ -34,5 +34,12 @@ public class SlashCommandAcknowledgementTests
     public void HardcoreDeathCommandIsNotRegistered()
     {
         Assert.DoesNotContain(SlashCommands.All, command => command.Properties.Name.Value == "rip");
+    }
+
+    [Fact]
+    public void RaidCommandIsRetainedButNotRegistered()
+    {
+        Assert.Equal("raids", SlashCommands.Raids.Properties.Name.Value);
+        Assert.DoesNotContain(SlashCommands.All, command => command.Properties.Name.Value == "raids");
     }
 }

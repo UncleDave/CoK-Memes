@@ -31,8 +31,9 @@ rewritten by changing these prompts; update relevant entries through the
 
 The DM editor updates stored lore, not code-defined prompt context. Raid-name/description
 lists, summon jokes, configured event/follower targets, and the independent Leaf site
-are also unchanged. This transition does not automatically disable scheduled events or
-remove old jokes. Notebook discovery/review and DM editing use expansion-neutral tasks
+are also unchanged. `/raids` is no longer registered, and startup removes its existing
+guild slash-command registration. Its MoP implementation and settings are retained,
+not adapted to Forever. Other scheduled events are unchanged. Notebook discovery/review and DM editing use expansion-neutral tasks
 and do not contain a separate MoP/Classic guild identity to replace.
 
 Existing tests check that the shared context reaches actual model requests for every

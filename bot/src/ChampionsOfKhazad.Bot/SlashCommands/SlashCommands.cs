@@ -32,9 +32,26 @@ public static class SlashCommands
         command => command.DeferAsync()
     );
 
-    public static readonly SlashCommand[] GuildCommands = [Raids, Summarise];
+    public static readonly SlashCommand[] GuildCommands = [Summarise];
 
     public static readonly SlashCommand[] GlobalCommands = [Suggest];
 
     public static readonly SlashCommand[] All = GuildCommands.Concat(GlobalCommands).ToArray();
+
+    internal static async Task RegisterGuildCommandsAsync(IGuild guild)
+    {
+        foreach (var command in GuildCommands)
+            await guild.CreateApplicationCommandAsync(command.Properties);
+
+        // Creating enabled commands does not remove existing Discord registrations.
+        // Retain /raids locally, but remove its remote registration until explicitly re-enabled.
+        if (!GuildCommands.Contains(Raids))
+        {
+            foreach (var command in await guild.GetApplicationCommandsAsync())
+            {
+                if (command.Name == Raids.Properties.Name.Value && command.Type == ApplicationCommandType.Slash)
+                    await command.DeleteAsync();
+            }
+        }
+    }
 }

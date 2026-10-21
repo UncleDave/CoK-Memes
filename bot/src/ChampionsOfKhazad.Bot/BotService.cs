@@ -67,8 +67,7 @@ public class BotService : IHostedService
         _botContextProvider.BotContext = new BotContext(_client.CurrentUser.Id, guild, _client);
         _botContextProvider.IsReady = true;
 
-        foreach (var slashCommand in SlashCommands.GuildCommands)
-            await guild.CreateApplicationCommandAsync(slashCommand.Properties);
+        await SlashCommands.RegisterGuildCommandsAsync(guild);
 
         foreach (var slashCommand in SlashCommands.GlobalCommands)
             await _client.CreateGlobalApplicationCommandAsync(slashCommand.Properties);

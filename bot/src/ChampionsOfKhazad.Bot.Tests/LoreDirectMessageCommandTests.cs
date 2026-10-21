@@ -21,6 +21,7 @@ public class LoreDirectMessageCommandTests
         Assert.Equal("Unknown", entry.Pronouns);
         Assert.Equal("Unknown", entry.Nationality);
         Assert.Equal("Unknown", entry.MainCharacter);
+        Assert.Null(entry.DiscordUserId);
         Assert.Equal("Dies to elevators.", entry.Biography);
         var revision = Assert.Single(fixture.Store.State.History);
         Assert.Equal(1UL, revision.ActorId);
@@ -40,7 +41,7 @@ public class LoreDirectMessageCommandTests
     [Fact]
     public async Task FocusedUpdatesPreserveAllUnspecifiedFields()
     {
-        var original = Member() with { Aliases = ["Grimbles"], Roles = ["Raider"] };
+        var original = Member() with { DiscordUserId = 123456789, Aliases = ["Grimbles"], Roles = ["Raider"] };
         var fixture = new Fixture(Update(new() { MainCharacter = "Paladin" }), original);
         var reply = await fixture.Command.ExecuteAsync(1, "Grim's main is actually a paladin now. Keep the elevator joke.", Token);
         Assert.Contains("Saved Grim", reply);
@@ -49,6 +50,190 @@ public class LoreDirectMessageCommandTests
         Assert.Equal(original, fixture.Store.State.History[^1].Before);
         await fixture.Command.ExecuteAsync(1, "undo", Token);
         Assert.Equal(original, fixture.Store.State.Entry);
+    }
+
+    [Theory]
+    [InlineData("1", 1UL)]
+    [InlineData("9223372036854775807", (ulong)long.MaxValue)]
+    [InlineData("", null)]
+    public async Task DiscordUserIdEditsPreserveProfileAndAppearInSaveShowHistoryAndUndo(string value, ulong? expectedId)
+    {
+        var original = Member() with { DiscordUserId = 123456789, Aliases = ["Grimbles"], Roles = ["Raider"] };
+        var fixture = new Fixture(Update(new() { DiscordUserId = value }), original);
+        var displayedId = value.Length == 0 ? "Not linked" : value;
+        var change = $"Discord user ID: 123456789 → {displayedId}";
+
+        var reply = await fixture.Command.ExecuteAsync(1, "Change Grim's Discord user ID", Token);
+        Assert.Contains("Saved Grim", reply);
+        Assert.Contains(change, reply);
+        Assert.DoesNotContain("Biography:", reply);
+        Assert.Equal(original with { DiscordUserId = expectedId }, fixture.Store.State.Entry);
+        Assert.Equal(original, fixture.Store.State.History[^1].Before);
+        Assert.Equal(expectedId, fixture.Store.State.History[^1].After!.DiscordUserId);
+        Assert.Contains($"Discord user ID: {displayedId}", await fixture.Command.ExecuteAsync(1, "lore show Grim", Token));
+        Assert.Contains(change, await fixture.Command.ExecuteAsync(1, "lore history Grim", Token));
+
+        var undone = await fixture.Command.ExecuteAsync(1, "undo", Token);
+        Assert.Contains($"Discord user ID: {displayedId} → 123456789", undone);
+        Assert.Equal(original, fixture.Store.State.Entry);
+    }
+
+    [Fact]
+    public async Task NewMemberMayHaveAnExplicitDiscordUserIdWithoutInventedProfileDetails()
+    {
+        var fixture = new Fixture(Create(new() { DiscordUserId = "9223372036854775807" }));
+        var reply = await fixture.Command.ExecuteAsync(1, "Add Grim with Discord user ID 9223372036854775807", Token);
+        Assert.Contains("Saved Grim", reply);
+        Assert.Contains("Discord user ID: 9223372036854775807", reply);
+        Assert.Equal((ulong)long.MaxValue, fixture.Store.State.Entry!.DiscordUserId);
+        Assert.Null(fixture.Store.State.Entry.Biography);
+        Assert.Equal("Unknown", fixture.Store.State.Entry.Pronouns);
+        Assert.Equal("Unknown", fixture.Store.State.Entry.Nationality);
+        Assert.Equal("Unknown", fixture.Store.State.Entry.MainCharacter);
+    }
+
+    [Theory]
+    [InlineData("0")]
+    [InlineData("000")]
+    [InlineData("9223372036854775808")]
+    [InlineData("18446744073709551615")]
+    [InlineData("18446744073709551616")]
+    [InlineData("00000000000000000001")]
+    [InlineData("not-an-id")]
+    [InlineData("1.0")]
+    [InlineData("1e3")]
+    [InlineData("-1")]
+    [InlineData("+1")]
+    [InlineData(" 1")]
+    [InlineData("1 ")]
+    [InlineData(" ")]
+    [InlineData("１２３")]
+    [InlineData("1\0")]
+    public async Task InvalidDiscordUserIdChangesFailClosedEvenForAnInjectedPlan(string value)
+    {
+        var original = Member() with { DiscordUserId = 123456789 };
+        var fixture = new Fixture(Update(new() { DiscordUserId = value }), original);
+        Assert.DoesNotContain("Saved", await fixture.Command.ExecuteAsync(1, "Change Grim's Discord user ID", Token));
+        Assert.Equal(0, fixture.Store.Saves);
+        Assert.Equal(original, fixture.Store.State.Entry);
+    }
+
+    [Fact]
+    public async Task HelpShowsSupportedDiscordUserIdRangeAndLinkActions()
+    {
+        var fixture = new Fixture(Create(new() { DiscordUserId = "1" }));
+        var reply = await fixture.Command.ExecuteAsync(1, "lore help", Token);
+        Assert.Contains("1..9223372036854775807", reply);
+        Assert.Contains("Set Grim's Discord user ID", reply);
+        Assert.Contains("Clear Grim's Discord user ID", reply);
+        Assert.DoesNotContain("18446744073709551615", reply);
+        Assert.Equal(0, fixture.Planner.Calls);
+        Assert.Equal(0, fixture.Store.Saves);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task DuplicateDiscordUserIdsAreRejectedWithTheLinkedMemberName(bool create)
+    {
+        var fixture = new Fixture(
+            create ? Create(new() { DiscordUserId = "123456789" }) : Update(new() { DiscordUserId = "123456789" }),
+            create ? null : Member()
+        );
+        fixture.Store.OtherEntries.Add(new("Leaf", "member") { DiscordUserId = 123456789 });
+        var reply = await fixture.Command.ExecuteAsync(1, "Set Grim's Discord user ID to 123456789", Token);
+        Assert.Contains("Discord user ID 123456789 is already linked to Leaf", reply);
+        Assert.Contains("Unlink it there", reply);
+        Assert.Contains("Nothing was changed", reply);
+        Assert.Equal(0, fixture.Store.Saves);
+        Assert.Null(fixture.Store.State.Entry?.DiscordUserId);
+    }
+
+    [Fact]
+    public async Task DiscordUserIdCannotBeAssignedToGuildLoreByAnInjectedPlan()
+    {
+        var original = new LoreEntrySnapshot("Floor inspector", "guild") { Content = "A joke about Leaf dying on pull." };
+        var fixture = new Fixture(new("update", original.Name, "guild", new() { DiscordUserId = "123456789" }, "Edit", false), original);
+        Assert.DoesNotContain("Saved", await fixture.Command.ExecuteAsync(1, "Link the guild joke to a Discord account", Token));
+        Assert.Equal(original, fixture.Store.State.Entry);
+        Assert.Equal(0, fixture.Store.Saves);
+    }
+
+    [Theory]
+    [InlineData(null, false)]
+    [InlineData("123456789", false)]
+    [InlineData("987654321", true)]
+    public async Task BroadRewriteCountsDiscordUserIdOnlyWhenItActuallyChanges(string? userId, bool requiresConfirmation)
+    {
+        var original = Member() with { DiscordUserId = 123456789 };
+        var fixture = new Fixture(
+            Update(
+                new()
+                {
+                    DiscordUserId = userId,
+                    Pronouns = "she/her",
+                    Nationality = "DK",
+                    MainCharacter = "Paladin",
+                }
+            ),
+            original
+        );
+        var reply = await fixture.Command.ExecuteAsync(1, "Update Grim's profile", Token);
+        if (requiresConfirmation)
+        {
+            Assert.Contains("Not saved yet", reply);
+            Assert.Contains("Discord user ID: 123456789 → 987654321", reply);
+            Assert.Equal(0, fixture.Store.Saves);
+            Assert.Contains("Saved Grim", await fixture.Command.ExecuteAsync(1, Confirmation(reply!), Token));
+            Assert.Equal(987654321UL, fixture.Store.State.Entry!.DiscordUserId);
+        }
+        else
+        {
+            Assert.Contains("Saved Grim", reply);
+            Assert.DoesNotContain("Discord user ID:", reply);
+            Assert.Equal(123456789UL, fixture.Store.State.Entry!.DiscordUserId);
+        }
+    }
+
+    [Fact]
+    public async Task DiscordLinkConfirmationDoesNotBypassStoreConflictsOrReplan()
+    {
+        var fixture = new Fixture(Update(new() { DiscordUserId = "123456789" }) with { RequiresConfirmation = true }, Member());
+        var preview = await fixture.Command.ExecuteAsync(1, "Link Grim to Discord user ID 123456789", Token);
+        Assert.Contains("Discord user ID: Not linked → 123456789", preview);
+        var reads = fixture.Store.Reads;
+        fixture.Store.Reject = true;
+
+        var reply = await fixture.Command.ExecuteAsync(1, Confirmation(preview!), Token);
+        Assert.Contains("Discord user ID 123456789 is already linked to another member", reply);
+        Assert.Contains("Nothing was overwritten", reply);
+        Assert.DoesNotContain("Saved", reply);
+        Assert.Null(fixture.Store.State.Entry!.DiscordUserId);
+        Assert.Equal(0, fixture.Store.Saves);
+        Assert.Equal(reads, fixture.Store.Reads);
+        Assert.Equal(1, fixture.Planner.Calls);
+        Assert.Contains("No live", await fixture.Command.ExecuteAsync(1, Confirmation(preview!), Token));
+    }
+
+    [Fact]
+    public async Task UndoRestoringADiscordLinkDoesNotBypassStoreConflicts()
+    {
+        var original = Member() with { DiscordUserId = 123456789 };
+        var fixture = new Fixture(new("delete", "Grim", "member", new(), "Delete Grim", true), original);
+        var preview = await fixture.Command.ExecuteAsync(1, "Delete Grim", Token);
+        await fixture.Command.ExecuteAsync(1, Confirmation(preview!), Token);
+        Assert.Null(fixture.Store.State.Entry);
+        fixture.Store.Reject = true;
+        var reads = fixture.Store.Reads;
+
+        var reply = await fixture.Command.ExecuteAsync(1, "undo", Token);
+        Assert.Contains("Discord user ID 123456789 is already linked to another member", reply);
+        Assert.Contains("Nothing was overwritten", reply);
+        Assert.Null(fixture.Store.State.Entry);
+        Assert.Equal(1, fixture.Store.Saves);
+        Assert.Single(fixture.Store.State.History);
+        Assert.Equal(reads + 1, fixture.Store.Reads);
+        Assert.Equal(1, fixture.Planner.Calls);
     }
 
     [Theory]
@@ -71,9 +256,23 @@ public class LoreDirectMessageCommandTests
         var fixture = new Fixture(Create(new() { Biography = "New" }));
         Assert.Null(await fixture.Command.ExecuteAsync(2, "Add Grim", Token));
         Assert.Null(await fixture.Command.ExecuteAsync(2, "lore history Grim", Token));
+        Assert.Null(await fixture.Command.ExecuteAsync(2, "Set Grim's Discord user ID to 123456789", Token));
+        Assert.Null(await fixture.Command.ExecuteAsync(2, "Clear Grim's Discord user ID", Token));
         Assert.Equal(0, fixture.Planner.Calls);
         Assert.Equal(0, fixture.Store.Reads);
         Assert.Equal(0, fixture.Store.Saves);
+    }
+
+    [Fact]
+    public async Task OnlyTheAdminCanConfirmADiscordLink()
+    {
+        var fixture = new Fixture(Update(new() { DiscordUserId = "123456789" }) with { RequiresConfirmation = true }, Member());
+        var preview = await fixture.Command.ExecuteAsync(1, "Set Grim's Discord user ID to 123456789", Token);
+        Assert.Null(await fixture.Command.ExecuteAsync(2, Confirmation(preview!), Token));
+        Assert.Null(fixture.Store.State.Entry!.DiscordUserId);
+        Assert.Equal(0, fixture.Store.Saves);
+        Assert.Contains("Saved Grim", await fixture.Command.ExecuteAsync(1, Confirmation(preview!), Token));
+        Assert.Equal(123456789UL, fixture.Store.State.Entry!.DiscordUserId);
     }
 
     [Fact]
@@ -266,6 +465,16 @@ public class LoreDirectMessageCommandTests
     {
         var fixture = new Fixture(Update(new() { MainCharacter = "Shaman" }), Member());
         Assert.Contains("No changes needed", await fixture.Command.ExecuteAsync(1, "Set Grim's main to shaman", Token));
+        Assert.Equal(0, fixture.Store.Saves);
+    }
+
+    [Theory]
+    [InlineData("123456789", 123456789UL)]
+    [InlineData("", null)]
+    public async Task IdenticalDiscordLinksDoNotCreateRevisions(string userId, ulong? existingId)
+    {
+        var fixture = new Fixture(Update(new() { DiscordUserId = userId }), Member() with { DiscordUserId = existingId });
+        Assert.Contains("No changes needed", await fixture.Command.ExecuteAsync(1, "Change Grim's Discord user ID", Token));
         Assert.Equal(0, fixture.Store.Saves);
     }
 
@@ -500,6 +709,7 @@ public class LoreDirectMessageCommandTests
         public int Saves { get; private set; }
         public int Reads { get; private set; }
         public bool Reject { get; set; }
+        public List<LoreEntrySnapshot> OtherEntries { get; } = [];
 
         public void ConcurrentEdit(LoreEntrySnapshot entry) => State = State with { Entry = entry, Revision = Guid.NewGuid().ToString("N") };
 
@@ -507,7 +717,8 @@ public class LoreDirectMessageCommandTests
         {
             cancellationToken.ThrowIfCancellationRequested();
             Reads++;
-            return Task.FromResult<IReadOnlyList<LoreEditState>>(State.Entry is null ? [] : [State]);
+            var entries = OtherEntries.Select(entry => new LoreEditState(entry.Name, true, "initial-other", entry, []));
+            return Task.FromResult<IReadOnlyList<LoreEditState>>((State.Entry is null ? entries : entries.Prepend(State)).ToArray());
         }
 
         public Task<LoreEditState> GetEntryAsync(string name, CancellationToken cancellationToken)

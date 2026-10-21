@@ -75,12 +75,21 @@ internal abstract partial class PersonalityBase(
             .Replace("{{$emojis}}", string.Join(' ', emojiHandler.GetEmojis()))
             .Replace("{{$currentMonth}}", DateTimeOffset.Now.ToString("MMMM"));
 
+        var authorContext = await personalityTools.GetAuthorContextAsync(messageContext, includeLorekeeperTools, cancellationToken);
+        if (authorContext.Text is not null)
+            systemPrompt += "\n\n" + authorContext.Text;
+
         var messages = new ChatHistory([new ChatMessage(ChatRole.System, systemPrompt), .. chatHistory]);
         var generatedImages = new ConcurrentQueue<Uri>();
         var options = new ChatOptions
         {
             Reasoning = new ReasoningOptions { Effort = ReasoningEffort.Medium },
-            Tools = personalityTools.Create(messageContext, includeLorekeeperTools, generatedImages.Enqueue),
+            Tools = personalityTools.Create(
+                messageContext,
+                includeLorekeeperTools,
+                generatedImages.Enqueue,
+                authorNotebookSearched: authorContext.NotebookSearched
+            ),
         };
 
         var response = await chatClient.GetResponseAsync(messages, options, cancellationToken);

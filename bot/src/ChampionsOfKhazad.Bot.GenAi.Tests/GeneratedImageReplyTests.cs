@@ -288,7 +288,7 @@ public class GeneratedImageReplyTests
                 ),
                 NullLogger<ImageGenerationService>.Instance
             );
-            var tools = new PersonalityTools(null!, Service, null!, null!, NullLogger<PersonalityTools>.Instance);
+            var tools = new PersonalityTools(null!, Service, null!, null!, NullLogger<PersonalityTools>.Instance, new EmptyLoreGetter());
             _personality = new TestPersonality(new ChatClientBuilder(ChatClient).UseFunctionInvocation().Build(), tools);
         }
 

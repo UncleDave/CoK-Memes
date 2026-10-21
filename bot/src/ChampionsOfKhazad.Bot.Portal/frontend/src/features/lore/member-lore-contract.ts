@@ -2,6 +2,7 @@ import GuildLoreContract from "./guild-lore-contract.ts";
 
 export default interface MemberLoreContract {
   name: string;
+  discordUserId?: string | null;
   aliases: string[];
   pronouns: string;
   nationality: string;

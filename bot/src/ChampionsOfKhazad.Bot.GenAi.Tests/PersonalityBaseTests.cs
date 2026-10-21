@@ -19,7 +19,14 @@ public class PersonalityBaseTests
         var personality = new LorekeeperPersonality(
             new PassThroughEmojiHandler(),
             chatClient,
-            new PersonalityTools(new EmptyRelatedLore(), null!, new EmptyDiscordMessageService(), null!, NullLogger<PersonalityTools>.Instance),
+            new PersonalityTools(
+                new EmptyRelatedLore(),
+                null!,
+                new EmptyDiscordMessageService(),
+                null!,
+                NullLogger<PersonalityTools>.Instance,
+                new EmptyLoreGetter()
+            ),
             service
         );
         var history = new ChatHistory([new ChatMessage(ChatRole.Assistant, "Earlier angry reply")]);
@@ -199,7 +206,8 @@ public class PersonalityBaseTests
             null!,
             new EmptyDiscordMessageService(),
             notebook,
-            NullLogger<PersonalityTools>.Instance
+            NullLogger<PersonalityTools>.Instance,
+            new EmptyLoreGetter()
         );
         var tool = Assert.IsAssignableFrom<AIFunction>(
             tools.Create(new TestMessageContext { ChannelId = null }, true).Single(tool => tool.Name == "remember_note")
@@ -238,7 +246,8 @@ public class PersonalityBaseTests
             null!,
             new EmptyDiscordMessageService(),
             notebook,
-            NullLogger<PersonalityTools>.Instance
+            NullLogger<PersonalityTools>.Instance,
+            new EmptyLoreGetter()
         );
         var tool = Assert.IsAssignableFrom<AIFunction>(
             tools.Create(new TestMessageContext { ChannelId = null }, true).Single(tool => tool.Name == "search_notebook")
@@ -256,7 +265,8 @@ public class PersonalityBaseTests
             null!,
             new EmptyDiscordMessageService(),
             null!,
-            NullLogger<PersonalityTools>.Instance
+            NullLogger<PersonalityTools>.Instance,
+            new EmptyLoreGetter()
         );
         return new TestPersonality(includeLorekeeperTools, new PassThroughEmojiHandler(), chatClient, personalityTools);
     }

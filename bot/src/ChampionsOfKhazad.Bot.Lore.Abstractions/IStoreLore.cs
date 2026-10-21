@@ -4,6 +4,7 @@ public interface IStoreLore
 {
     Task<IReadOnlyList<ILore>> ReadLoreAsync(CancellationToken cancellationToken = default);
     Task<ILore?> ReadLoreAsync(string name, CancellationToken cancellationToken = default);
+    Task<IMemberLore?> ReadMemberLoreAsync(ulong discordUserId, CancellationToken cancellationToken = default);
     Task<bool> CreateLoreAsync(ILore lore, CancellationToken cancellationToken = default);
     Task<bool> UpdateLoreAsync(ILore lore, CancellationToken cancellationToken = default);
     Task UpsertLoreAsync(ILore lore);

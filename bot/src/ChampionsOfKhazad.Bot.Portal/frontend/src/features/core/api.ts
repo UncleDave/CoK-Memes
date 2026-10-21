@@ -7,6 +7,9 @@ const buildGuildLoreBody = (formData: FormData, includeName = false) => ({
 
 const buildMemberLoreBody = (formData: FormData, includeName = false) => ({
   ...(includeName && { name: formData.get("name") }),
+  ...(formData.has("discordUserId") && {
+    discordUserId: formData.get("discordUserId"),
+  }),
   pronouns: formData.get("pronouns"),
   nationality: formData.get("nationality"),
   mainCharacter: formData.get("mainCharacter"),

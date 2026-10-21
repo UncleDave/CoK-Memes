@@ -39,3 +39,31 @@ Existing tests check that the shared context reaches actual model requests for e
 Lorekeeper temperament and the five conversation follower personalities. They test
 prompt assembly, not the spelling of individual lore facts; live model interpretation
 is not guaranteed by these tests.
+
+## Linked member context
+
+Member lore can explicitly link one Discord account using an optional `DiscordUserId`.
+One active member entry may own an account; names and aliases alone never bind identities.
+Existing unlinked lore is unchanged. Admins maintain links through the member lore form
+or the [DM editor](permanent-lore-editor.md); conversation cannot assign or change them.
+The ID is metadata, not biography text or embedding content, and is represented as a
+decimal string over JSON so browsers cannot round it.
+
+Before a personality reply, the current author's ID retrieves the exact linked member
+from existing lore. The profile is available as quoted data even when the question would
+otherwise skip lore search. It does not replace topic-specific lookup or grant instructions
+inside stored text any authority. Use relevant details naturally, without reciting the
+profile, forced callbacks, inferred personality judgments, or invented relationships.
+
+The Lorekeeper additionally recalls up to three matching active notebook anecdotes using
+the linked name, aliases and exact Discord mentions. Whole-name matching avoids substring
+matches, but common names can still be ambiguous: results remain possible references, not
+proof of an anecdote's subject. A note's proposer or source author is not its subject.
+Other personalities receive linked lore only, preserving their existing notebook access.
+
+Automatic recall uses the notebook's existing audience filtering, source-integrity checks,
+post-read visibility checks and ten-candidate bound. It counts as one of the three notebook
+searches per request. Combined identity/recall work is bounded to ten seconds; absent,
+oversized or unavailable context does not block a normal reply. No profile or notebook
+data is cached across requests, no extra AI call is added, and write/review/expiry policies
+are unchanged. This is retrieval from the existing systems, not another memory store.

@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using ChampionsOfKhazad.Bot.GenAi;
 using ChampionsOfKhazad.Bot.Lore.Abstractions;
@@ -17,6 +18,8 @@ public class LoreDirectMessageCommand(
 {
     private const string Help =
         "DM an explicit lore instruction, e.g. ‘Add Grim, a resto shaman who keeps dying to elevators’ or ‘Update Grim: his main is now a paladin; keep the elevator joke’. "
+        + "To link a Discord account, say ‘Set Grim's Discord user ID to 123456789’; to clear it, say ‘Clear Grim's Discord user ID’. "
+        + "IDs must be decimal digits in the range 1..9223372036854775807. "
         + "Clear single-entry additions/corrections save directly. Deletions and broad rewrites need `lore confirm <token>`. "
         + "Commands: `lore list [page]`, `lore show <name>`, `lore history <name>`, `lore undo <name>` (or `undo` for your last edit), `lore cancel`, `lore reset`. "
         + "Unknown member details stay Unknown. Paste or explain linked messages; links are not fetched. Conversation expires after 30 minutes or a restart.";
@@ -141,6 +144,17 @@ public class LoreDirectMessageCommand(
             return $"No changes needed for {Display(expected.Name)}.";
         if (after?.Kind == "guild" && string.IsNullOrWhiteSpace(after.Content))
             throw new InvalidOperationException("Guild lore cannot be blank.");
+        if (after is { Kind: "member", DiscordUserId: { } userId })
+        {
+            var duplicate = catalog.FirstOrDefault(entry =>
+                !entry.Name.Equals(expected.Name, StringComparison.OrdinalIgnoreCase)
+                && entry.Entry is { Kind: "member" } member
+                && member.DiscordUserId == userId
+            );
+            if (duplicate is not null)
+                return $"Discord user ID {FormatDiscordUserId(userId)} is already linked to {Display(duplicate.Name)}. "
+                    + $"Unlink it there before assigning it to {Display(expected.Name)}. Nothing was changed.";
+        }
         if (plan.Action == "delete" || plan.RequiresConfirmation || BroadRewrite(expected.Entry, after))
         {
             var token = Guid.NewGuid().ToString("N")[..12];
@@ -202,7 +216,10 @@ public class LoreDirectMessageCommand(
             after
         );
         if (!await store.TrySaveAsync(expected, revision, cancellationToken))
-            return Conflict;
+            return after?.DiscordUserId is { } userId && after.DiscordUserId != expected.Entry?.DiscordUserId
+                ? $"That lore changed or Discord user ID {FormatDiscordUserId(userId)} is already linked to another member. "
+                    + "Nothing was overwritten. Please inspect it and send a fresh request."
+                : Conflict;
         session.LastEditedName = expected.Name;
         session.LastEditedRevision = revision.Id;
         return $"Saved {Display(expected.Name)}{(action == "undo" ? " (undo)" : "")}.\n{Changes(expected.Entry, after, compact: true)}\n"
@@ -232,10 +249,14 @@ public class LoreDirectMessageCommand(
             + $"\n`lore undo {Display(state.Name)}` reverses the latest revision only (including an undo).";
     }
 
-    private static LoreEntrySnapshot Apply(LoreEntrySnapshot entry, LoreEditChanges changes) =>
-        entry with
+    private static LoreEntrySnapshot Apply(LoreEntrySnapshot entry, LoreEditChanges changes)
+    {
+        if (changes.DiscordUserId is not null && entry.Kind != "member")
+            throw new InvalidOperationException("Discord user IDs can only be linked to member lore.");
+        return entry with
         {
             Content = changes.Content ?? entry.Content,
+            DiscordUserId = changes.DiscordUserId is null ? entry.DiscordUserId : ParseDiscordUserId(changes.DiscordUserId),
             Pronouns = changes.Pronouns ?? entry.Pronouns,
             Nationality = changes.Nationality ?? entry.Nationality,
             MainCharacter = changes.MainCharacter ?? entry.MainCharacter,
@@ -246,6 +267,21 @@ public class LoreDirectMessageCommand(
             Aliases = changes.Aliases ?? entry.Aliases,
             Roles = changes.Roles ?? entry.Roles,
         };
+    }
+
+    private static ulong? ParseDiscordUserId(string value)
+    {
+        if (value.Length == 0)
+            return null;
+        if (
+            value.Length > 19
+            || value.Any(character => character is < '0' or > '9')
+            || !long.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out var userId)
+            || userId == 0
+        )
+            throw new InvalidOperationException("Discord user IDs must be decimal strings in the range 1..9223372036854775807.");
+        return (ulong)userId;
+    }
 
     private static bool Same(LoreEntrySnapshot? first, LoreEntrySnapshot? second) =>
         JsonSerializer.Serialize(first) == JsonSerializer.Serialize(second);
@@ -266,6 +302,7 @@ public class LoreDirectMessageCommand(
                 ? new[] { ("Content", before.Content, after.Content) }
                 : new[]
                 {
+                    ("Discord user ID", FormatDiscordUserId(before.DiscordUserId), FormatDiscordUserId(after.DiscordUserId)),
                     ("Pronouns", before.Pronouns, after.Pronouns),
                     ("Nationality", before.Nationality, after.Nationality),
                     ("Main character", before.MainCharacter, after.MainCharacter),
@@ -329,7 +366,8 @@ public class LoreDirectMessageCommand(
     private static string Describe(LoreEntrySnapshot entry, bool compact = false) =>
         entry.Kind == "guild"
             ? $"{Display(entry.Name)}\n{Value(entry.Content, compact)}"
-            : $"{Display(entry.Name)}\nPronouns: {Value(entry.Pronouns, compact)}\nNationality: {Value(entry.Nationality, compact)}\n"
+            : $"{Display(entry.Name)}\nDiscord user ID: {FormatDiscordUserId(entry.DiscordUserId)}\n"
+                + $"Pronouns: {Value(entry.Pronouns, compact)}\nNationality: {Value(entry.Nationality, compact)}\n"
                 + $"Main character: {Value(entry.MainCharacter, compact)}\nAliases: {Value(string.Join(", ", entry.Aliases), compact)}\n"
                 + $"Roles: {Value(string.Join(", ", entry.Roles), compact)}\nBiography: {Value(entry.Biography ?? "", compact)}";
 
@@ -342,4 +380,6 @@ public class LoreDirectMessageCommand(
     }
 
     private static string Display(string text) => NotebookReview.DisplayText(text);
+
+    private static string FormatDiscordUserId(ulong? userId) => userId?.ToString(CultureInfo.InvariantCulture) ?? "Not linked";
 }

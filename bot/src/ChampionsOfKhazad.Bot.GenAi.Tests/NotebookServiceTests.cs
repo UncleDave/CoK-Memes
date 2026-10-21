@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using ChampionsOfKhazad.Bot.Lore.Abstractions;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace ChampionsOfKhazad.Bot.GenAi.Tests;
@@ -429,6 +430,137 @@ public class NotebookServiceTests
         var result = await fixture.Service.SearchAsync("raid", fixture.Context, TestContext.Current.CancellationToken);
         Assert.Contains("best-match", result);
         Assert.Equal(NotebookService.MaximumSearchResults, fixture.Reader.Calls);
+    }
+
+    [Fact]
+    public async Task MemberRecallUsesWholeNamesAliasesAndMentionsNotSourceAuthorsOrProposers()
+    {
+        var fixture = new Fixture();
+        var template = fixture.CreateNote() with { ReviewDelivered = true };
+        fixture.Context.UserId = 42;
+        fixture.Store.State = new NotebookState
+        {
+            Notes =
+            [
+                template with
+                {
+                    Id = "name",
+                    Subject = "LEAF fell off the lift",
+                },
+                template with
+                {
+                    Id = "alias",
+                    Subject = "Grimbles' escape",
+                },
+                template with
+                {
+                    Id = "mention",
+                    Content = "<@!42> won the contest",
+                },
+                template with
+                {
+                    Id = "substring",
+                    Content = "Leaflet delivery",
+                },
+                template with
+                {
+                    Id = "source-author",
+                    RequestedBy = 42,
+                    Content = "Other member's story",
+                },
+            ],
+        };
+
+        var result = await fixture.Service.SearchMemberAsync(
+            new LinkedMember("Leaf", 42, ["Grimbles"]),
+            fixture.Context,
+            TestContext.Current.CancellationToken
+        );
+
+        Assert.Contains("\"Id\":\"name\"", result);
+        Assert.Contains("\"Id\":\"alias\"", result);
+        Assert.Contains("\"Id\":\"mention\"", result);
+        Assert.DoesNotContain("substring", result);
+        Assert.DoesNotContain("source-author", result);
+        Assert.Equal(3, fixture.Reader.Calls);
+    }
+
+    [Fact]
+    public async Task MemberRecallReturnsAtMostThreeAnecdotesWithoutReadingEveryMatchingSource()
+    {
+        var fixture = new Fixture();
+        fixture.Store.State = new NotebookState
+        {
+            Notes = Enumerable
+                .Range(1, 6)
+                .Select(index =>
+                    fixture.CreateNote() with
+                    {
+                        Id = index.ToString(),
+                        Subject = "Leaf's adventure",
+                        ReviewDelivered = true,
+                        CreatedAtUtc = fixture.Clock.Now.AddMinutes(-index),
+                    }
+                )
+                .ToArray(),
+        };
+
+        var result = await fixture.Service.SearchMemberAsync(new LinkedMember("Leaf", 1, []), fixture.Context, TestContext.Current.CancellationToken);
+
+        Assert.Contains("\"Id\":\"1\"", result);
+        Assert.Contains("\"Id\":\"3\"", result);
+        Assert.DoesNotContain("\"Id\":\"4\"", result);
+        Assert.Equal(3, fixture.Reader.Calls);
+    }
+
+    [Theory]
+    [InlineData("hidden")]
+    [InlineData("expired")]
+    [InlineData("discarded")]
+    [InlineData("unreviewed")]
+    [InlineData("edited-source")]
+    public async Task MemberRecallKeepsExistingVisibilityAndSourceIntegrityChecks(string exclusion)
+    {
+        var fixture = new Fixture();
+        var note = fixture.CreateNote() with { Subject = "Leaf's adventure", ReviewDelivered = true };
+        note = exclusion switch
+        {
+            "expired" => note with { ExpiresAtUtc = fixture.Clock.Now },
+            "discarded" => note with { DiscardedAtUtc = fixture.Clock.Now },
+            "unreviewed" => note with { ReviewDelivered = false },
+            _ => note,
+        };
+        fixture.Store.State = new NotebookState { Notes = [note] };
+        if (exclusion == "hidden")
+            fixture.Reader.ChannelsAccessible = false;
+        if (exclusion == "edited-source")
+            fixture.Reader.Content = "Changed source";
+
+        var result = await fixture.Service.SearchMemberAsync(new LinkedMember("Leaf", 1, []), fixture.Context, TestContext.Current.CancellationToken);
+
+        Assert.DoesNotContain("Leaf's adventure", result);
+        Assert.Contains("No accessible", result);
+    }
+
+    [Fact]
+    public async Task MemberRecallRechecksPermissionsAfterSourceReadsAndRequiresLinkedAuthor()
+    {
+        var fixture = new Fixture();
+        fixture.Store.State = new NotebookState { Notes = [fixture.CreateNote() with { Subject = "Leaf's adventure", ReviewDelivered = true }] };
+        fixture.Reader.BeforeRead = _ =>
+        {
+            fixture.Reader.ChannelsAccessible = false;
+            return Task.CompletedTask;
+        };
+        var member = new LinkedMember("Leaf", 1, []);
+
+        Assert.Contains("No accessible", await fixture.Service.SearchMemberAsync(member, fixture.Context, TestContext.Current.CancellationToken));
+        Assert.Equal(1, fixture.Reader.Calls);
+        Assert.Contains(
+            "linked",
+            await fixture.Service.SearchMemberAsync(member with { DiscordUserId = 99 }, fixture.Context, TestContext.Current.CancellationToken)
+        );
+        Assert.Equal(1, fixture.Reader.Calls);
     }
 
     [Fact]
@@ -1145,5 +1277,14 @@ public class NotebookServiceTests
         public ulong? ChannelId { get; set; } = 3;
 
         public Task Reply(string message) => Task.CompletedTask;
+    }
+
+    private sealed record LinkedMember(string Name, ulong? DiscordUserId, IReadOnlyList<string> Aliases) : IMemberLore
+    {
+        public string Pronouns => "Unknown";
+        public string Nationality => "Unknown";
+        public string MainCharacter => "Unknown";
+        public string? Biography => null;
+        public IReadOnlyList<string> Roles => [];
     }
 }

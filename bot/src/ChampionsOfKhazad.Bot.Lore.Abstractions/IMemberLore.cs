@@ -2,6 +2,7 @@ namespace ChampionsOfKhazad.Bot.Lore.Abstractions;
 
 public interface IMemberLore : ILore
 {
+    ulong? DiscordUserId { get; }
     string Pronouns { get; }
     string Nationality { get; }
     string MainCharacter { get; }

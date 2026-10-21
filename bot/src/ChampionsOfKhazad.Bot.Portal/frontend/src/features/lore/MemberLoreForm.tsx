@@ -18,6 +18,15 @@ const MemberLoreForm = ({ lore, isCreating = false }: MemberLoreFormProps) => (
       required
       disabled={!isCreating}
     />
+    <FormInput
+      label="Discord user ID"
+      name="discordUserId"
+      defaultValue={isCreating ? "" : (lore.discordUserId ?? "")}
+      pattern="0*[1-9][0-9]*"
+      maxLength={20}
+      inputMode="numeric"
+      helperText="Optional. Paste the member's Discord user ID, or leave blank to unlink."
+    />
     <FormMultiInput
       label="Aliases"
       name="aliases"

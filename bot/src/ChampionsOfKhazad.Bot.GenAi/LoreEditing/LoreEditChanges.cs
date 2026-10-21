@@ -3,6 +3,7 @@ namespace ChampionsOfKhazad.Bot.GenAi;
 public record LoreEditChanges
 {
     public string? Content { get; init; }
+    public string? DiscordUserId { get; init; }
     public string? Pronouns { get; init; }
     public string? Nationality { get; init; }
     public string? MainCharacter { get; init; }

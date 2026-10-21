@@ -35,3 +35,19 @@ values nor baselines are persisted in browser storage.
 `frontend/tests/unsaved-lore.test.mjs` covers snapshots, repeated values, restoration,
 and blocked/confirmed navigation contracts. Browser checks are also needed for
 dynamic rows, dialog focus/actions, native unload warnings, and mutation redirects.
+
+## Discord account links
+
+The member form has an optional Discord user ID, maintained by admins. Paste the exact
+decimal ID; it stays a string in the browser and API to avoid numeric rounding.
+Valid IDs are positive and at most `9223372036854775807`, matching BSON's signed storage.
+Leaving the field blank clears the link. Older API updates that omit the field preserve an
+existing link. Copying an entry to create a new member does not copy its account link.
+Duplicate active account assignments are rejected rather than transferred automatically.
+Member updates preserve links and save against the same revision snapshot; concurrent
+changes reject the whole update and retain the browser draft. This does not detect
+changes made before the save request began: the form does not submit its opening revision.
+
+The link lets bot replies load the correct existing member lore despite display-name
+changes. It does not create a customer profile, authorise edits by that member, or add
+facts to lore. See [linked member context](guild-prompt-context.md#linked-member-context).

@@ -13,7 +13,11 @@ public static class MongoLoreBotBuilderExtensions
             .AddMongo()
             .AddCollection<LoreDocument>(
                 Collections.Lore.Name,
-                collection => collection.CreateUniqueIndex(Collections.Lore.UniqueIndex.Field, Collections.Lore.UniqueIndex.Collation)
+                collection =>
+                {
+                    collection.CreateUniqueIndex(Collections.Lore.UniqueIndex.Field, Collections.Lore.UniqueIndex.Collation);
+                    collection.Indexes.CreateOne(Collections.MemberDiscordUserIdIndex);
+                }
             )
             .Services.AddSingleton<MongoLoreStore>()
             .AddSingleton<IStoreLore>(services => services.GetRequiredService<MongoLoreStore>())

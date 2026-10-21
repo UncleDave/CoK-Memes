@@ -13,4 +13,14 @@ internal static class Collections
         "lore",
         new Index<LoreDocument>(x => x.Name, new Collation("en", strength: CollationStrength.Primary))
     );
+
+    public static readonly CreateIndexModel<LoreDocument> MemberDiscordUserIdIndex = new(
+        Builders<LoreDocument>.IndexKeys.Ascending(x => x.DiscordUserId),
+        new CreateIndexOptions<LoreDocument>
+        {
+            Name = "unique_active_member_discord_user_id",
+            Unique = true,
+            PartialFilterExpression = Builders<LoreDocument>.Filter.Gt(x => x.DiscordUserId, 0UL),
+        }
+    );
 }

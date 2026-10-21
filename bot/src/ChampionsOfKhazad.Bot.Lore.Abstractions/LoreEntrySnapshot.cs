@@ -2,6 +2,7 @@ namespace ChampionsOfKhazad.Bot.Lore.Abstractions;
 
 public record LoreEntrySnapshot(string Name, string Kind)
 {
+    public ulong? DiscordUserId { get; init; }
     public string Content { get; init; } = "";
     public string Pronouns { get; init; } = "Unknown";
     public string Nationality { get; init; } = "Unknown";
@@ -15,6 +16,7 @@ public record LoreEntrySnapshot(string Name, string Kind)
         {
             IMemberLore member => new(member.Name, "member")
             {
+                DiscordUserId = member.DiscordUserId,
                 Pronouns = member.Pronouns,
                 Nationality = member.Nationality,
                 MainCharacter = member.MainCharacter,

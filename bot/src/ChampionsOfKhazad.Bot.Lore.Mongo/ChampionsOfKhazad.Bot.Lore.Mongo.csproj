@@ -6,6 +6,7 @@
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="ChampionsOfKhazad.Bot.Portal.Tests" />
+    <InternalsVisibleTo Include="ChampionsOfKhazad.Bot.Tests" />
     <!-- DispatchProxy generates test doubles for collections of internal documents in this assembly. -->
     <InternalsVisibleTo Include="ProxyBuilder" />
   </ItemGroup>

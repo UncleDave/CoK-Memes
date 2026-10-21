@@ -9,5 +9,6 @@ public record UpdateMemberLoreContract(
     string MainCharacter,
     string? Biography,
     IReadOnlyList<string>? Aliases,
-    IReadOnlyList<string>? Roles
+    IReadOnlyList<string>? Roles,
+    string? DiscordUserId = null
 );

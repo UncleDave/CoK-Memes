@@ -28,6 +28,9 @@ internal sealed class LoreStoreStub : IStoreLore
 
     public Task<ILore?> ReadLoreAsync(string name, CancellationToken cancellationToken = default) => throw new NotSupportedException();
 
+    public Task<IMemberLore?> ReadMemberLoreAsync(ulong discordUserId, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException();
+
     public Task UpsertLoreAsync(ILore lore) => throw new NotSupportedException();
 
     public Task UpsertLoreAsync(IGuildLore lore) => throw new NotSupportedException();

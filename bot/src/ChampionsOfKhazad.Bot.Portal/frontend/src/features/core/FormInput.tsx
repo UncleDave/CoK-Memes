@@ -1,4 +1,5 @@
 import { Input } from "@mui/joy";
+import { InputHTMLAttributes } from "react";
 import FormControl from "./FormControl.tsx";
 
 interface FormInputProps {
@@ -8,6 +9,9 @@ interface FormInputProps {
   required?: boolean;
   helperText?: string;
   disabled?: boolean;
+  pattern?: string;
+  maxLength?: number;
+  inputMode?: InputHTMLAttributes<HTMLInputElement>["inputMode"];
 }
 
 const FormInput = ({
@@ -17,6 +21,9 @@ const FormInput = ({
   required,
   helperText,
   disabled,
+  pattern,
+  maxLength,
+  inputMode,
 }: FormInputProps) => (
   <FormControl label={label} helperText={helperText}>
     <Input
@@ -24,6 +31,7 @@ const FormInput = ({
       defaultValue={defaultValue}
       required={required}
       disabled={disabled}
+      slotProps={{ input: { pattern, maxLength, inputMode } }}
     />
   </FormControl>
 );

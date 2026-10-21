@@ -18,6 +18,13 @@ Privacy checks, per-request limits, and rolling daily budgets remain enforced in
 of the model's selection policy. Source bodies and mention mappings are transient review
 evidence, not archived memories. Lookups recheck channel access and source integrity.
 
+The Lorekeeper can automatically recall up to three anecdotes matching the current
+author's explicitly linked member-lore name, aliases or Discord mentions. This shares
+the existing search visibility/integrity checks and counts toward the three-search
+request limit. Name matches are possible references, not identity proof; a source
+author or proposing member is not automatically the subject. See
+[linked member context](guild-prompt-context.md#linked-member-context).
+
 Independent model review explicitly uses high reasoning effort on the shared Luna text model.
 This does not relax deterministic evidence, privacy, budget, or activation checks, and the
 existing two-minute write/review deadline remains unchanged. Interactive personality replies

@@ -1,4 +1,6 @@
 using System.Text.Json;
+using System.Text.RegularExpressions;
+using ChampionsOfKhazad.Bot.Lore.Abstractions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -281,10 +283,63 @@ public class NotebookService(
         }
     }
 
-    public async Task<string> SearchAsync(string query, IMessageContext context, CancellationToken cancellationToken)
+    public Task<string> SearchAsync(string query, IMessageContext context, CancellationToken cancellationToken)
     {
         if (context.ChannelId is null || string.IsNullOrWhiteSpace(query) || query.Length > 200)
-            return "Notebook search requires guild chat and a query up to 200 characters.";
+            return Task.FromResult("Notebook search requires guild chat and a query up to 200 characters.");
+        var terms = query.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        return SearchCoreAsync(
+            note =>
+                terms.Sum(term =>
+                    note.Subject.Contains(term, StringComparison.OrdinalIgnoreCase) ? 3
+                    : note.Content.Contains(term, StringComparison.OrdinalIgnoreCase) ? 1
+                    : 0
+                ),
+            context,
+            MaximumSearchResults,
+            cancellationToken
+        );
+    }
+
+    internal Task<string> SearchMemberAsync(IMemberLore member, IMessageContext context, CancellationToken cancellationToken)
+    {
+        if (context.ChannelId is null || member.DiscordUserId != context.UserId)
+            return Task.FromResult("Member notebook recall requires a linked guild-chat author.");
+        var names = member
+            .Aliases.Prepend(member.Name)
+            .Where(name => !string.IsNullOrWhiteSpace(name) && name.Length <= 100)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(31)
+            .ToArray();
+        var patterns = names
+            .Select(name => new Regex(
+                @"(?<![\p{L}\p{N}_])" + Regex.Escape(name) + @"(?![\p{L}\p{N}_])",
+                RegexOptions.IgnoreCase | RegexOptions.CultureInvariant,
+                TimeSpan.FromMilliseconds(100)
+            ))
+            .ToArray();
+        bool MentionsMember(string text) =>
+            text.Contains($"<@{context.UserId}>", StringComparison.Ordinal)
+            || text.Contains($"<@!{context.UserId}>", StringComparison.Ordinal)
+            || patterns.Any(pattern => pattern.IsMatch(text));
+        return SearchCoreAsync(
+            note =>
+                MentionsMember(note.Subject) ? 3
+                : MentionsMember(note.Content) ? 1
+                : 0,
+            context,
+            3,
+            cancellationToken
+        );
+    }
+
+    private async Task<string> SearchCoreAsync(
+        Func<NotebookNote, int> score,
+        IMessageContext context,
+        int maximumResults,
+        CancellationToken cancellationToken
+    )
+    {
         using var deadline = new CancellationTokenSource(SearchTimeout, clock);
         using var lookupCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, deadline.Token);
         var lookupToken = lookupCancellation.Token;
@@ -298,18 +353,9 @@ public class NotebookService(
                 context
             );
             lookupToken.ThrowIfCancellationRequested();
-            var terms = query.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
             var matches = active
                 .Where(note => note.Sources.All(source => accessibleUrls.Contains(source.Url)))
-                .Select(note => new
-                {
-                    Note = note,
-                    Score = terms.Sum(term =>
-                        note.Subject.Contains(term, StringComparison.OrdinalIgnoreCase) ? 3
-                        : note.Content.Contains(term, StringComparison.OrdinalIgnoreCase) ? 1
-                        : 0
-                    ),
-                })
+                .Select(note => new { Note = note, Score = score(note) })
                 .Where(match => match.Score > 0)
                 .OrderByDescending(match => match.Score)
                 .ThenByDescending(match => match.Note.CreatedAtUtc)
@@ -336,7 +382,7 @@ public class NotebookService(
                 )
                     continue;
                 visible.Add(note);
-                if (visible.Count == MaximumSearchResults)
+                if (visible.Count == maximumResults)
                     break;
             }
             // Check persisted visibility and channel permissions again after network reads, before returning any memory.

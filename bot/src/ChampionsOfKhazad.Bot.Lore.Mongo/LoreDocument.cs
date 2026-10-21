@@ -1,9 +1,13 @@
 ﻿using ChampionsOfKhazad.Bot.Lore.Abstractions;
+using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
 
 namespace ChampionsOfKhazad.Bot.Lore.Mongo;
 
 internal record LoreDocument(string Name, string Content)
 {
+    [BsonRepresentation(BsonType.Int64)]
+    public ulong? DiscordUserId { get; init; }
     public string? Pronouns { get; init; }
     public string? Nationality { get; init; }
     public string? MainCharacter { get; init; }
@@ -26,6 +30,7 @@ internal record LoreDocument(string Name, string Content)
     public LoreDocument(IMemberLore memberLore)
         : this(memberLore.Name, memberLore.ToString() ?? string.Empty)
     {
+        DiscordUserId = memberLore.DiscordUserId;
         Pronouns = memberLore.Pronouns;
         Nationality = memberLore.Nationality;
         MainCharacter = memberLore.MainCharacter;
@@ -38,6 +43,7 @@ internal record LoreDocument(string Name, string Content)
         MainCharacter is not null
             ? new MemberLore(Name, Pronouns ?? "Unknown", Nationality ?? "Unknown", MainCharacter, Biography)
             {
+                DiscordUserId = DiscordUserId,
                 Aliases = Aliases ?? [],
                 Roles = Roles ?? [],
             }
@@ -52,6 +58,7 @@ internal record LoreDocument(string Name, string Content)
             "member" => new(
                 new MemberLore(entry.Name, entry.Pronouns, entry.Nationality, entry.MainCharacter, entry.Biography)
                 {
+                    DiscordUserId = entry.DiscordUserId,
                     Aliases = entry.Aliases,
                     Roles = entry.Roles,
                 }

@@ -24,6 +24,19 @@ Send explicit instructions, optionally prefixed with `lore`:
 
 > Grim's main is actually a paladin now. Keep the elevator joke.
 
+> Link Grim to Discord user ID 1234567890123456789.
+
+> Clear Grim's Discord user ID.
+
+Account links are optional member metadata, not biography text. Only explicitly
+supplied IDs may be assigned; names and aliases do not prove an account.
+IDs must be decimal digits in the range `1..9223372036854775807`.
+Omitted link changes preserve the existing ID; clearing is explicit. One active member may
+own each ID. Conflicts, including restores through undo, reject the edit instead of
+transferring the link. Show/history and saved-change summaries include the link.
+These links support [author-aware retrieval](guild-prompt-context.md#linked-member-context),
+not member self-service editing or automatic profile learning.
+
 > Add a guild joke called Floor inspector: we started calling Leaf that after he died
 > immediately on the first pull. It is a joke, not an official guild role.
 
@@ -110,3 +123,11 @@ confirmation expiry/cancellation, undo, failure, and cancellation. Mongo adapter
 inspect revision filters, embeddings, bounded history, tombstones, and serialization.
 They do not emulate real MongoDB collation/index/concurrency semantics; validate these
 against a disposable local MongoDB when exercising persistence behavior.
+
+Member identity integration tests use `COK_MEMBER_LORE_MONGO_TEST_CONNECTION` pointing
+to disposable localhost MongoDB. The optional field needs no backfill or embedding
+migration, and the partial unique index excludes unlinked legacy entries.
+Tombstones clear account metadata; positive links remain unique even on legacy entries
+without a `Deleted` field.
+Assign links after deploying all lore writers (bot, portal and any embedding regenerator):
+older binaries replace documents without the new metadata and can erase links.

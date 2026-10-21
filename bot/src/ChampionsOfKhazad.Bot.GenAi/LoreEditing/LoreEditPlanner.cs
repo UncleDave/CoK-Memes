@@ -1,4 +1,6 @@
+using System.Globalization;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using ChampionsOfKhazad.Bot.Lore.Abstractions;
 using Microsoft.Extensions.AI;
 
@@ -17,6 +19,9 @@ internal class LoreEditPlanner(IChatClient chatClient) : ILoreEditPlanner
         If a request needs the contents of a link, ask the administrator to paste or explain it. No Discord history is supplied.
         The administrator's supplied facts are authoritative for this task; independent notebook review is not required.
         Match existing members using names and aliases. If identity is ambiguous, ask; never guess. Use the EXACT existing name.
+        A Discord user ID explicitly supplied by the administrator may be linked to a member as metadata, not biography.
+        Never invent a Discord user ID, infer an account from a display name or alias, or copy another member's link.
+        Set discordUserId only from an explicitly supplied ID for that member; omit it otherwise. Clear it only if explicitly requested.
         Do not create a second entry for an existing member or joke. New people use member entries; guild jokes/incidents use guild.
         Plan exactly ONE entry per turn. For multiple entries, ask which to do first. No renames or type changes are supported.
         Preserve ALL unrelated existing facts, anecdotes, aliases, and roles. Output only changed fields, not a rewritten profile.
@@ -35,9 +40,11 @@ internal class LoreEditPlanner(IChatClient chatClient) : ILoreEditPlanner
         For none/clarify: name=null, kind=null, changes={}, requiresConfirmation=false, reply is a useful answer or question.
         For delete: exact existing name and kind, changes={}, requiresConfirmation=true.
         For create/update: name nonblank (at most 100 characters), kind member/guild, changes is a nonempty object.
-        guild changes allow only content (nonblank). member changes allow only pronouns, nationality, mainCharacter,
+        guild changes allow only content (nonblank). member changes allow only discordUserId, pronouns, nationality, mainCharacter,
         biography, aliases, roles. Strings: content/biography at most 16000 characters, other fields at most 200.
-        Omit fields not being changed; do NOT use null. Empty biography clears it. Other string fields must be nonblank.
+        discordUserId must be a decimal STRING of 1-19 digits in the range 1..9223372036854775807, never a JSON number.
+        An empty discordUserId string clears the link. Omit fields not being changed; do NOT use null.
+        Empty biography clears it. Other string fields must be nonblank.
         aliases/roles are complete replacement arrays, at most 30 nonblank strings of at most 100 characters each.
         reply is nonblank, at most 1500 characters. No extra properties or markdown fences.
         """;
@@ -55,7 +62,8 @@ internal class LoreEditPlanner(IChatClient chatClient) : ILoreEditPlanner
                 instruction,
                 entries,
                 conversation,
-            }
+            },
+            new JsonSerializerOptions { NumberHandling = JsonNumberHandling.WriteAsString }
         );
         if (data.Length > 160000)
             throw new InvalidOperationException("Lore editor input is too large.");
@@ -124,6 +132,7 @@ internal class LoreEditPlanner(IChatClient chatClient) : ILoreEditPlanner
                 parsed = field.Name switch
                 {
                     "content" when kind == "guild" => parsed with { Content = ReadString(field.Value, 16000) },
+                    "discordUserId" when kind == "member" => parsed with { DiscordUserId = ReadDiscordUserId(field.Value) },
                     "pronouns" when kind == "member" => parsed with { Pronouns = ReadString(field.Value, 200) },
                     "nationality" when kind == "member" => parsed with { Nationality = ReadString(field.Value, 200) },
                     "mainCharacter" when kind == "member" => parsed with { MainCharacter = ReadString(field.Value, 200) },
@@ -168,6 +177,23 @@ internal class LoreEditPlanner(IChatClient chatClient) : ILoreEditPlanner
         if (values.Distinct(StringComparer.OrdinalIgnoreCase).Count() != values.Length)
             throw Invalid();
         return values;
+    }
+
+    private static string ReadDiscordUserId(JsonElement element)
+    {
+        if (element.ValueKind != JsonValueKind.String)
+            throw Invalid();
+        var value = element.GetString()!;
+        if (value.Length == 0)
+            return value;
+        if (
+            value.Length > 19
+            || value.Any(character => character is < '0' or > '9')
+            || !long.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out var userId)
+            || userId == 0
+        )
+            throw Invalid();
+        return value;
     }
 
     private static InvalidOperationException Invalid() => new("Lore editor did not produce a valid plan.");

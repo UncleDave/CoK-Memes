@@ -34,8 +34,24 @@ internal class MongoLoreStore(IMongoCollection<LoreDocument> loreCollection, IEm
         return result?.ToModel();
     }
 
+    public async Task<IMemberLore?> ReadMemberLoreAsync(ulong discordUserId, CancellationToken cancellationToken = default)
+    {
+        MemberLore.ValidateDiscordUserId(discordUserId);
+        var documents = await loreCollection
+            .Find(
+                Builders<LoreDocument>.Filter.Eq(x => x.DiscordUserId, discordUserId)
+                    & Builders<LoreDocument>.Filter.Ne(x => x.MainCharacter, null)
+                    & Active
+            )
+            .Project(_loreProjection)
+            .Limit(2)
+            .ToListAsync(cancellationToken);
+        return documents.SingleOrDefault()?.ToModel() as IMemberLore;
+    }
+
     public async Task<bool> CreateLoreAsync(ILore lore, CancellationToken cancellationToken = default)
     {
+        MemberLore.ValidateDiscordUserId((lore as IMemberLore)?.DiscordUserId);
         var state = await GetEntryAsync(lore.Name, cancellationToken);
         if (state.Entry is not null)
             return false;
@@ -44,6 +60,7 @@ internal class MongoLoreStore(IMongoCollection<LoreDocument> loreCollection, IEm
 
     public async Task<bool> UpdateLoreAsync(ILore lore, CancellationToken cancellationToken = default)
     {
+        MemberLore.ValidateDiscordUserId((lore as IMemberLore)?.DiscordUserId);
         var state = await GetEntryAsync(lore.Name, cancellationToken);
         if (state.Entry is null)
             return false;
@@ -52,6 +69,7 @@ internal class MongoLoreStore(IMongoCollection<LoreDocument> loreCollection, IEm
 
     public async Task UpsertLoreAsync(ILore lore)
     {
+        MemberLore.ValidateDiscordUserId((lore as IMemberLore)?.DiscordUserId);
         var state = await GetEntryAsync(lore.Name, CancellationToken.None);
         if (!await TrySaveAsync(state, RevisionFor(state, LoreEntrySnapshot.FromLore(lore) with { Name = state.Name }), CancellationToken.None))
             throw new InvalidOperationException("Lore changed during the upsert; no overwrite was made.");
@@ -80,6 +98,12 @@ internal class MongoLoreStore(IMongoCollection<LoreDocument> loreCollection, IEm
     public async Task<bool> TrySaveAsync(LoreEditState expected, LoreRevision revision, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        var history = expected.History.Append(revision).TakeLast(MaximumHistory).ToArray();
+        foreach (var item in history)
+        {
+            MemberLore.ValidateDiscordUserId(item.Before?.DiscordUserId);
+            MemberLore.ValidateDiscordUserId(item.After?.DiscordUserId);
+        }
         if (revision.After is { } next && next.Name != expected.Name)
             throw new InvalidOperationException("Lore edits cannot rename entries.");
         var document = revision.After is { } entry ? LoreDocument.FromSnapshot(entry) : new LoreDocument(expected.Name, "") { Deleted = true };
@@ -88,7 +112,7 @@ internal class MongoLoreStore(IMongoCollection<LoreDocument> loreCollection, IEm
             var embedding = await embeddingsService.GenerateAsync(document.Content, cancellationToken: cancellationToken);
             document = document with { Embedding = embedding.Vector.ToArray() };
         }
-        document = document with { Revision = revision.Id, History = expected.History.Append(revision).TakeLast(MaximumHistory).ToArray() };
+        document = document with { Revision = revision.Id, History = history };
         cancellationToken.ThrowIfCancellationRequested();
         if (!expected.Exists)
         {
@@ -104,13 +128,20 @@ internal class MongoLoreStore(IMongoCollection<LoreDocument> loreCollection, IEm
         }
         var filter =
             Builders<LoreDocument>.Filter.Eq(x => x.Name, expected.Name) & Builders<LoreDocument>.Filter.Eq(x => x.Revision, expected.Revision);
-        var result = await loreCollection.ReplaceOneAsync(
-            filter,
-            document,
-            new ReplaceOptions { IsUpsert = false, Collation = Collections.Lore.UniqueIndex.Collation },
-            cancellationToken
-        );
-        return result.MatchedCount == 1;
+        try
+        {
+            var result = await loreCollection.ReplaceOneAsync(
+                filter,
+                document,
+                new ReplaceOptions { IsUpsert = false, Collation = Collections.Lore.UniqueIndex.Collation },
+                cancellationToken
+            );
+            return result.MatchedCount == 1;
+        }
+        catch (MongoWriteException exception) when (exception.WriteError.Category == ServerErrorCategory.DuplicateKey)
+        {
+            return false;
+        }
     }
 
     private static LoreRevision RevisionFor(LoreEditState state, LoreEntrySnapshot? next) =>

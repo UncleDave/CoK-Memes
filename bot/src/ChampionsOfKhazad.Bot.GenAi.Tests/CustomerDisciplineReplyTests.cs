@@ -16,6 +16,7 @@ public class CustomerDisciplineReplyTests
 
         Assert.Equal(1, fixture.Chat.Decisions);
         Assert.Equal(1, fixture.Chat.NormalReplies);
+        Assert.Equal(0, fixture.Chat.StrikeReviews);
         Assert.Equal(new[] { "issue_customer_strike" }, fixture.Chat.DecisionTools);
         Assert.Contains("generate_image", fixture.Chat.NormalTools);
         Assert.Empty((await fixture.GetAsync()).Strikes);
@@ -40,6 +41,80 @@ public class CustomerDisciplineReplyTests
         Assert.DoesNotContain(LorekeeperPersonality.SavedStrikeReplyPolicy, fixture.Chat.NormalPrompt);
         Assert.Equal("Normal answer", reply);
         Assert.Empty((await fixture.GetAsync()).Strikes);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ARejectedStrikeForALedgerQuestionCannotWriteOrAnnounceAPenaltyOrRetry(bool failReview)
+    {
+        using var fixture = new Fixture();
+        await fixture.Service.IssueStrikeAsync(2, 1, 1, "Existing strike", TestContext.Current.CancellationToken);
+        fixture.Chat.Action = "issue_customer_strike";
+        fixture.Chat.SecondAction = "pardon_customer";
+        fixture.Chat.StrikeReason = "Asked who has strikes; no misconduct.";
+        fixture.Chat.ApproveStrike = false;
+        fixture.Chat.FailStrikeReview = failReview;
+
+        var reply = await fixture.InvokeAsync("whomst amongst us have strikes?");
+
+        Assert.Equal("Normal answer", reply);
+        Assert.Equal(1, fixture.Chat.StrikeReviews);
+        Assert.Equal(1, fixture.Chat.NormalReplies);
+        Assert.Contains("list_customer_strikes", fixture.Chat.NormalTools);
+        Assert.Equal("Existing strike", Assert.Single((await fixture.GetAsync()).Strikes).Reason);
+        Assert.Equal(1, fixture.Store.Saves);
+        Assert.Contains(fixture.Chat.Results, result => result.Contains("Only one", StringComparison.Ordinal));
+        using var ledger = ReadReplyLedger(fixture.Chat);
+        Assert.Equal(JsonValueKind.Null, ledger.RootElement.GetProperty("savedAction").ValueKind);
+        Assert.DoesNotContain(LorekeeperPersonality.SavedStrikeReplyPolicy, fixture.Chat.NormalPrompt);
+    }
+
+    [Fact]
+    public async Task RequestedCancellationDuringStrikeReviewDoesNotWriteAPenalty()
+    {
+        using var fixture = new Fixture();
+        using var cancellation = new CancellationTokenSource();
+        fixture.Chat.Action = "issue_customer_strike";
+        fixture.Chat.BeforeStrikeReview = cancellation.Cancel;
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => fixture.InvokeAsync(cancellationToken: cancellation.Token));
+
+        Assert.Equal(0, fixture.Store.Saves);
+        Assert.Empty((await fixture.GetAsync()).Strikes);
+        Assert.Equal(0, fixture.Chat.NormalReplies);
+    }
+
+    [Fact]
+    public async Task RejectedThirdStrikeCannotBarTheCustomerOrSkipNormalService()
+    {
+        using var fixture = new Fixture();
+        await fixture.Service.IssueStrikeAsync(2, 1, 1, "Existing strike", TestContext.Current.CancellationToken);
+        await fixture.Service.IssueStrikeAsync(2, 1, 2, "Another existing strike", TestContext.Current.CancellationToken);
+        fixture.Chat.Action = "issue_customer_strike";
+        fixture.Chat.ApproveStrike = false;
+
+        Assert.Equal("Normal answer", await fixture.InvokeAsync("Who is barred?"));
+
+        Assert.False((await fixture.GetAsync()).IsBarred);
+        Assert.Equal(2, fixture.Store.Saves);
+        Assert.Equal(0, fixture.Chat.BanterReplies);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData(" ")]
+    [InlineData(null)]
+    public async Task InvalidStrikeReasonSkipsBothReviewAndPersistence(string? reason)
+    {
+        using var fixture = new Fixture();
+        fixture.Chat.Action = "issue_customer_strike";
+        fixture.Chat.StrikeReason = reason ?? new string('x', 201);
+
+        Assert.Equal("Normal answer", await fixture.InvokeAsync());
+
+        Assert.Equal(0, fixture.Chat.StrikeReviews);
+        Assert.Equal(0, fixture.Store.Saves);
     }
 
     [Theory]
@@ -146,6 +221,7 @@ public class CustomerDisciplineReplyTests
         Assert.True((await fixture.GetAsync()).IsBarred);
         Assert.Equal(2, fixture.Chat.NormalReplies);
         Assert.Equal(1, fixture.Chat.BanterReplies);
+        Assert.Equal(3, fixture.Chat.StrikeReviews);
     }
 
     [Theory]
@@ -288,6 +364,7 @@ public class CustomerDisciplineReplyTests
         Assert.Empty(fixture.Chat.NormalTools);
         Assert.Equal(1, fixture.Chat.BanterReplies);
         Assert.Empty(fixture.Chat.BanterOptions!.Tools!);
+        Assert.Equal(0, fixture.Chat.StrikeReviews);
     }
 
     [Fact]
@@ -303,6 +380,7 @@ public class CustomerDisciplineReplyTests
         Assert.Empty((await fixture.GetAsync()).Strikes);
         Assert.Equal(0, fixture.Chat.NormalReplies);
         Assert.Equal(0, fixture.Chat.BanterReplies);
+        Assert.Equal(0, fixture.Chat.StrikeReviews);
         fixture.Chat.Action = null;
         fixture.Context.MessageId++;
         Assert.Equal("Normal answer", await fixture.InvokeAsync());
@@ -557,6 +635,10 @@ public class CustomerDisciplineReplyTests
         public Func<Task>? BeforeDecision { get; set; }
         public Func<Task>? AfterDecision { get; set; }
         public string StrikeReason { get; set; } = "Insulting the chips";
+        public bool ApproveStrike { get; set; } = true;
+        public bool FailStrikeReview { get; set; }
+        public Action? BeforeStrikeReview { get; set; }
+        public int StrikeReviews { get; private set; }
         public bool FailDecisionFollowUp { get; set; }
         public bool FailNormalResponse { get; set; }
         public bool FailBanter { get; set; }
@@ -583,6 +665,22 @@ public class CustomerDisciplineReplyTests
         )
         {
             var history = messages.ToList();
+            if (options?.ResponseFormat == ChatResponseFormat.Json)
+            {
+                StrikeReviews++;
+                BeforeStrikeReview?.Invoke();
+                cancellationToken.ThrowIfCancellationRequested();
+                if (FailStrikeReview)
+                    throw new HttpRequestException("Controlled strike review failure");
+                using var input = JsonDocument.Parse(history[^1].Text!);
+                var current = input.RootElement.GetProperty("currentMessage").GetString()!;
+                return new ChatResponse(
+                    new ChatMessage(
+                        ChatRole.Assistant,
+                        JsonSerializer.Serialize(new { approved = ApproveStrike, evidence = ApproveStrike ? current : null })
+                    )
+                );
+            }
             if (options?.Tools is { Count: 0 })
             {
                 BanterReplies++;
@@ -754,6 +852,7 @@ public class CustomerDisciplineReplyTests
         public bool FailSave { get; set; }
         public bool FailAfterSave { get; set; }
         public bool FailReadAfterSave { get; set; }
+        public int Saves { get; private set; }
 
         public Task<CustomerDisciplineState?> GetAsync(string id, CancellationToken cancellationToken) =>
             FailRead ? throw new InvalidOperationException("Controlled read failure") : Task.FromResult(_state);
@@ -773,6 +872,7 @@ public class CustomerDisciplineReplyTests
             if ((_state?.Revision ?? 0) != state.Revision)
                 return Task.FromResult(false);
             _state = state with { Revision = state.Revision + 1 };
+            Saves++;
             FailRead = FailReadAfterSave;
             if (FailAfterSave)
                 throw new InvalidOperationException("Controlled acknowledgement failure");

@@ -57,9 +57,11 @@ it does not generate or upload a Discord avatar automatically.
 ### Customer strikes and pardons
 
 Grub may give the customer currently addressing him an occasional comic strike
-for unmistakable direct taunts, personal insults aimed at him, or explicit roleplayed
-shop misconduct. Default to no strike when the target or intent is unclear. Each saved
-strike has a short, concrete reason; calling something playful is not grounds to penalise it.
+for sustained, unmistakable personal abuse aimed at him or explicit disruptive roleplayed
+shop misconduct. Strikes are exceptional: one-off ribbing, mild insults and friendly
+back-and-forth get a comeback rather than a penalty. Default to no strike when the
+target or intent is unclear. Each saved strike has a short, concrete reason; calling
+something playful is not grounds to penalise it.
 Ordinary questions, thanks, disagreements, criticism, service complaints, poor gameplay,
 quoted text, other members' conduct, sensitive topics, and asking him to stop the act
 are not grounds for a strike. Neither are nostalgia, bot preferences or comparisons:
@@ -67,7 +69,8 @@ are not grounds for a strike. Neither are nostalgia, bot preferences or comparis
 insulting Grub. Temperament changes his voice, not this threshold.
 Before striking, Grub must have a coherent objection to the specific conduct; accepting
 it as harmless or simply agreeing with it is a reason not to strike. This remains a
-model judgment, not a deterministic text classifier.
+model judgment, not a deterministic text classifier. Ledger/status/pardon questions,
+including "whomst amongst us have strikes?", are ordinary help, not misconduct.
 
 Three strikes bars the customer from Grub's normal service until pardoned. They can
 still address him to apologise or appeal; Grub may clear all their strikes if persuaded,
@@ -101,6 +104,25 @@ tools bound to the current author. Normal tools are exposed only after recheckin
 saved record. Barred customers' decisions receive only the pardon tool; they never
 reach the normal service pipeline. The application delivers saved verdicts and a
 fixed barred status; model prose is not authority for a strike or pardon.
+
+Strike tool calls are proposals, not immediate writes. Before saving, a neutral,
+tool-free, medium-reasoning reviewer checks the proposed reason against the original
+current message and up to 11 recent context messages. It defaults to rejection and
+must return a strict JSON approval with an exact current-message evidence quotation
+of at most 200 characters. The application verifies that quotation is present; it
+does not treat evidence from an earlier message as grounds for the current strike.
+Discord metadata must match the current author/request; evidence must come from the
+message body, not author names or other metadata.
+The reviewer has no service, search, lore, notebook, strike or pardon tools.
+Reasons that describe no misconduct must be rejected, as must ordinary questions,
+mild ribbing and sensitive material. Proposed reasons and chat remain untrusted data.
+Malformed, truncated, oversized, unexpected tool-call or failed review (including a
+10-second timeout) suppresses the strike and allows ordinary service to continue.
+The one-attempt guard covers review: a rejected proposal cannot be retried or followed
+by a pardon in the same request. Pardons do not pass through the strike reviewer.
+Caller cancellation still propagates; actual ledger-write failures retain their
+existing uncertain-outcome handling. Review semantics remain model judgments, while
+pre-save approval, evidence validation and no-write-on-review-failure are enforced.
 
 After a successful decision and status recheck, a short, low-reasoning, tool-free
 call adds contextual counter banter to that status. The third strike gets a send-off

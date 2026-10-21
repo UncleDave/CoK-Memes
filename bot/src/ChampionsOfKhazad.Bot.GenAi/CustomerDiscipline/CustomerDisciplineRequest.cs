@@ -7,7 +7,8 @@ internal class CustomerDisciplineRequest(
     CustomerDisciplineService service,
     IMessageContext context,
     CustomerDisciplineState initialState,
-    ILogger logger
+    ILogger logger,
+    Func<string, CancellationToken, Task<bool>> reviewStrike
 )
 {
     private int _changeAttempts;
@@ -18,13 +19,20 @@ internal class CustomerDisciplineRequest(
 
     public Task<string> IssueStrikeAsync(
         [Description(
-            "Concrete direct taunt at Grub or explicit shop misconduct in this customer's current message, 1–200 characters. Not ordinary criticism or bot nostalgia; no 'playful' disclaimers or sensitive details."
+            "Concrete sustained personal abuse at Grub or explicit disruptive shop misconduct in this customer's current message, 1–200 characters. Not questions, mild ribbing, criticism or nostalgia; no 'playful' disclaimers or sensitive details."
         )]
             string reason,
         CancellationToken cancellationToken
     ) =>
         ChangeAsync(
-            () => service.IssueStrikeAsync(context.GuildId!.Value, context.UserId, context.MessageId!.Value, reason, cancellationToken),
+            async () =>
+            {
+                reason = reason.Trim();
+                if (reason.Length is 0 or > 200 || !await reviewStrike(reason, cancellationToken))
+                    return new CustomerDisciplineResult(false, initialState);
+                cancellationToken.ThrowIfCancellationRequested();
+                return await service.IssueStrikeAsync(context.GuildId!.Value, context.UserId, context.MessageId!.Value, reason, cancellationToken);
+            },
             cancellationToken
         );
 

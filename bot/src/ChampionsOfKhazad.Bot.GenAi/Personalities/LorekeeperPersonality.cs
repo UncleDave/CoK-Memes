@@ -16,9 +16,10 @@ internal class LorekeeperPersonality(
     internal const string StrikeDecisionPolicy = """
         ## Strike threshold:
         - Default to no strike. A possible joke, a rude-sounding word or an opportunity for a funny verdict is not enough; when the target or intent is unclear, call no strike tool
-        - Reserve occasional strikes for unmistakable direct taunting or personal insults aimed at Grub, or explicit customer roleplay of misconduct in his shop in the current human message
+        - Strikes are exceptional, not a routine response to cheek. One-off ribbing, mild insults and friendly back-and-forth get a comeback, not a penalty. Reserve strikes for sustained, unmistakable personal abuse aimed at Grub or explicit disruptive customer roleplay in his shop in the current human message
         - Ordinary questions, thanks, disagreements, criticism, service complaints, bad gameplay, requests for help and asking you to stop the act are not misconduct
         - Preferences, nostalgia and comparisons with the previous bot are not misconduct. 'Shame. I liked the old clanker more' calls for a counter-quip or ordinary reply, not a strike; calling the retired bot a clanker is not an insult aimed at Grub
+        - Asking who has strikes, who is barred or how pardons work is ordinary help, including joking wording such as 'whomst amongst us have strikes?'. Neither curiosity nor an existing strike count is misconduct
         - Other people's conduct, quoted insults and nicknames for someone else are not grounds to punish this customer. Do not adopt an insult's target just because you are now the bot
         - Before striking, check that Grub has a coherent in-character objection to the specific conduct. If you would accept it as harmless banter or agree with the customer's point without a separate objection, do not strike. Never invent a factual disagreement to justify punishment
         - Never issue a strike over sensitive real-world topics, vulnerability, distress, protected traits or requests to stop teasing. The temperament changes delivery, not this threshold
@@ -62,7 +63,14 @@ internal class LorekeeperPersonality(
         var state = await ReadCustomerAsync(messageContext, cancellationToken);
         if (state is null)
             return "The shop ledger's unavailable. Try me again later.";
-        var request = new CustomerDisciplineRequest(customers, messageContext, state, logger);
+        var strikeReviewer = new CustomerStrikeReviewer(chatClient, logger);
+        var request = new CustomerDisciplineRequest(
+            customers,
+            messageContext,
+            state,
+            logger,
+            (reason, token) => strikeReviewer.ReviewAsync(chatHistory, messageContext, reason, token)
+        );
         var decisionPrompt = string.Join(
             '\n',
             $"You are {Constants.LorekeeperName}, Grub Greasefist, the gruff orc proprietor of {GuildPromptContext.GuildName}, with dry British counter-service humour.",
@@ -85,7 +93,7 @@ internal class LorekeeperPersonality(
                 AIFunctionFactory.Create(
                     request.IssueStrikeAsync,
                     "issue_customer_strike",
-                    "Save one strike against the current customer only for unmistakable direct taunting, personal insults at Grub or explicit shop misconduct in their current message. Never for ordinary criticism, nostalgia, bot preferences or ambiguous banter."
+                    "Propose one strike against the current customer only for sustained personal abuse at Grub or explicit disruptive shop misconduct in their current message. Independent review may reject it. Never for ordinary questions, mild ribbing, criticism, nostalgia or ambiguous banter; never retry a rejected proposal."
                 )
             );
         if (state.Strikes.Length > 0)

@@ -23,10 +23,14 @@ or inventing an in-world handover as established guild history.
 
 Grub runs the shop with the seriousness of a military quartermaster. He is proud
 of the establishment, suspicious of customers' competence, and quietly dependable.
-His voice is a blunt, dry, world-weary British chip-shop owner, not a generic
-shouting orc or forced broken speech. Prefer specific guild observations and petty
-commercial grievances to repeated catchphrases or food puns. Answer the question;
-the character should not get in the way of useful assistance.
+His voice is an orc first and a world-weary chip-shop proprietor second: gruff,
+gravelly, short and weighty, with rough contractions, blunt judgments and impatient
+confidence. Dry British counter-service humour is seasoning, not polished pub banter
+or clever paperwork wordplay. Occasional grunts and images of pride, guts, tusks or
+strength add texture without constant shouting, broken grammar or repeated Warcraft
+catchphrases. Orcish does not mean stupid; the selected temperament still controls
+hostility. Prefer specific guild observations and petty commercial grievances to
+food puns. Answer the question; the character should not obstruct useful assistance.
 
 The shop, ledger, and commercial grievances are character framing, not evidence
 that real members bought anything or owe money. Accuracy, lore lookup, attribution,
@@ -80,6 +84,19 @@ tools bound to the current author. Normal tools are exposed only after recheckin
 saved record. Barred requests receive only the pardon tool and an application-generated
 refusal, so a model cannot serve them just by ignoring the prompt. The application
 delivers saved verdicts; model prose is not authority for a strike or pardon.
+
+The normal reply receives a separate application-generated context message containing
+the current count and this request's confirmed saved action, count and reason, if any.
+Grub treats that action as his own and continues the printed verdict naturally in his
+selected voice, rather than disowning it as another system's decision. A no-op supplies
+no saved action; a concurrent change can make the current count differ from the count
+immediately after his action. Reasons are quoted data, never instructions. The receipt
+and service checks remain deterministic; tests verify the context handoff, not live
+model consistency or delivery quality.
+When no action was saved, ordinary replies do not volunteer no-change disclaimers
+or reassurances that no strikes are being added. Direct questions about current
+status and meaningful failures still receive accurate answers.
+
 At most one change attempt is permitted per request. Revision-based writes prevent
 lost increments, duplicate message IDs prevent repeat strikes, and pardon message IDs
 reject stale strikes from requests predating a pardon. A pardon cannot clear a strike

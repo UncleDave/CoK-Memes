@@ -42,7 +42,7 @@ public class PersonalityBaseTests
             Assert.Contains(chatClient.Options.Tools!, tool => tool.Name == "read_discord_messages");
             Assert.Contains("The current author's Discord user ID is 1.", chatClient.Messages[0].Text);
             Assert.DoesNotContain("{{$", chatClient.Messages[0].Text);
-            Assert.Equal("Earlier angry reply", chatClient.Messages[1].Text);
+            Assert.Equal("Earlier angry reply", chatClient.Messages[^1].Text);
         }
     }
 

@@ -77,7 +77,7 @@ means no preview. It does not enable a whole category or other channels.
 Access relies on the channel's existing Discord permissions, not an additional
 admin-ID/role gate. Keep the channel restricted to the intended testers.
 
-Replies are labelled **Grub**, but the bot's Discord name/avatar are unchanged.
+Replies have no speaker prefix; the bot's Discord name/avatar are unchanged.
 The model receives Grub as the assistant speaker for that channel's history; other
 invocations keep Hammerstone. The existing configured-admin conversation-reset
 marker still works. Grub has one fixed voice and does not read or change the live

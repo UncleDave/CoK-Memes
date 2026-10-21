@@ -44,7 +44,7 @@ public class MentionHandler(
         var personality = isGrubPreview ? completionService.GrubPreview : completionService.Lorekeeper;
         var response = await personality.InvokeAsync(chatHistory, notification.Message.ToMessageContext(), cancellationToken);
 
-        await message.ReplyInChunksAsync(isGrubPreview ? $"**Grub:**\n{response}" : response, cancellationToken);
+        await message.ReplyInChunksAsync(response, cancellationToken);
     }
 
     public override string ToString() => nameof(MentionHandler);

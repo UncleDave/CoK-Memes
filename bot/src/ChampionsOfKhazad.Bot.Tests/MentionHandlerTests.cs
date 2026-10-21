@@ -41,7 +41,7 @@ public class MentionHandlerTests
         Assert.NotNull(grub.History);
         Assert.Equal("Grub", grub.History[0].AuthorName);
         Assert.Equal(authorId, grub.Context!.UserId);
-        Assert.Equal(["**Grub:**\nanswer"], fixture.Replies);
+        Assert.Equal(["answer"], fixture.Replies);
     }
 
     [Theory]

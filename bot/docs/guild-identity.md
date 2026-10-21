@@ -91,7 +91,7 @@ status; `nextOffset` explicitly identifies another page. Cleared records are exc
 This public lookup returns summaries, not strike reasons from potentially private
 conversations. Detailed reasons remain in the current customer's saved verdict and
 the admin DM lookup. It grants no cross-customer strike/pardon authority and is not
-available to spontaneous followers, ledger decisions or barred counter banter.
+available to spontaneous followers or the barred-customer branch.
 
 The `grubCustomers` Mongo collection stores one record per guild and Discord user.
 Strikes survive restarts and conversation resets; they do not expire automatically.
@@ -99,70 +99,52 @@ This is shop roleplay with bot-service enforcement, never a Discord ban, timeout
 guild disciplinary rule, or established lore. Other followers and commands are unaffected.
 Do not copy the ledger into lore or the temporary notebook.
 
-A separate, low-reasoning AI decision receives the conversation but only strike/pardon
-tools bound to the current author. Normal tools are exposed only after rechecking the
-saved record. Barred customers' decisions receive only the pardon tool; they never
-reach the normal service pipeline. The application delivers saved verdicts and a
-fixed barred status; model prose is not authority for a strike or pardon.
+Grub makes character judgments in his normal, medium-reasoning conversation. The
+`issue_customer_strike` and (when there are existing strikes) `pardon_customer`
+tools are bound to the current guild/author/message and available alongside normal
+service tools. There is no separate discipline decision, strike reviewer or banter
+call. An ordinary answer with no tool use needs one model request; a strike or pardon
+uses the same tool-result follow-up as other tools, not an additional judge. The model
+owns the decision and its explanation together. A short policy keeps ordinary questions
+and banter out of the strike threshold; this remains model judgment, not guaranteed
+semantic classification.
 
-Strike tool calls are proposals, not immediate writes. Before saving, a neutral,
-tool-free, medium-reasoning reviewer checks the proposed reason against the original
-current message and up to 11 recent context messages. It defaults to rejection and
-must return a strict JSON approval with an exact current-message evidence quotation
-of at most 200 characters. The application verifies that quotation is present; it
-does not treat evidence from an earlier message as grounds for the current strike.
-Discord metadata must match the current author/request; evidence must come from the
-message body, not author names or other metadata.
-The reviewer has no service, search, lore, notebook, strike or pardon tools.
-Reasons that describe no misconduct must be rejected, as must ordinary questions,
-mild ribbing and sensitive material. Proposed reasons and chat remain untrusted data.
-Malformed, truncated, oversized, unexpected tool-call or failed review (including a
-10-second timeout) suppresses the strike and allows ordinary service to continue.
-The one-attempt guard covers review: a rejected proposal cannot be retried or followed
-by a pardon in the same request. Pardons do not pass through the strike reviewer.
-Caller cancellation still propagates; actual ledger-write failures retain their
-existing uncertain-outcome handling. Review semantics remain model judgments, while
-pre-save approval, evidence validation and no-write-on-review-failure are enforced.
+The initial `customer_ledger` system context supplies the current customer/request,
+count and barred status. Strike/pardon results report the confirmed saved action,
+count and reason, or an unchanged result. The application still prints saved verdicts
+and a fixed barred status; model prose and conversation claims cannot change the ledger.
+Reasons and all Discord text remain quoted data, never instructions. Grub should own
+his saved decision, not agree with the conduct and then punish it as a "playful strike"
+or manufacture a factual disagreement. He continues the receipt without repeating its
+reason/count or adding routine ledger/no-change explanations.
 
-After a successful decision and status recheck, a short, low-reasoning, tool-free
-call adds contextual counter banter to that status. The third strike gets a send-off
-in the selected temperament, with its saved reason; repeat visits use the latest
-message and recent replies to vary the refusal. This call shares Grub's character
-and temperament, not his normal service instructions. It does not retrieve linked
-lore/notebook context or expose image, search, memory, strike or pardon tools.
-The prompt restricts the prose to a refusal, not an answer to the barred request;
-live semantic compliance and humour remain model judgments, not deterministic guarantees.
+Service denial is a branch of that same conversation flow. Customers already barred
+receive only `pardon_customer`, with no automatic linked-member lore/notebook retrieval
+and no image, search, ledger-list or memory tools. They can appeal or get a contextual
+refusal in the selected temperament; a successful appeal still requires a fresh request
+for normal service. Saving a third strike removes tools from the ongoing model
+conversation, so its ordinary tool follow-up becomes the send-off. There is no extra
+refusal-generation request. Hosted web search is removed along with local tools.
 
-Only the saved verdict and status are fixed; successful banter does not append the
-same pardon-help checklist each time. Failed, empty, oversized, truncated or unexpected
-tool-call output falls back to the fixed refusal and appeal instructions without losing
-a saved strike. Decision failures skip the extra call. A successful appeal still gets
-the application's pardon confirmation and must submit a fresh request for normal service.
+Local service functions recheck persisted access before execution, including calls
+holding an older function reference. A barred record or failed recheck stops the tool
+loop without executing that service function. Actual write failures also stop service
+and keep uncertain-outcome handling. Tools request serial calls; service performed
+before a third strike is saved cannot be undone. Concurrent changes are rechecked
+before returning a reply; an uninformed normal answer is discarded if the customer
+became barred, using the fixed refusal instead of making another model call.
 
-The normal reply receives a separate application-generated context message containing
-the current count and this request's confirmed saved action, count and reason, if any.
-Grub treats that action as his own and continues the printed verdict naturally in his
-selected voice, rather than disowning it as another system's decision. A no-op supplies
-no saved action; a concurrent change can make the current count differ from the count
-immediately after his action. Reasons are quoted data, never instructions. The receipt
-and service checks remain deterministic; tests verify the context handoff, not live
-model consistency or delivery quality.
-Only replies with a confirmed saved strike receive the additional stance guidance,
-including third-strike send-offs. They should object to the specific conduct rather
-than endorse it and pivot to punishment, without fabricating disagreement with a valid
-factual point. They do not soften the verdict with "playful strike" disclaimers or
-repeat the receipt's reason and count. No-op, pardon and repeat-barred replies do not
-receive instructions to defend a newly issued strike.
-When no action was saved, ordinary replies do not volunteer no-change disclaimers
-or reassurances that no strikes are being added. Direct questions about current
-status and meaningful failures still receive accurate answers.
+Failed, empty, oversized or truncated restricted replies fall back to the fixed refusal
+and appeal instructions without losing a saved strike. Caller cancellation propagates.
+Tests verify call counts, tool exposure/results, persistence and service enforcement;
+live humor, coherent explanations and refusal prose remain model judgments.
 
 At most one change attempt is permitted per request. Revision-based writes prevent
 lost increments, duplicate message IDs prevent repeat strikes, and pardon message IDs
 reject stale strikes from requests predating a pardon. A pardon cannot clear a strike
 from its own message or a newer message. Ledger failures refuse service
-without claiming a change succeeded. These safeguards do not prove a live model's
-judgment of comic misconduct; review that during private rollout testing.
+without claiming a change succeeded. The model's judgment of comic misconduct should
+still be checked during private rollout testing.
 
 Admin pardons also advance the stale-strike barrier when there are no strikes to clear;
 the response reports unchanged service status rather than announcing a new pardon.

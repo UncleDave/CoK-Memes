@@ -84,13 +84,9 @@ internal abstract partial class PersonalityBase(
         var options = new ChatOptions
         {
             Reasoning = new ReasoningOptions { Effort = ReasoningEffort.Medium },
-            Tools = personalityTools.Create(
-                messageContext,
-                includeLorekeeperTools,
-                generatedImages.Enqueue,
-                authorNotebookSearched: authorContext.NotebookSearched
-            ),
+            Tools = CreateTools(messageContext, generatedImages.Enqueue, authorContext.NotebookSearched),
         };
+        ConfigureOptions(options);
 
         var response = await chatClient.GetResponseAsync(messages, options, cancellationToken);
 
@@ -122,6 +118,11 @@ internal abstract partial class PersonalityBase(
         var imageLinks = string.Join('\n', missingImageUrls);
         return string.IsNullOrWhiteSpace(responseText) ? imageLinks : $"{responseText}\n\n{imageLinks}";
     }
+
+    protected virtual IList<AITool> CreateTools(IMessageContext context, Action<Uri> onImageGenerated, bool authorNotebookSearched) =>
+        personalityTools.Create(context, includeLorekeeperTools, onImageGenerated, authorNotebookSearched);
+
+    protected virtual void ConfigureOptions(ChatOptions options) { }
 
     [GeneratedRegex(
         @"(?<!`)(?<ticks>`+)(?!`)[\s\S]*?(?<!`)\k<ticks>(?!`)|\\[\s\S]|!(?<link>\[(?:\\[^\r\n]|[^\]\\\r\n])*\]\([ \t]*<?https?://[^\r\n]*?\))",

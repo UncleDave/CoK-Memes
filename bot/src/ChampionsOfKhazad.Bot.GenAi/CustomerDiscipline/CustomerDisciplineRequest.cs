@@ -17,7 +17,10 @@ internal class CustomerDisciplineRequest(
     public string? Error { get; private set; }
 
     public Task<string> IssueStrikeAsync(
-        [Description("Specific comic misconduct in this customer's current message, 1–200 characters; no sensitive personal details.")] string reason,
+        [Description(
+            "Concrete direct taunt at Grub or explicit shop misconduct in this customer's current message, 1–200 characters. Not ordinary criticism or bot nostalgia; no 'playful' disclaimers or sensitive details."
+        )]
+            string reason,
         CancellationToken cancellationToken
     ) =>
         ChangeAsync(

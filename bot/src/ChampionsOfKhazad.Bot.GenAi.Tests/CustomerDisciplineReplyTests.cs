@@ -22,6 +22,24 @@ public class CustomerDisciplineReplyTests
         using var ledger = ReadReplyLedger(fixture.Chat);
         Assert.Equal(0, ledger.RootElement.GetProperty("currentStrikeCount").GetInt32());
         Assert.Equal(JsonValueKind.Null, ledger.RootElement.GetProperty("savedAction").ValueKind);
+        Assert.DoesNotContain(LorekeeperPersonality.SavedStrikeReplyPolicy, fixture.Chat.NormalPrompt);
+    }
+
+    [Fact]
+    public async Task BotNostalgiaIsPassedToTheDecisionWithTheConservativeStrikePolicyAndNoOpNeedsNoStrikeDefence()
+    {
+        using var fixture = new Fixture();
+        const string message = "Shame. I liked the old clanker more";
+
+        var reply = await fixture.InvokeAsync(message);
+
+        Assert.Contains(LorekeeperPersonality.StrikeDecisionPolicy, fixture.Chat.DecisionMessages[0].Text);
+        Assert.Equal(ChatRole.User, fixture.Chat.DecisionMessages[^1].Role);
+        Assert.Equal(message, fixture.Chat.DecisionMessages[^1].Text);
+        Assert.Equal(message, fixture.Chat.NormalMessages[^1].Text);
+        Assert.DoesNotContain(LorekeeperPersonality.SavedStrikeReplyPolicy, fixture.Chat.NormalPrompt);
+        Assert.Equal("Normal answer", reply);
+        Assert.Empty((await fixture.GetAsync()).Strikes);
     }
 
     [Theory]
@@ -47,6 +65,7 @@ public class CustomerDisciplineReplyTests
         Assert.Equal("strike", action.GetProperty("kind").GetString());
         Assert.Equal(1, action.GetProperty("strikeCount").GetInt32());
         Assert.Equal(reason, action.GetProperty("reason").GetString());
+        Assert.Contains(LorekeeperPersonality.SavedStrikeReplyPolicy, fixture.Chat.NormalPrompt);
         Assert.Equal(3, fixture.Chat.NormalMessages.Count);
         Assert.Equal(ChatRole.User, fixture.Chat.NormalMessages[^1].Role);
         Assert.Equal(message, fixture.Chat.NormalMessages[^1].Text);
@@ -66,6 +85,7 @@ public class CustomerDisciplineReplyTests
         Assert.Equal(1, ledger.RootElement.GetProperty("currentStrikeCount").GetInt32());
         Assert.Equal(JsonValueKind.Null, ledger.RootElement.GetProperty("savedAction").ValueKind);
         Assert.Single((await fixture.GetAsync()).Strikes);
+        Assert.DoesNotContain(LorekeeperPersonality.SavedStrikeReplyPolicy, fixture.Chat.NormalPrompt);
     }
 
     [Fact]
@@ -83,6 +103,7 @@ public class CustomerDisciplineReplyTests
         Assert.Equal(0, ledger.RootElement.GetProperty("currentStrikeCount").GetInt32());
         Assert.Equal(1, ledger.RootElement.GetProperty("savedAction").GetProperty("strikeCount").GetInt32());
         Assert.Empty((await fixture.GetAsync()).Strikes);
+        Assert.Contains(LorekeeperPersonality.SavedStrikeReplyPolicy, fixture.Chat.NormalPrompt);
     }
 
     [Fact]
@@ -151,6 +172,7 @@ public class CustomerDisciplineReplyTests
         Assert.Equal(512, fixture.Chat.BanterOptions.MaxOutputTokens);
         Assert.Equal(0, fixture.Notes.Reads);
         Assert.StartsWith(LorekeeperPersonality.GetPrompt(temperament).Split('\n')[0], fixture.Chat.BanterMessages[0].Text);
+        Assert.Contains(LorekeeperPersonality.SavedStrikeReplyPolicy, fixture.Chat.BanterMessages[0].Text);
         using var ledger = ReadLedger(fixture.Chat.BanterMessages);
         Assert.True(ledger.RootElement.GetProperty("isBarred").GetBoolean());
         Assert.Equal(fixture.Context.UserName, ledger.RootElement.GetProperty("customerName").GetString());
@@ -188,6 +210,7 @@ public class CustomerDisciplineReplyTests
         Assert.True(ledger.RootElement.GetProperty("isBarred").GetBoolean());
         Assert.Equal(0, fixture.Chat.NormalReplies);
         Assert.Equal(3, (await fixture.GetAsync()).Strikes.Length);
+        Assert.DoesNotContain(LorekeeperPersonality.SavedStrikeReplyPolicy, fixture.Chat.BanterMessages[0].Text);
     }
 
     [Theory]
@@ -303,6 +326,7 @@ public class CustomerDisciplineReplyTests
         Assert.Equal("pardon", action.GetProperty("kind").GetString());
         Assert.Equal(0, action.GetProperty("strikeCount").GetInt32());
         Assert.Equal(JsonValueKind.Null, action.GetProperty("reason").ValueKind);
+        Assert.DoesNotContain(LorekeeperPersonality.SavedStrikeReplyPolicy, fixture.Chat.NormalPrompt);
     }
 
     [Fact]
@@ -333,6 +357,7 @@ public class CustomerDisciplineReplyTests
         using var ledger = ReadReplyLedger(fixture.Chat);
         Assert.Equal(1, ledger.RootElement.GetProperty("currentStrikeCount").GetInt32());
         Assert.Equal(JsonValueKind.Null, ledger.RootElement.GetProperty("savedAction").ValueKind);
+        Assert.DoesNotContain(LorekeeperPersonality.SavedStrikeReplyPolicy, fixture.Chat.NormalPrompt);
     }
 
     [Fact]
@@ -545,6 +570,7 @@ public class CustomerDisciplineReplyTests
         public int Decisions { get; private set; }
         public int NormalReplies { get; private set; }
         public string[] DecisionTools { get; private set; } = [];
+        public IReadOnlyList<ChatMessage> DecisionMessages { get; private set; } = [];
         public string[] NormalTools { get; private set; } = [];
         public List<string> Results { get; } = [];
         public string? NormalPrompt { get; private set; }
@@ -602,6 +628,7 @@ public class CustomerDisciplineReplyTests
             if (results.Length == 0)
             {
                 Decisions++;
+                DecisionMessages = history;
                 DecisionTools = options!.Tools!.Select(tool => tool.Name).ToArray();
                 if (BeforeDecision is not null)
                     await BeforeDecision();

@@ -57,10 +57,17 @@ it does not generate or upload a Discord avatar automatically.
 ### Customer strikes and pardons
 
 Grub may give the customer currently addressing him an occasional comic strike
-for direct cheek, insults aimed at him, or playful shop misconduct. Each saved
-strike has a short reason. Ordinary questions, thanks, disagreements, poor gameplay,
+for unmistakable direct taunts, personal insults aimed at him, or explicit roleplayed
+shop misconduct. Default to no strike when the target or intent is unclear. Each saved
+strike has a short, concrete reason; calling something playful is not grounds to penalise it.
+Ordinary questions, thanks, disagreements, criticism, service complaints, poor gameplay,
 quoted text, other members' conduct, sensitive topics, and asking him to stop the act
-are not grounds for a strike. Temperament changes his voice, not this threshold.
+are not grounds for a strike. Neither are nostalgia, bot preferences or comparisons:
+"Shame. I liked the old clanker more" should get a counter-quip, not a strike for
+insulting Grub. Temperament changes his voice, not this threshold.
+Before striking, Grub must have a coherent objection to the specific conduct; accepting
+it as harmless or simply agreeing with it is a reason not to strike. This remains a
+model judgment, not a deterministic text classifier.
 
 Three strikes bars the customer from Grub's normal service until pardoned. They can
 still address him to apologise or appeal; Grub may clear all their strikes if persuaded,
@@ -118,6 +125,12 @@ no saved action; a concurrent change can make the current count differ from the 
 immediately after his action. Reasons are quoted data, never instructions. The receipt
 and service checks remain deterministic; tests verify the context handoff, not live
 model consistency or delivery quality.
+Only replies with a confirmed saved strike receive the additional stance guidance,
+including third-strike send-offs. They should object to the specific conduct rather
+than endorse it and pivot to punishment, without fabricating disagreement with a valid
+factual point. They do not soften the verdict with "playful strike" disclaimers or
+repeat the receipt's reason and count. No-op, pardon and repeat-barred replies do not
+receive instructions to defend a newly issued strike.
 When no action was saved, ordinary replies do not volunteer no-change disclaimers
 or reassurances that no strikes are being added. Direct questions about current
 status and meaningful failures still receive accurate answers.

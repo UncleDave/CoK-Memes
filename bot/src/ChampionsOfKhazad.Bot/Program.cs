@@ -115,6 +115,7 @@ host.Services.AddSingleton<NotificationQueue>().AddHostedService<NotificationQue
 
 host.Services.AddHostedService<BotService>()
     .AddScoped<PersonalityDirectMessageCommand>()
+    .AddScoped<CustomerDirectMessageCommand>()
     .AddScoped<NotebookDirectMessageCommand>()
     .AddScoped<LoreDirectMessageCommand>()
     .AddScoped<GazetteDirectMessageCommand>()

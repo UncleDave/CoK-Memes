@@ -9,6 +9,7 @@ public class DirectMessageHandler(
     IOptions<DirectMessageHandlerOptions> options,
     IGetTheWordOfTheDay wordOfTheDayGetter,
     PersonalityDirectMessageCommand personalityCommand,
+    CustomerDirectMessageCommand customerCommand,
     NotebookDirectMessageCommand notebookCommand,
     CooldownTracker<ulong> cooldowns,
     LoreDirectMessageCommand loreCommand,
@@ -25,6 +26,9 @@ public class DirectMessageHandler(
         + "personality list — list the presets\n"
         + "personality <baseline|grouchy|furious> [duration] — switch temperament\n"
         + "personality reset — restore baseline and clear any expiry\n\n"
+        + "customers — customer commands; three strikes refuse service until pardoned\n"
+        + "customers show <user-id> — show strikes and service status\n"
+        + "customers pardon <user-id> — clear strikes and restore service\n\n"
         + "notebook — status and notebook commands\n"
         + "notebook list/history [page] — review active notes or audit history\n"
         + "notebook show/discard <id> — inspect or remove a note\n"
@@ -84,6 +88,7 @@ public class DirectMessageHandler(
                     return;
                 var response =
                     await personalityCommand.ExecuteAsync(message.Content, cancellationToken)
+                    ?? await customerCommand.ExecuteAsync(message.Content, message.Id, cancellationToken)
                     ?? await notebookCommand.ExecuteAsync(message.Content, cancellationToken)
                     ?? await loreCommand.ExecuteAsync(message.Author.Id, message.Content, cancellationToken);
                 if (response is not null)

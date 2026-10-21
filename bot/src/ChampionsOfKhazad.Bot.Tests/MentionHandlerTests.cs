@@ -190,6 +190,8 @@ public class MentionHandlerTests
         Assert.Single(personality.History!);
         Assert.Equal(7UL, personality.Context!.UserId);
         Assert.Equal("Leaf", personality.Context.UserName);
+        Assert.Equal(50UL, personality.Context.GuildId);
+        Assert.Equal(3UL, personality.Context.MessageId);
         Assert.Contains("new question", personality.History![0].Text);
         Assert.DoesNotContain("stale", personality.History[0].Text);
     }

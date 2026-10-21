@@ -37,6 +37,7 @@ public class FeatureRegistrationTests
         AssertSingleton<IGazetteIssueStore>(services);
         AssertSingleton<IGazettePublishedEditionStore>(services);
         AssertSingleton<ILorekeeperPersonalityStore>(services);
+        AssertSingleton<ICustomerDisciplineStore>(services);
         Assert.Single(services, descriptor => descriptor.ServiceType == typeof(INotificationHandler<CharacterDeathReported>));
     }
 
@@ -74,6 +75,7 @@ public class FeatureRegistrationTests
             Assert.Single(services, descriptor => descriptor.ServiceType == typeof(NotebookObserverService)).Lifetime
         );
         AssertSingleton<TimeProvider>(services);
+        AssertSingleton<CustomerDisciplineService>(services);
     }
 
     private sealed class NoopEmojiHandler : IEmojiHandler

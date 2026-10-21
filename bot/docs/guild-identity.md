@@ -43,6 +43,51 @@ Stained apron, battered paper hat, frying basket, grease-stained ledger, and
 Horde-red shop signage. This description is available to the main personality;
 it does not generate or upload a Discord avatar automatically.
 
+### Customer strikes and pardons
+
+Grub may give the customer currently addressing him an occasional comic strike
+for direct cheek, insults aimed at him, or playful shop misconduct. Each saved
+strike has a short reason. Ordinary questions, thanks, disagreements, poor gameplay,
+quoted text, other members' conduct, sensitive topics, and asking him to stop the act
+are not grounds for a strike. Temperament changes his voice, not this threshold.
+
+Three strikes bars the customer from Grub's normal service until pardoned. They can
+still address him to apologise or appeal; Grub may clear all their strikes if persuaded,
+including before the third strike. A successful appeal from a barred customer confirms
+the pardon without performing the request embedded in that appeal; ask again for service.
+Grub must not demand real money, favours, humiliation, or personal information.
+The configured admin can inspect or reset a record by DM:
+
+- `customers` — help.
+- `customers show <user-id>` — current strikes and reasons.
+- `customers pardon <user-id>` — clear strikes and lift the bar.
+
+The `grubCustomers` Mongo collection stores one record per guild and Discord user.
+Strikes survive restarts and conversation resets; they do not expire automatically.
+This is shop roleplay with bot-service enforcement, never a Discord ban, timeout,
+guild disciplinary rule, or established lore. Other followers and commands are unaffected.
+Do not copy the ledger into lore or the temporary notebook.
+
+A separate, low-reasoning AI decision receives the conversation but only strike/pardon
+tools bound to the current author. Normal tools are exposed only after rechecking the
+saved record. Barred requests receive only the pardon tool and an application-generated
+refusal, so a model cannot serve them just by ignoring the prompt. The application
+delivers saved verdicts; model prose is not authority for a strike or pardon.
+At most one change attempt is permitted per request. Revision-based writes prevent
+lost increments, duplicate message IDs prevent repeat strikes, and pardon message IDs
+reject stale strikes from requests predating a pardon. A pardon cannot clear a strike
+from its own message or a newer message. Ledger failures refuse service
+without claiming a change succeeded. These safeguards do not prove a live model's
+judgment of comic misconduct; review that during private rollout testing.
+
+Admin pardons also advance the stale-strike barrier when there are no strikes to clear;
+the response reports unchanged service status rather than announcing a new pardon.
+If an AI follow-up fails after a saved change, the application still delivers its verdict
+with a service-failure response where relevant.
+
+Optional persistence tests use `COK_CUSTOMERS_MONGO_TEST_CONNECTION` pointing to a
+disposable local Mongo instance. They create and remove only their own unique database.
+
 ## Retained history and commands
 
 The former guild name, past expansions, historical characters, and old anecdotes

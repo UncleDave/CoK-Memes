@@ -63,6 +63,7 @@ public static class GenAiBotBuilderExtensions
         builder
             .Services.AddScoped<ICompletionService, CompletionService>()
             .AddSingleton<LorekeeperPersonalityService>()
+            .AddSingleton<CustomerDisciplineService>()
             .AddScoped<NotebookService>()
             .AddScoped<INotebookEvaluator, NotebookEvaluator>()
             .AddScoped<INotebookDiscoverer, NotebookDiscoverer>()

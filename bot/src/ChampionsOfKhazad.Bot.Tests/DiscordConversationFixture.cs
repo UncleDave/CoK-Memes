@@ -30,6 +30,7 @@ internal class DiscordConversationFixture
             {
                 "get_Id" => channelId,
                 "get_CategoryId" => categoryId,
+                "get_GuildId" => 50UL,
                 "GetMessagesAsync" => GetBatches((ulong)args![0]!, (int)args[2]!, (RequestOptions?)args[^1]),
                 "GetMessageAsync" => Fetch((ulong)args![0]!),
                 "SendMessageAsync" => Send((string)args![0]!),

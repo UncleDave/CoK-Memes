@@ -88,6 +88,8 @@ public class ConversationPersonalityTests
 
     private sealed class TestMessageContext : IMessageContext
     {
+        public ulong? GuildId => 2;
+        public ulong? MessageId => 4;
         public ulong UserId => 456;
         public string UserName => "CurrentRaider";
         public ulong? ChannelId => 100;

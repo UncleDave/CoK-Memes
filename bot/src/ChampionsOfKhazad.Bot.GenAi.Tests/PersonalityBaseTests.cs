@@ -27,7 +27,9 @@ public class PersonalityBaseTests
                 NullLogger<PersonalityTools>.Instance,
                 new EmptyLoreGetter()
             ),
-            service
+            service,
+            new CustomerDisciplineService(new MemoryCustomerStore(), TimeProvider.System),
+            NullLogger<LorekeeperPersonality>.Instance
         );
         var history = new ChatHistory([new ChatMessage(ChatRole.Assistant, "Earlier angry reply")]);
 
@@ -55,6 +57,14 @@ public class PersonalityBaseTests
             _setting = setting;
             return Task.CompletedTask;
         }
+    }
+
+    private sealed class MemoryCustomerStore : ICustomerDisciplineStore
+    {
+        public Task<CustomerDisciplineState?> GetAsync(string id, CancellationToken cancellationToken) =>
+            Task.FromResult<CustomerDisciplineState?>(null);
+
+        public Task<bool> TrySaveAsync(CustomerDisciplineState state, CancellationToken cancellationToken) => throw new NotSupportedException();
     }
 
     [Fact]
@@ -295,6 +305,8 @@ public class PersonalityBaseTests
         public ulong UserId => 1;
         public string UserName => "Tester";
         public ulong? ChannelId { get; init; } = 3;
+        public ulong? GuildId => 2;
+        public ulong? MessageId => 4;
 
         public Task Reply(string message) => Task.CompletedTask;
     }

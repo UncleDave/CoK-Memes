@@ -1272,6 +1272,8 @@ public class NotebookServiceTests
 
     private sealed class MessageContext : IMessageContext
     {
+        public ulong? GuildId => 2;
+        public ulong? MessageId => 4;
         public ulong UserId { get; set; } = 1;
         public string UserName => "Member";
         public ulong? ChannelId { get; set; } = 3;

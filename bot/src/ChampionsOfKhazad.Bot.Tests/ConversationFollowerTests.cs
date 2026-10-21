@@ -419,6 +419,7 @@ public class ConversationFollowerTests
                     {
                         "get_Id" => channelId,
                         "get_CategoryId" => categoryId,
+                        "get_GuildId" => 50UL,
                         "EnterTypingState" => new NoopDisposable(),
                         "GetMessagesAsync" => GetHistory(),
                         "SendMessageAsync" => Send((string)args![0]!),
@@ -429,6 +430,7 @@ public class ConversationFollowerTests
                 (method, _) =>
                     method.Name switch
                     {
+                        "get_Id" => 1UL,
                         "get_Channel" => channel,
                         "get_Author" => author,
                         "get_Content" or "get_CleanContent" => content,

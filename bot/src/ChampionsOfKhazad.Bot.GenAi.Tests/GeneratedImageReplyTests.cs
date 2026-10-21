@@ -387,6 +387,8 @@ public class GeneratedImageReplyTests
         public ulong UserId => 1;
         public string UserName => "Tester";
         public ulong? ChannelId => 3;
+        public ulong? GuildId => 2;
+        public ulong? MessageId => 4;
         public List<string> Replies { get; } = [];
         public bool FailConfirmation { get; set; }
         public int ReplyAttempts { get; private set; }

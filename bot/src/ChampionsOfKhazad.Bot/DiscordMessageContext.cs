@@ -11,5 +11,9 @@ public class DiscordMessageContext(IUserMessage message) : IMessageContext
 
     public ulong? ChannelId { get; } = message.Channel.Id;
 
+    public ulong? GuildId { get; } = (message.Channel as IGuildChannel)?.GuildId;
+
+    public ulong? MessageId { get; } = message.Id;
+
     public Task Reply(string content) => message.ReplyAsync(content, allowedMentions: new AllowedMentions { MentionRepliedUser = true });
 }

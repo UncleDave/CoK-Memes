@@ -116,6 +116,9 @@ public class DirectMessageHandlerTests
         Assert.Contains("personality list", help);
         Assert.Contains("baseline|grouchy|furious", help);
         Assert.Contains("personality reset", help);
+        Assert.Contains("customers show <user-id>", help);
+        Assert.Contains("customers pardon <user-id>", help);
+        Assert.Contains("three strikes refuse service until pardoned", help);
         Assert.Contains("30m, 2h, 1d", help);
         Assert.Contains("personality furious 2h", help);
         Assert.Contains("@Grub you've had a stroke.", help);
@@ -137,6 +140,64 @@ public class DirectMessageHandlerTests
         var handler = CreateHandler(null!, null!);
         await handler.Handle(new MessageReceived(CreateMessage(admin, dm, bot, "help", replies)), TestContext.Current.CancellationToken);
         Assert.DoesNotContain(replies, reply => reply.Contains("Admin DM commands:", StringComparison.Ordinal));
+    }
+
+    [Theory]
+    [InlineData(true, true, false, true)]
+    [InlineData(false, true, false, false)]
+    [InlineData(true, false, false, false)]
+    [InlineData(true, true, true, false)]
+    public async Task OnlyHumanAdminInDmCanPardonCustomers(bool admin, bool dm, bool bot, bool shouldPardon)
+    {
+        var store = new CustomerStore();
+        var guild = Stub<IGuild>(method => method.Name == "get_Id" ? 10UL : throw new NotSupportedException(method.Name));
+        var command = new CustomerDirectMessageCommand(
+            new CustomerDisciplineService(store, TimeProvider.System),
+            new BotContext(9, guild, null!),
+            NullLogger<CustomerDirectMessageCommand>.Instance
+        );
+        var handler = CreateHandler(new MemoryStore(), new WordGetter(), customerCommand: command);
+        var replies = new List<string>();
+        await handler.Handle(
+            new MessageReceived(CreateMessage(admin, dm, bot, "customers pardon 42", replies, messageId: 123)),
+            TestContext.Current.CancellationToken
+        );
+
+        Assert.Equal(shouldPardon, store.State.Strikes.Length == 0);
+        Assert.Equal(shouldPardon ? 123UL : 0UL, store.State.LastPardonMessageId);
+        Assert.Equal(shouldPardon, replies.Any(reply => reply.Contains("Customer 42 pardoned", StringComparison.Ordinal)));
+    }
+
+    [Theory]
+    [InlineData(true, true, false, true)]
+    [InlineData(false, true, false, false)]
+    [InlineData(true, false, false, false)]
+    [InlineData(true, true, true, false)]
+    public async Task CustomerStatusIsOnlyExposedInHumanAdminDms(bool admin, bool dm, bool bot, bool shouldShow)
+    {
+        var store = new CustomerStore();
+        var guild = Stub<IGuild>(method => method.Name == "get_Id" ? 10UL : throw new NotSupportedException(method.Name));
+        var command = new CustomerDirectMessageCommand(
+            new CustomerDisciplineService(store, TimeProvider.System),
+            new BotContext(9, guild, null!),
+            NullLogger<CustomerDirectMessageCommand>.Instance
+        );
+        var handler = CreateHandler(new MemoryStore(), new WordGetter(), customerCommand: command);
+        var replies = new List<string>();
+        await handler.Handle(new MessageReceived(CreateMessage(admin, dm, bot, "customers show 42", replies)), TestContext.Current.CancellationToken);
+
+        Assert.Equal(shouldShow, store.Reads > 0);
+        Assert.Equal(shouldShow, replies.Any(reply => reply.Contains("Customer 42: 3/3 strikes", StringComparison.Ordinal)));
+        Assert.Equal(3, store.State.Strikes.Length);
+    }
+
+    [Fact]
+    public async Task CustomerHelpIsHandledBeforeTheLoreFallbackWithoutAccessingPersistence()
+    {
+        var replies = new List<string>();
+        var handler = CreateHandler(new MemoryStore(), null!);
+        await handler.Handle(new MessageReceived(CreateMessage(true, true, false, "customers", replies)), TestContext.Current.CancellationToken);
+        Assert.Contains("customers show <user-id>", Assert.Single(replies));
     }
 
     [Theory]
@@ -217,7 +278,8 @@ public class DirectMessageHandlerTests
         WordGetter getter,
         NotebookDirectMessageCommand? notebookCommand = null,
         LoreDirectMessageCommand? loreCommand = null,
-        GazetteDirectMessageCommand? gazetteCommand = null
+        GazetteDirectMessageCommand? gazetteCommand = null,
+        CustomerDirectMessageCommand? customerCommand = null
     ) =>
         new(
             Options.Create(new DirectMessageHandlerOptions { AdminUserId = 1 }),
@@ -225,6 +287,7 @@ public class DirectMessageHandlerTests
             new PersonalityDirectMessageCommand(
                 new LorekeeperPersonalityService(store, TimeProvider.System, NullLogger<LorekeeperPersonalityService>.Instance)
             ),
+            customerCommand ?? new CustomerDirectMessageCommand(null!, null!, NullLogger<CustomerDirectMessageCommand>.Instance),
             notebookCommand!,
             new CooldownTracker<ulong>(TimeProvider.System),
             loreCommand!,
@@ -243,7 +306,7 @@ public class DirectMessageHandlerTests
                 )
         );
 
-    private static IUserMessage CreateMessage(bool admin, bool dm, bool bot, string content, List<string> replies)
+    private static IUserMessage CreateMessage(bool admin, bool dm, bool bot, string content, List<string> replies, ulong messageId = 100)
     {
         var user = Stub<IUser>(method =>
             method.Name switch
@@ -264,6 +327,7 @@ public class DirectMessageHandlerTests
         return Stub<IUserMessage>(method =>
             method.Name switch
             {
+                "get_Id" => messageId,
                 "get_Channel" => channel,
                 "get_Author" => user,
                 "get_Content" or "get_CleanContent" => content,
@@ -311,6 +375,36 @@ public class DirectMessageHandlerTests
 
         public Task<bool> TrySaveAsync(NotebookState state, CancellationToken cancellationToken)
         {
+            State = state with { Revision = state.Revision + 1 };
+            return Task.FromResult(true);
+        }
+    }
+
+    private sealed class CustomerStore : ICustomerDisciplineStore
+    {
+        public int Reads { get; private set; }
+
+        public CustomerDisciplineState State { get; private set; } =
+            CustomerDisciplineState.Create(10, 42) with
+            {
+                Strikes =
+                [
+                    new(1, "First strike", DateTime.UtcNow),
+                    new(2, "Second strike", DateTime.UtcNow),
+                    new(3, "Third strike", DateTime.UtcNow),
+                ],
+            };
+
+        public Task<CustomerDisciplineState?> GetAsync(string id, CancellationToken cancellationToken)
+        {
+            Reads++;
+            return Task.FromResult<CustomerDisciplineState?>(State.Id == id ? State : null);
+        }
+
+        public Task<bool> TrySaveAsync(CustomerDisciplineState state, CancellationToken cancellationToken)
+        {
+            if (state.Id != State.Id || state.Revision != State.Revision)
+                return Task.FromResult(false);
             State = state with { Revision = state.Revision + 1 };
             return Task.FromResult(true);
         }

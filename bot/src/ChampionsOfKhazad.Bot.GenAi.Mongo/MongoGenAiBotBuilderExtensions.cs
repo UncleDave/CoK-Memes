@@ -25,6 +25,7 @@ public static class MongoGenAiBotBuilderExtensions
                 }
             )
             .AddCollection<LorekeeperPersonalitySetting>("lorekeeperPersonality")
+            .AddCollection<CustomerDisciplineState>("grubCustomers")
             .AddCollection<NotebookState>("lorekeeperNotebook")
             .AddCollection<GazetteState>("gazette")
             .AddCollection<GazettePublishedEdition>(
@@ -41,6 +42,7 @@ public static class MongoGenAiBotBuilderExtensions
                     )
             )
             .Services.AddSingleton<IGeneratedImageStore, MongoGeneratedImageStore>()
+            .AddSingleton<ICustomerDisciplineStore, MongoCustomerDisciplineStore>()
             .AddSingleton<INotebookStore, MongoNotebookStore>()
             .AddSingleton<IGazetteIssueStore, MongoGazetteIssueStore>()
             .AddSingleton<IGazettePublishedEditionStore, MongoGazettePublishedEditionStore>()

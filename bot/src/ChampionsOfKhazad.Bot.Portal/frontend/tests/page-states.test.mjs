@@ -141,6 +141,69 @@ test("initial loading keeps the portal shell with an announced, page-shaped skel
   }
 });
 
+test("route loading overlays progress without displacing the current page", async () => {
+  const { default: Root } = await server.ssrLoadModule(
+    "/src/features/core/Root.tsx",
+  );
+  const loading = Promise.withResolvers();
+  const router = createMemoryRouter(
+    [
+      {
+        id: "root",
+        path: "/",
+        loader: () => ({ roles: ["Admin"] }),
+        element: createElement(Root),
+        children: [
+          {
+            path: "images",
+            element: createElement("h1", null, "Current images"),
+          },
+          {
+            path: "lore",
+            loader: () => loading.promise,
+            element: createElement("h1", null, "Loaded lore"),
+          },
+        ],
+      },
+    ],
+    {
+      initialEntries: ["/images"],
+      hydrationData: { loaderData: { root: { roles: ["Admin"] } } },
+    },
+  );
+  let navigation;
+  try {
+    const idleHtml = render(createElement(RouterProvider, { router }));
+    assert.match(idleHtml, /<main[^>]*aria-busy="false"/);
+    assert.doesNotMatch(idleHtml, /aria-label="Loading page"/);
+
+    navigation = router.navigate("/lore");
+    assert.equal(router.state.navigation.state, "loading");
+    const loadingHtml = render(createElement(RouterProvider, { router }));
+    assert.match(loadingHtml, /aria-label="Main navigation"/);
+    assert.match(loadingHtml, /<h1>Current images<\/h1>/);
+    assert.doesNotMatch(loadingHtml, /Loaded lore/);
+    assert.match(loadingHtml, /<main[^>]*aria-busy="true"/);
+    assert.match(
+      loadingHtml,
+      /role="progressbar"[^>]*aria-label="Loading page"/,
+    );
+    assert.match(loadingHtml, /position:fixed;top:0;left:0;right:0/);
+    assert.match(loadingHtml, /pointer-events:none/);
+
+    loading.resolve(null);
+    await navigation;
+    const loadedHtml = render(createElement(RouterProvider, { router }));
+    assert.match(loadedHtml, /<h1>Loaded lore<\/h1>/);
+    assert.match(loadedHtml, /<main[^>]*aria-busy="false"/);
+    assert.doesNotMatch(loadedHtml, /aria-label="Loading page"/);
+  } finally {
+    loading.resolve(null);
+    await navigation;
+    router.dispose();
+  }
+});
+
 test("route errors distinguish session, permission, and missing-page failures", () => {
   assert.equal(
     getRouteErrorDetails(new ApiError("internal", 401)).title,

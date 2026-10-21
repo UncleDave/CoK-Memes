@@ -20,7 +20,8 @@ navigation between sections, and the current-user request contract.
 Initial loading retains the portal header and displays a page-shaped skeleton
 with an announced loading status rather than a blank viewport. Admin navigation
 is not guessed while the current-user request is pending. Subsequent route loads keep the
-current page and navigation visible with a progress indicator. Child-route failures
+current page and navigation visible with a thin progress overlay fixed to the top
+of the viewport; it does not shift content or intercept clicks. Child-route failures
 keep the shared header available and offer Retry without discarding successfully
 loaded gallery pages. An initial current-user failure has the same recovery UI,
 but cannot display role-based navigation until the user request succeeds.

@@ -21,7 +21,19 @@ const Root = () => {
         sx={{ pt: 2 }}
       >
         {navigation.state === "loading" && (
-          <LinearProgress aria-label="Loading page" sx={{ mb: 2 }} />
+          <LinearProgress
+            aria-label="Loading page"
+            thickness={3}
+            sx={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              right: 0,
+              zIndex: "snackbar",
+              borderRadius: 0,
+              pointerEvents: "none",
+            }}
+          />
         )}
         <Outlet />
       </Box>

@@ -40,7 +40,7 @@ public class ConversationPersonalityTests
     private static IPersonality CreatePersonality(string personalityName, IChatClient chatClient)
     {
         var emojiHandler = new PassThroughEmojiHandler();
-        var tools = new PersonalityTools(null!, null!, null!, null!, NullLogger<PersonalityTools>.Instance, new EmptyLoreGetter());
+        var tools = new PersonalityTools(null!, null!, null!, null!, NullLogger<PersonalityTools>.Instance, new EmptyLoreGetter(), null!);
         return personalityName switch
         {
             "Sycophant" => new SycophantPersonality(emojiHandler, chatClient, tools),

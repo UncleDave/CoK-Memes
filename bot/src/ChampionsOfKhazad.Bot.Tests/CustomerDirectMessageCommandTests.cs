@@ -188,6 +188,14 @@ public class CustomerDirectMessageCommandTests
 
     private sealed class MemoryStore : ICustomerDisciplineStore
     {
+        public Task<IReadOnlyList<CustomerDisciplineState>> ListAsync(
+            ulong guildId,
+            bool barredOnly,
+            int offset,
+            int limit,
+            CancellationToken cancellationToken
+        ) => throw new NotSupportedException();
+
         public CustomerDisciplineState? State { get; set; }
         public List<string> ReadIds { get; } = [];
         public int Saves { get; private set; }

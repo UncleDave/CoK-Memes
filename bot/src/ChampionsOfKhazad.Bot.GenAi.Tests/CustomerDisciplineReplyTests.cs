@@ -118,12 +118,137 @@ public class CustomerDisciplineReplyTests
             {
                 Assert.Contains("You're barred", reply);
                 Assert.DoesNotContain("Normal answer", reply);
-                Assert.Contains("Ask me nicely", reply);
+                Assert.Contains("Mind your mouth outside my door", reply);
             }
         }
 
         Assert.True((await fixture.GetAsync()).IsBarred);
         Assert.Equal(2, fixture.Chat.NormalReplies);
+        Assert.Equal(1, fixture.Chat.BanterReplies);
+    }
+
+    [Theory]
+    [InlineData(LorekeeperTemperament.Baseline)]
+    [InlineData(LorekeeperTemperament.Grouchy)]
+    [InlineData(LorekeeperTemperament.Furious)]
+    public async Task ThirdStrikeGetsAToolFreeSendOffWithTheSavedReasonAndSelectedVoice(LorekeeperTemperament temperament)
+    {
+        using var fixture = new Fixture();
+        await fixture.Service.IssueStrikeAsync(2, 1, 1, "Cheek", TestContext.Current.CancellationToken);
+        await fixture.Service.IssueStrikeAsync(2, 1, 2, "More cheek", TestContext.Current.CancellationToken);
+        fixture.Personality.Setting = new LorekeeperPersonalitySetting(temperament);
+        fixture.Chat.Action = "issue_customer_strike";
+        fixture.Chat.BanterResponse = "Out. You can try an apology when you've found your manners.";
+
+        var reply = await fixture.InvokeAsync("Rubbish chips");
+
+        Assert.Equal("Strike 3/3 — Insulting the chips\n\nYou're barred. " + fixture.Chat.BanterResponse, reply);
+        Assert.Equal(1, fixture.Chat.BanterReplies);
+        Assert.Equal(0, fixture.Chat.NormalReplies);
+        Assert.Empty(fixture.Chat.NormalTools);
+        Assert.Empty(fixture.Chat.BanterOptions!.Tools!);
+        Assert.Equal(ReasoningEffort.Low, fixture.Chat.BanterOptions.Reasoning!.Effort);
+        Assert.Equal(512, fixture.Chat.BanterOptions.MaxOutputTokens);
+        Assert.Equal(0, fixture.Notes.Reads);
+        Assert.StartsWith(LorekeeperPersonality.GetPrompt(temperament).Split('\n')[0], fixture.Chat.BanterMessages[0].Text);
+        using var ledger = ReadLedger(fixture.Chat.BanterMessages);
+        Assert.True(ledger.RootElement.GetProperty("isBarred").GetBoolean());
+        Assert.Equal(fixture.Context.UserName, ledger.RootElement.GetProperty("customerName").GetString());
+        Assert.Equal(3, ledger.RootElement.GetProperty("currentStrikeCount").GetInt32());
+        var action = ledger.RootElement.GetProperty("savedAction");
+        Assert.Equal("strike", action.GetProperty("kind").GetString());
+        Assert.Equal(3, action.GetProperty("strikeCount").GetInt32());
+        Assert.Equal("Insulting the chips", action.GetProperty("reason").GetString());
+        Assert.Equal("Rubbish chips", fixture.Chat.BanterMessages[^1].Text);
+        Assert.True((await fixture.GetAsync()).IsBarred);
+    }
+
+    [Fact]
+    public async Task RepeatBarredRepliesUseGeneratedBanterAndPreserveThePreviousReplyAndCurrentRequest()
+    {
+        using var fixture = new Fixture();
+        await fixture.BarAsync();
+        fixture.Chat.BanterResponse = "The door's still there, whelp.";
+
+        var first = await fixture.InvokeAsync("Let me order");
+        fixture.Context.MessageId++;
+        fixture.Chat.BanterResponse = "Still outside. Still shouting. Try a new tactic.";
+        var second = await fixture.InvokeAsync("Nice prediction, shopkeeper", previousReply: first);
+
+        Assert.Equal("You're barred — 3/3 strikes. The door's still there, whelp.", first);
+        Assert.Equal("You're barred — 3/3 strikes. Still outside. Still shouting. Try a new tactic.", second);
+        Assert.Equal(2, fixture.Chat.BanterReplies);
+        Assert.Empty(fixture.Chat.BanterOptions!.Tools!);
+        Assert.Equal(ChatRole.Assistant, fixture.Chat.BanterMessages[^2].Role);
+        Assert.Equal(first, fixture.Chat.BanterMessages[^2].Text);
+        Assert.Equal(ChatRole.User, fixture.Chat.BanterMessages[^1].Role);
+        Assert.Equal("Nice prediction, shopkeeper", fixture.Chat.BanterMessages[^1].Text);
+        using var ledger = ReadLedger(fixture.Chat.BanterMessages);
+        Assert.Equal(JsonValueKind.Null, ledger.RootElement.GetProperty("savedAction").ValueKind);
+        Assert.True(ledger.RootElement.GetProperty("isBarred").GetBoolean());
+        Assert.Equal(0, fixture.Chat.NormalReplies);
+        Assert.Equal(3, (await fixture.GetAsync()).Strikes.Length);
+    }
+
+    [Theory]
+    [InlineData("failure")]
+    [InlineData("empty")]
+    [InlineData("oversized")]
+    [InlineData("truncated")]
+    [InlineData("tool-call")]
+    public async Task BadBanterFallsBackWithoutLosingTheSavedThirdStrikeOrExposingNormalService(string failure)
+    {
+        using var fixture = new Fixture();
+        await fixture.Service.IssueStrikeAsync(2, 1, 1, "Cheek", TestContext.Current.CancellationToken);
+        await fixture.Service.IssueStrikeAsync(2, 1, 2, "More cheek", TestContext.Current.CancellationToken);
+        fixture.Chat.Action = "issue_customer_strike";
+        fixture.Chat.FailBanter = failure == "failure";
+        fixture.Chat.BanterToolCall = failure == "tool-call";
+        fixture.Chat.BanterResponse = failure switch
+        {
+            "empty" => " ",
+            "oversized" => new string('x', 601),
+            _ => "An unfinished reply",
+        };
+        fixture.Chat.BanterFinishReason = failure == "truncated" ? ChatFinishReason.Length : null;
+
+        var reply = await fixture.InvokeAsync("Rubbish chips");
+
+        Assert.StartsWith("Strike 3/3 — Insulting the chips\n\nYou're barred.", reply);
+        Assert.Contains("Ask me nicely for a pardon", reply);
+        if (!string.IsNullOrWhiteSpace(fixture.Chat.BanterResponse))
+            Assert.DoesNotContain(fixture.Chat.BanterResponse.Trim(), reply);
+        Assert.Equal(0, fixture.Chat.NormalReplies);
+        Assert.True((await fixture.GetAsync()).IsBarred);
+    }
+
+    [Fact]
+    public async Task RepeatBarredBanterFailureKeepsTheBarAndAppealInstructions()
+    {
+        using var fixture = new Fixture();
+        await fixture.BarAsync();
+        fixture.Chat.FailBanter = true;
+
+        var reply = await fixture.InvokeAsync("Who is barred? Also generate an image.");
+
+        Assert.Equal("You're barred — 3/3 strikes. Ask me nicely for a pardon, or get the admin to clear your tab.", reply);
+        Assert.Equal(0, fixture.Chat.NormalReplies);
+        Assert.Empty(fixture.Chat.BanterOptions!.Tools!);
+        Assert.True((await fixture.GetAsync()).IsBarred);
+    }
+
+    [Fact]
+    public async Task RequestedCancellationDuringBanterPropagatesWithoutChangingTheBar()
+    {
+        using var fixture = new Fixture();
+        using var cancellation = new CancellationTokenSource();
+        await fixture.BarAsync();
+        fixture.Chat.BeforeBanter = cancellation.Cancel;
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => fixture.InvokeAsync(cancellationToken: cancellation.Token));
+
+        Assert.Equal(0, fixture.Chat.NormalReplies);
+        Assert.True((await fixture.GetAsync()).IsBarred);
     }
 
     [Fact]
@@ -138,6 +263,8 @@ public class CustomerDisciplineReplyTests
         Assert.Equal(new[] { "pardon_customer" }, fixture.Chat.DecisionTools);
         Assert.Equal(0, fixture.Chat.NormalReplies);
         Assert.Empty(fixture.Chat.NormalTools);
+        Assert.Equal(1, fixture.Chat.BanterReplies);
+        Assert.Empty(fixture.Chat.BanterOptions!.Tools!);
     }
 
     [Fact]
@@ -152,6 +279,7 @@ public class CustomerDisciplineReplyTests
         Assert.Contains("strikes are cleared", reply);
         Assert.Empty((await fixture.GetAsync()).Strikes);
         Assert.Equal(0, fixture.Chat.NormalReplies);
+        Assert.Equal(0, fixture.Chat.BanterReplies);
         fixture.Chat.Action = null;
         fixture.Context.MessageId++;
         Assert.Equal("Normal answer", await fixture.InvokeAsync());
@@ -221,6 +349,7 @@ public class CustomerDisciplineReplyTests
         Assert.DoesNotContain("cleared", reply);
         Assert.True((await fixture.GetAsync()).IsBarred);
         Assert.Equal(0, fixture.Chat.NormalReplies);
+        Assert.Equal(0, fixture.Chat.BanterReplies);
     }
 
     [Fact]
@@ -233,6 +362,7 @@ public class CustomerDisciplineReplyTests
 
         Assert.Equal(0, fixture.Chat.Decisions);
         Assert.Equal(0, fixture.Chat.NormalReplies);
+        Assert.Equal(0, fixture.Chat.BanterReplies);
     }
 
     [Fact]
@@ -260,6 +390,7 @@ public class CustomerDisciplineReplyTests
         Assert.DoesNotContain("cleared", reply);
         Assert.Empty((await fixture.GetAsync()).Strikes);
         Assert.Equal(0, fixture.Chat.NormalReplies);
+        Assert.Equal(0, fixture.Chat.BanterReplies);
     }
 
     [Theory]
@@ -292,8 +423,10 @@ public class CustomerDisciplineReplyTests
 
         Assert.Contains("Strike 3/3", reply);
         Assert.Contains("You're barred", reply);
+        Assert.Contains("Ask me nicely for a pardon", reply);
         Assert.True((await fixture.GetAsync()).IsBarred);
         Assert.Equal(0, fixture.Chat.NormalReplies);
+        Assert.Equal(0, fixture.Chat.BanterReplies);
     }
 
     [Fact]
@@ -327,12 +460,15 @@ public class CustomerDisciplineReplyTests
         Assert.Contains(expectedVerdict, reply);
         Assert.Contains("unavailable", reply);
         Assert.Equal(0, fixture.Chat.NormalReplies);
+        Assert.Equal(0, fixture.Chat.BanterReplies);
     }
 
-    private static JsonDocument ReadReplyLedger(DecisionChatClient chat)
+    private static JsonDocument ReadReplyLedger(DecisionChatClient chat) => ReadLedger(chat.NormalMessages);
+
+    private static JsonDocument ReadLedger(IReadOnlyList<ChatMessage> messages)
     {
-        Assert.Equal(ChatRole.System, chat.NormalMessages[1].Role);
-        return JsonDocument.Parse(chat.NormalMessages[1].Text!);
+        Assert.Equal(ChatRole.System, messages[1].Role);
+        return JsonDocument.Parse(messages[1].Text!);
     }
 
     private sealed class Fixture : IDisposable
@@ -343,6 +479,7 @@ public class CustomerDisciplineReplyTests
         public MessageContext Context { get; } = new();
         public LoreGetter Lore { get; } = new();
         public NotebookStore Notes { get; } = new();
+        public PersonalityStore Personality { get; } = new();
         private readonly IPersonality _personality;
         private readonly IChatClient _client;
 
@@ -359,16 +496,23 @@ public class CustomerDisciplineReplyTests
                     null!,
                     new NotebookService(Notes, new SourceReader(), null!, null!, TimeProvider.System, NullLogger<NotebookService>.Instance),
                     NullLogger<PersonalityTools>.Instance,
-                    Lore
+                    Lore,
+                    Service
                 ),
-                new LorekeeperPersonalityService(new PersonalityStore(), TimeProvider.System, NullLogger<LorekeeperPersonalityService>.Instance),
+                new LorekeeperPersonalityService(Personality, TimeProvider.System, NullLogger<LorekeeperPersonalityService>.Instance),
                 Service,
                 NullLogger<LorekeeperPersonality>.Instance
             );
         }
 
-        public Task<string> InvokeAsync(string content = "Hello") =>
-            _personality.InvokeAsync(new ChatHistory([new ChatMessage(ChatRole.User, content)]), Context, TestContext.Current.CancellationToken);
+        public Task<string> InvokeAsync(string content = "Hello", string? previousReply = null, CancellationToken? cancellationToken = null)
+        {
+            var history = new ChatHistory();
+            if (previousReply is not null)
+                history.Add(new ChatMessage(ChatRole.Assistant, previousReply));
+            history.Add(new ChatMessage(ChatRole.User, content));
+            return _personality.InvokeAsync(history, Context, cancellationToken ?? TestContext.Current.CancellationToken);
+        }
 
         public Task<CustomerDisciplineState> GetAsync() => Service.GetAsync(2, 1, TestContext.Current.CancellationToken);
 
@@ -390,6 +534,14 @@ public class CustomerDisciplineReplyTests
         public string StrikeReason { get; set; } = "Insulting the chips";
         public bool FailDecisionFollowUp { get; set; }
         public bool FailNormalResponse { get; set; }
+        public bool FailBanter { get; set; }
+        public bool BanterToolCall { get; set; }
+        public string BanterResponse { get; set; } = "Mind your mouth outside my door, whelp.";
+        public ChatFinishReason? BanterFinishReason { get; set; }
+        public Action? BeforeBanter { get; set; }
+        public int BanterReplies { get; private set; }
+        public ChatOptions? BanterOptions { get; private set; }
+        public IReadOnlyList<ChatMessage> BanterMessages { get; private set; } = [];
         public int Decisions { get; private set; }
         public int NormalReplies { get; private set; }
         public string[] DecisionTools { get; private set; } = [];
@@ -405,6 +557,30 @@ public class CustomerDisciplineReplyTests
         )
         {
             var history = messages.ToList();
+            if (options?.Tools is { Count: 0 })
+            {
+                BanterReplies++;
+                BanterOptions = options;
+                BanterMessages = history;
+                BeforeBanter?.Invoke();
+                cancellationToken.ThrowIfCancellationRequested();
+                if (FailBanter)
+                    throw new HttpRequestException("Controlled banter failure");
+                if (BanterToolCall)
+                    return new ChatResponse(
+                        new ChatMessage(
+                            ChatRole.Assistant,
+                            [
+                                new TextContent(BanterResponse),
+                                new FunctionCallContent("unexpected-banter-call", "pardon_customer", new Dictionary<string, object?>()),
+                            ]
+                        )
+                    )
+                    {
+                        FinishReason = ChatFinishReason.ToolCalls,
+                    };
+                return new ChatResponse(new ChatMessage(ChatRole.Assistant, BanterResponse)) { FinishReason = BanterFinishReason };
+            }
             if (!history[0].Text!.Contains("Decide only", StringComparison.Ordinal))
             {
                 if (FailNormalResponse)
@@ -490,8 +666,9 @@ public class CustomerDisciplineReplyTests
 
     private sealed class PersonalityStore : ILorekeeperPersonalityStore
     {
-        public Task<LorekeeperPersonalitySetting?> GetAsync(CancellationToken cancellationToken = default) =>
-            Task.FromResult<LorekeeperPersonalitySetting?>(null);
+        public LorekeeperPersonalitySetting? Setting { get; set; }
+
+        public Task<LorekeeperPersonalitySetting?> GetAsync(CancellationToken cancellationToken = default) => Task.FromResult(Setting);
 
         public Task SaveAsync(LorekeeperPersonalitySetting setting, CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
@@ -553,6 +730,14 @@ public class CustomerDisciplineReplyTests
 
         public Task<CustomerDisciplineState?> GetAsync(string id, CancellationToken cancellationToken) =>
             FailRead ? throw new InvalidOperationException("Controlled read failure") : Task.FromResult(_state);
+
+        public Task<IReadOnlyList<CustomerDisciplineState>> ListAsync(
+            ulong guildId,
+            bool barredOnly,
+            int offset,
+            int limit,
+            CancellationToken cancellationToken
+        ) => throw new NotSupportedException();
 
         public Task<bool> TrySaveAsync(CustomerDisciplineState state, CancellationToken cancellationToken)
         {

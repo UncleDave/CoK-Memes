@@ -382,6 +382,14 @@ public class DirectMessageHandlerTests
 
     private sealed class CustomerStore : ICustomerDisciplineStore
     {
+        public Task<IReadOnlyList<CustomerDisciplineState>> ListAsync(
+            ulong guildId,
+            bool barredOnly,
+            int offset,
+            int limit,
+            CancellationToken cancellationToken
+        ) => throw new NotSupportedException();
+
         public int Reads { get; private set; }
 
         public CustomerDisciplineState State { get; private set; } =

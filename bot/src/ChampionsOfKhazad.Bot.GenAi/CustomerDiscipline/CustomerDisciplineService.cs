@@ -1,7 +1,41 @@
+using System.Globalization;
+
 namespace ChampionsOfKhazad.Bot.GenAi;
 
 public class CustomerDisciplineService(ICustomerDisciplineStore store, TimeProvider timeProvider)
 {
+    public const int ListPageSize = 25;
+
+    public async Task<CustomerDisciplinePage> ListAsync(
+        ulong guildId,
+        bool barredOnly = false,
+        int offset = 0,
+        CancellationToken cancellationToken = default
+    )
+    {
+        ArgumentOutOfRangeException.ThrowIfZero(guildId);
+        ArgumentOutOfRangeException.ThrowIfNegative(offset);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(offset, int.MaxValue - ListPageSize);
+        cancellationToken.ThrowIfCancellationRequested();
+        var states = await store.ListAsync(guildId, barredOnly, offset, ListPageSize + 1, cancellationToken);
+        var prefix = guildId.ToString(CultureInfo.InvariantCulture) + ":";
+        var customers = new List<CustomerDisciplineCustomer>();
+        foreach (var state in states)
+        {
+            if (
+                !state.Id.StartsWith(prefix, StringComparison.Ordinal)
+                || !ulong.TryParse(state.Id.AsSpan(prefix.Length), NumberStyles.None, CultureInfo.InvariantCulture, out var userId)
+                || userId == 0
+                || state.Strikes.Length == 0
+                || (barredOnly && !state.IsBarred)
+            )
+                throw new InvalidOperationException("Customer ledger returned an invalid or out-of-scope record.");
+            if (customers.Count < ListPageSize)
+                customers.Add(new CustomerDisciplineCustomer(userId, state.Strikes.Length));
+        }
+        return new CustomerDisciplinePage(customers, states.Count > ListPageSize ? offset + ListPageSize : null);
+    }
+
     public async Task<CustomerDisciplineState> GetAsync(ulong guildId, ulong userId, CancellationToken cancellationToken = default)
     {
         ArgumentOutOfRangeException.ThrowIfZero(guildId);

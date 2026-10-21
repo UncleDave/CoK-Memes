@@ -9,6 +9,50 @@ public class CustomerDisciplineMongoIntegrationTests
     public static bool HasLocalMongo => !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("COK_CUSTOMERS_MONGO_TEST_CONNECTION"));
 
     [Fact(Skip = "Set COK_CUSTOMERS_MONGO_TEST_CONNECTION to a disposable local Mongo instance.", SkipUnless = nameof(HasLocalMongo))]
+    public async Task RealMongoListingIsGuildScopedExcludesClearedRecordsAndSupportsBarredFilteringAndOffsets()
+    {
+        var connection = LocalConnection();
+        var client = new MongoClient(connection);
+        var databaseName = "customers_validation_" + Guid.NewGuid().ToString("N");
+        var cancellation = TestContext.Current.CancellationToken;
+        try
+        {
+            var service = RecreatedService(connection, databaseName);
+            await service.IssueStrikeAsync(1, 2, 1, "One strike", cancellation);
+            for (ulong id = 1; id <= 3; id++)
+                await service.IssueStrikeAsync(1, 3, id, "Barred customer", cancellation);
+            await service.IssueStrikeAsync(11, 2, 1, "Other guild with a similar prefix", cancellation);
+            await service.IssueStrikeAsync(1, 4, 1, "Pardoned customer", cancellation);
+            await service.PardonAsync(1, 4, 100, cancellation);
+            await service.PardonAsync(1, 5, 100, cancellation);
+            var restarted = RecreatedService(connection, databaseName);
+
+            var all = await restarted.ListAsync(1, cancellationToken: cancellation);
+            var barred = await restarted.ListAsync(1, barredOnly: true, cancellationToken: cancellation);
+            var offset = await restarted.ListAsync(1, offset: 1, cancellationToken: cancellation);
+
+            Assert.Equal(new[] { new CustomerDisciplineCustomer(2, 1), new CustomerDisciplineCustomer(3, 3) }, all.Customers);
+            Assert.Equal(new CustomerDisciplineCustomer(3, 3), Assert.Single(barred.Customers));
+            Assert.Equal(new CustomerDisciplineCustomer(3, 3), Assert.Single(offset.Customers));
+            Assert.Null(all.NextOffset);
+            Assert.Null(barred.NextOffset);
+            await restarted.PardonAsync(1, 3, 100, cancellation);
+            Assert.Empty((await restarted.ListAsync(1, barredOnly: true, cancellationToken: cancellation)).Customers);
+            Assert.Equal(
+                5,
+                await client
+                    .GetDatabase(databaseName)
+                    .GetCollection<CustomerDisciplineState>("customers")
+                    .CountDocumentsAsync(FilterDefinition<CustomerDisciplineState>.Empty, cancellationToken: cancellation)
+            );
+        }
+        finally
+        {
+            await client.DropDatabaseAsync(databaseName, CancellationToken.None);
+        }
+    }
+
+    [Fact(Skip = "Set COK_CUSTOMERS_MONGO_TEST_CONNECTION to a disposable local Mongo instance.", SkipUnless = nameof(HasLocalMongo))]
     public async Task RealMongoCapsCompetingStrikesAndPreservesThemAcrossClientStoreAndServiceRecreation()
     {
         var connection = LocalConnection();

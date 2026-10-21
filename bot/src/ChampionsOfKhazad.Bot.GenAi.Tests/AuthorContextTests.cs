@@ -172,7 +172,8 @@ public class AuthorContextTests
                 null!,
                 new NotebookService(Notes, Reader, null!, null!, TimeProvider.System, NullLogger<NotebookService>.Instance),
                 NullLogger<PersonalityTools>.Instance,
-                Lore
+                Lore,
+                null!
             );
             return new TestPersonality(lorekeeper, Chat, tools).InvokeAsync(
                 history ?? new ChatHistory(),

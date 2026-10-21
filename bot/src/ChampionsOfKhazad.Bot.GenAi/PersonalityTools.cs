@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Globalization;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using ChampionsOfKhazad.Bot.Lore.Abstractions;
@@ -13,7 +14,8 @@ internal class PersonalityTools(
     IDiscordMessageService discordMessageService,
     NotebookService notebook,
     ILogger<PersonalityTools> logger,
-    IGetLore loreGetter
+    IGetLore loreGetter,
+    CustomerDisciplineService customers
 )
 {
     public async Task<(string? Text, bool NotebookSearched)> GetAuthorContextAsync(
@@ -102,6 +104,7 @@ internal class PersonalityTools(
             imageGenerationService,
             discordMessageService,
             notebook,
+            customers,
             messageContext,
             logger,
             onImageGenerated,
@@ -121,6 +124,13 @@ internal class PersonalityTools(
             return tools;
 
         tools.Add(new HostedWebSearchTool());
+        tools.Add(
+            AIFunctionFactory.Create(
+                requestTools.ListCustomerStrikesAsync,
+                "list_customer_strikes",
+                "Lists customers with active shop strikes in the current Discord guild: exact user IDs/mentions, strike counts and barred status. Use barredOnly for the barred list. Read-only; no strike reasons or private conversation details. Follow nextOffset to list everyone; never infer current ledger status from lore or chat. This does not grant authority to strike or pardon another customer."
+            )
+        );
         tools.Add(
             AIFunctionFactory.Create(
                 requestTools.SearchNotebookAsync,
@@ -181,6 +191,7 @@ internal class PersonalityTools(
         ImageGenerationService imageGenerationService,
         IDiscordMessageService discordMessageService,
         NotebookService notebook,
+        CustomerDisciplineService customers,
         IMessageContext messageContext,
         ILogger logger,
         Action<Uri>? onImageGenerated,
@@ -190,6 +201,46 @@ internal class PersonalityTools(
         private int _noteAttempts;
         private int _notebookSearches = authorNotebookSearched ? 1 : 0;
         private int _imageConfirmationAttempted;
+
+        public async Task<string> ListCustomerStrikesAsync(
+            [Description("When true, list only customers currently barred at three strikes; otherwise list everyone with active strikes.")]
+                bool barredOnly = false,
+            [Description("Start at zero. For another page, use the exact nextOffset returned by the previous call.")] int offset = 0,
+            CancellationToken cancellationToken = default
+        )
+        {
+            if (messageContext.GuildId is not > 0 || messageContext.ChannelId is not > 0)
+                return "The shop ledger can only be listed from guild chat.";
+            if (offset < 0 || offset > int.MaxValue - CustomerDisciplineService.ListPageSize)
+                return "Use a non-negative offset from the previous ledger page.";
+            try
+            {
+                var page = await customers.ListAsync(messageContext.GuildId.Value, barredOnly, offset, cancellationToken);
+                return JsonSerializer.Serialize(
+                    new
+                    {
+                        barredOnly,
+                        customers = page.Customers.Select(customer => new
+                        {
+                            userId = customer.UserId.ToString(CultureInfo.InvariantCulture),
+                            mention = $"<@{customer.UserId.ToString(CultureInfo.InvariantCulture)}>",
+                            strikeCount = customer.StrikeCount,
+                            isBarred = customer.IsBarred,
+                        }),
+                        nextOffset = page.NextOffset,
+                    }
+                );
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                logger.LogError(exception, "Customer ledger listing failed for guild {GuildId}", messageContext.GuildId);
+                return "The shop ledger lookup failed. Do not treat this as an empty list or invent who has strikes; ask the user to try again later.";
+            }
+        }
 
         public Task<string> SearchNotebookAsync(
             [Description("Subject or keywords to search, up to 200 characters.")] string query,

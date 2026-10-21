@@ -73,6 +73,16 @@ The configured admin can inspect or reset a record by DM:
 - `customers show <user-id>` — current strikes and reasons.
 - `customers pardon <user-id>` — clear strikes and lift the bar.
 
+Normal Grub replies also have a read-only `list_customer_strikes` tool for questions
+such as "Who has strikes?" and "Who is barred?". It is bound to the current Discord
+guild, lists only active strikes, and optionally filters to barred customers. Each
+page contains up to 25 customers with exact Discord IDs/mentions, counts and barred
+status; `nextOffset` explicitly identifies another page. Cleared records are excluded.
+This public lookup returns summaries, not strike reasons from potentially private
+conversations. Detailed reasons remain in the current customer's saved verdict and
+the admin DM lookup. It grants no cross-customer strike/pardon authority and is not
+available to spontaneous followers, ledger decisions or barred counter banter.
+
 The `grubCustomers` Mongo collection stores one record per guild and Discord user.
 Strikes survive restarts and conversation resets; they do not expire automatically.
 This is shop roleplay with bot-service enforcement, never a Discord ban, timeout,
@@ -81,9 +91,24 @@ Do not copy the ledger into lore or the temporary notebook.
 
 A separate, low-reasoning AI decision receives the conversation but only strike/pardon
 tools bound to the current author. Normal tools are exposed only after rechecking the
-saved record. Barred requests receive only the pardon tool and an application-generated
-refusal, so a model cannot serve them just by ignoring the prompt. The application
-delivers saved verdicts; model prose is not authority for a strike or pardon.
+saved record. Barred customers' decisions receive only the pardon tool; they never
+reach the normal service pipeline. The application delivers saved verdicts and a
+fixed barred status; model prose is not authority for a strike or pardon.
+
+After a successful decision and status recheck, a short, low-reasoning, tool-free
+call adds contextual counter banter to that status. The third strike gets a send-off
+in the selected temperament, with its saved reason; repeat visits use the latest
+message and recent replies to vary the refusal. This call shares Grub's character
+and temperament, not his normal service instructions. It does not retrieve linked
+lore/notebook context or expose image, search, memory, strike or pardon tools.
+The prompt restricts the prose to a refusal, not an answer to the barred request;
+live semantic compliance and humour remain model judgments, not deterministic guarantees.
+
+Only the saved verdict and status are fixed; successful banter does not append the
+same pardon-help checklist each time. Failed, empty, oversized, truncated or unexpected
+tool-call output falls back to the fixed refusal and appeal instructions without losing
+a saved strike. Decision failures skip the extra call. A successful appeal still gets
+the application's pardon confirmation and must submit a fresh request for normal service.
 
 The normal reply receives a separate application-generated context message containing
 the current count and this request's confirmed saved action, count and reason, if any.

@@ -703,6 +703,14 @@ public class CustomerDisciplineServiceTests
         public Exception? SaveFailure { get; set; }
         public Func<CustomerDisciplineState, CancellationToken, Task>? BeforeSave { get; set; }
 
+        public Task<IReadOnlyList<CustomerDisciplineState>> ListAsync(
+            ulong guildId,
+            bool barredOnly,
+            int offset,
+            int limit,
+            CancellationToken cancellationToken
+        ) => throw new NotSupportedException();
+
         public Task<CustomerDisciplineState?> GetAsync(string id, CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();

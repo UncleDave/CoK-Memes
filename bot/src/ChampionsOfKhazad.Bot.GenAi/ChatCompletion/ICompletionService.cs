@@ -5,7 +5,6 @@ namespace ChampionsOfKhazad.Bot.GenAi;
 public interface ICompletionService
 {
     IPersonality Lorekeeper { get; }
-    IPersonality GrubPreview { get; }
     IPersonality Sycophant { get; }
     IPersonality Contrarian { get; }
     IPersonality DisappointedTeacher { get; }

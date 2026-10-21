@@ -4,7 +4,14 @@ Crossroads Mega Chippy is the guild's new identity, following Champions of Khaza
 The guild is moving to World of Warcraft: Forever, playing Horde on a PvE realm.
 The rebrand is prepared on a branch for officer review; deploying this version is
 the cutover, not a claim that the tentative name has already been adopted in Discord.
-Keep the branch unmerged until the rebrand is approved.
+Keep the rollout off `main` until the rebrand is approved.
+
+This branch is the post-test rollout: Grub handles all normally configured mention
+channels, with full tools, selectable temperaments, customer strikes and pardons.
+It retains `main`'s Discord-account links and author-aware lore/notebook recall.
+The temporary channel-only voice preview on `main` is removed here, including its
+extra reply label, read-only tool mode and follower suppression. Preview configuration
+left in deployment settings has no effect after the cutover.
 
 ## Grub
 
@@ -105,7 +112,8 @@ after that review; registration cleanup skips the command when it is enabled.
 
 ## Rollout
 
-1. Obtain officer approval for the guild name and persona, then merge and deploy.
+1. Obtain officer approval for the guild name and persona, rebase onto current `main`,
+   then fast-forward `main` and deploy without a merge commit.
 2. Change the existing bot's Discord profile/application presentation to Grub
    and set an approved avatar. Rename the guild server separately if wanted.
    Keep the same application and server IDs; no token replacement is required for

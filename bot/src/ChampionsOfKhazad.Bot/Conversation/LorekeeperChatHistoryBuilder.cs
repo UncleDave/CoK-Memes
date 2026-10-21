@@ -16,12 +16,7 @@ public class LorekeeperChatHistoryBuilder(
     private const int ReplyChainLimit = 8;
     private const int MaximumScannedMessages = 200;
 
-    public async Task<ChatHistory> BuildAsync(
-        IUserMessage trigger,
-        ulong botId,
-        CancellationToken cancellationToken = default,
-        string botName = GenAi.Constants.OpenAiFriendlyLorekeeperName
-    )
+    public async Task<ChatHistory> BuildAsync(IUserMessage trigger, ulong botId, CancellationToken cancellationToken = default)
     {
         var requestOptions = new RequestOptions { CancelToken = cancellationToken };
         // The socket reader can stitch a discontinuous cache to older downloads, skipping markers.
@@ -154,11 +149,13 @@ public class LorekeeperChatHistoryBuilder(
                 .Select(message =>
                     DiscordConversationMessage
                         .FromDiscord(message, botId, kinds[message.Id], replyNotes.GetValueOrDefault(message.Id))
-                        .ToChatMessage(botName)
+                        .ToChatMessage(GenAi.Constants.OpenAiFriendlyLorekeeperName)
                 )
         );
         history.Add(
-            DiscordConversationMessage.FromDiscord(trigger, botId, "currentRequest", replyNotes.GetValueOrDefault(trigger.Id)).ToChatMessage(botName)
+            DiscordConversationMessage
+                .FromDiscord(trigger, botId, "currentRequest", replyNotes.GetValueOrDefault(trigger.Id))
+                .ToChatMessage(GenAi.Constants.OpenAiFriendlyLorekeeperName)
         );
         return history;
 

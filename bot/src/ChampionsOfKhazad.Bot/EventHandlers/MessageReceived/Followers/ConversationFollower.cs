@@ -23,8 +23,7 @@ public class ConversationFollower(
     IOptions<ConversationFollowerOptions> options,
     ICompletionService completionService,
     BotContext botContext,
-    ILogger<RandomChanceFollowerTriggerStrategy> triggerStrategyLogger,
-    IOptions<MentionHandlerOptions> mentionOptions
+    ILogger<RandomChanceFollowerTriggerStrategy> triggerStrategyLogger
 )
     : StrategyFollower(
         allFollowersOptions.Value.IgnoreBotMentionsInChannelId,
@@ -52,6 +51,5 @@ public class ConversationFollower(
                 "Make one brief, in-character interjection grounded in the latest message; do not invent claims, events, or unseen image details."
             )
         ),
-        botContext,
-        mentionOptions.Value.GrubPreviewChannelId ?? 0
+        botContext
     );

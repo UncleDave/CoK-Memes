@@ -78,7 +78,6 @@ public static class GenAiBotBuilderExtensions
             .AddSingleton<ImageGenerationService>()
             .AddScoped<PersonalityTools>()
             .AddScoped<LorekeeperPersonality>()
-            .AddScoped<GrubPreviewPersonality>()
             .AddScoped<SycophantPersonality>()
             .AddScoped<ContrarianPersonality>()
             .AddScoped<DisappointedTeacherPersonality>()

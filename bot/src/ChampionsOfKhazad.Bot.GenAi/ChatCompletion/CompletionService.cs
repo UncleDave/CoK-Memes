@@ -5,7 +5,6 @@ namespace ChampionsOfKhazad.Bot.GenAi;
 internal class CompletionService(
     IChatClient chatClient,
     LorekeeperPersonality lorekeeperPersonality,
-    GrubPreviewPersonality grubPreviewPersonality,
     SycophantPersonality sycophantPersonality,
     ContrarianPersonality contrarianPersonality,
     DisappointedTeacherPersonality disappointedTeacherPersonality,
@@ -15,7 +14,6 @@ internal class CompletionService(
 ) : ICompletionService
 {
     public IPersonality Lorekeeper => lorekeeperPersonality;
-    public IPersonality GrubPreview => grubPreviewPersonality;
     public IPersonality Sycophant => sycophantPersonality;
     public IPersonality Contrarian => contrarianPersonality;
     public IPersonality DisappointedTeacher => disappointedTeacherPersonality;

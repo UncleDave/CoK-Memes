@@ -8,7 +8,7 @@ public class CompletionServiceTests
     public async Task ExplicitEffortIsSentWithHistoryAndCancellation()
     {
         var client = new CapturingClient();
-        ICompletionService service = new CompletionService(client, null!, null!, null!, null!, null!, null!, null!, null!);
+        ICompletionService service = new CompletionService(client, null!, null!, null!, null!, null!, null!, null!);
         var history = new ChatHistory("Summarise these messages.");
         var cancellationToken = TestContext.Current.CancellationToken;
 
@@ -24,7 +24,7 @@ public class CompletionServiceTests
     public async Task OrdinaryCompletionsKeepProviderDefaults()
     {
         var client = new CapturingClient();
-        ICompletionService service = new CompletionService(client, null!, null!, null!, null!, null!, null!, null!, null!);
+        ICompletionService service = new CompletionService(client, null!, null!, null!, null!, null!, null!, null!);
         var history = new ChatHistory("Choose an emoji.");
         var cancellationToken = TestContext.Current.CancellationToken;
 

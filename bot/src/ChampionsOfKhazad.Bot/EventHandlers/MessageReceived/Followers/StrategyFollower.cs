@@ -4,9 +4,8 @@ public abstract class StrategyFollower(
     ulong ignoreBotMentionsInChannelId,
     IFollowerTriggerStrategy triggerStrategy,
     IFollowerResponseStrategy responseStrategy,
-    BotContext botContext,
-    ulong ignoredChannelId = 0
-) : Follower(ignoreBotMentionsInChannelId, botContext, ignoredChannelId)
+    BotContext botContext
+) : Follower(ignoreBotMentionsInChannelId, botContext)
 {
     protected override Task<bool> ShouldTrigger(MessageReceived notification) => Task.FromResult(triggerStrategy.ShouldTrigger(notification));
 

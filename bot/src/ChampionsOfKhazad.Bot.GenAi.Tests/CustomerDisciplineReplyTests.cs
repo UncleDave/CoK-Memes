@@ -1,3 +1,4 @@
+using ChampionsOfKhazad.Bot.Lore.Abstractions;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -17,6 +18,22 @@ public class CustomerDisciplineReplyTests
         Assert.Equal(new[] { "issue_customer_strike" }, fixture.Chat.DecisionTools);
         Assert.Contains("generate_image", fixture.Chat.NormalTools);
         Assert.Empty((await fixture.GetAsync()).Strikes);
+    }
+
+    [Fact]
+    public async Task FullGrubKeepsLinkedMemberContextAndNotebookRecallAfterTheStrikeDecision()
+    {
+        using var fixture = new Fixture();
+        fixture.Lore.Member = new LinkedMember();
+
+        Assert.Equal("Normal answer", await fixture.InvokeAsync());
+
+        Assert.Contains("Restoration shaman", fixture.Chat.NormalPrompt);
+        Assert.Contains("RECENT MEMBER ANECDOTES", fixture.Chat.NormalPrompt);
+        Assert.Contains(GuildPromptContext.Identity, fixture.Chat.NormalPrompt);
+        Assert.Equal(2, fixture.Notes.Reads);
+        Assert.Contains("remember_note", fixture.Chat.NormalTools);
+        Assert.Contains("generate_image", fixture.Chat.NormalTools);
     }
 
     [Fact]
@@ -244,6 +261,8 @@ public class CustomerDisciplineReplyTests
         public CustomerDisciplineService Service { get; }
         public DecisionChatClient Chat { get; } = new();
         public MessageContext Context { get; } = new();
+        public LoreGetter Lore { get; } = new();
+        public NotebookStore Notes { get; } = new();
         private readonly IPersonality _personality;
         private readonly IChatClient _client;
 
@@ -254,7 +273,14 @@ public class CustomerDisciplineReplyTests
             _personality = new LorekeeperPersonality(
                 new EmojiHandler(),
                 _client,
-                new PersonalityTools(null!, null!, null!, null!, NullLogger<PersonalityTools>.Instance),
+                new PersonalityTools(
+                    null!,
+                    null!,
+                    null!,
+                    new NotebookService(Notes, new SourceReader(), null!, null!, TimeProvider.System, NullLogger<NotebookService>.Instance),
+                    NullLogger<PersonalityTools>.Instance,
+                    Lore
+                ),
                 new LorekeeperPersonalityService(new PersonalityStore(), TimeProvider.System, NullLogger<LorekeeperPersonalityService>.Instance),
                 Service,
                 NullLogger<LorekeeperPersonality>.Instance
@@ -287,6 +313,7 @@ public class CustomerDisciplineReplyTests
         public string[] DecisionTools { get; private set; } = [];
         public string[] NormalTools { get; private set; } = [];
         public List<string> Results { get; } = [];
+        public string? NormalPrompt { get; private set; }
 
         public async Task<ChatResponse> GetResponseAsync(
             IEnumerable<ChatMessage> messages,
@@ -300,6 +327,7 @@ public class CustomerDisciplineReplyTests
                 if (FailNormalResponse)
                     throw new HttpRequestException("Controlled normal response failure");
                 NormalReplies++;
+                NormalPrompt = history[0].Text;
                 NormalTools = options!.Tools!.Select(tool => tool.Name).ToArray();
                 return new ChatResponse(new ChatMessage(ChatRole.Assistant, "Normal answer"));
             }
@@ -378,6 +406,53 @@ public class CustomerDisciplineReplyTests
             Task.FromResult<LorekeeperPersonalitySetting?>(null);
 
         public Task SaveAsync(LorekeeperPersonalitySetting setting, CancellationToken cancellationToken = default) => Task.CompletedTask;
+    }
+
+    private sealed record LinkedMember : IMemberLore
+    {
+        public string Name => "Leaf";
+        public ulong? DiscordUserId => 1;
+        public string Pronouns => "Unknown";
+        public string Nationality => "Unknown";
+        public string MainCharacter => "Restoration shaman";
+        public string? Biography => null;
+        public IReadOnlyList<string> Aliases => [];
+        public IReadOnlyList<string> Roles => [];
+    }
+
+    private sealed class LoreGetter : IGetLore
+    {
+        public IMemberLore? Member { get; set; }
+
+        public Task<IReadOnlyList<ILore>> GetLoreAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException();
+
+        public Task<ILore?> GetLoreAsync(string name, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+
+        public Task<IMemberLore?> GetMemberLoreAsync(ulong discordUserId, CancellationToken cancellationToken = default) => Task.FromResult(Member);
+    }
+
+    private sealed class NotebookStore : INotebookStore
+    {
+        public int Reads { get; private set; }
+
+        public Task<NotebookState> GetAsync(CancellationToken cancellationToken)
+        {
+            Reads++;
+            return Task.FromResult(new NotebookState());
+        }
+
+        public Task<bool> TrySaveAsync(NotebookState state, CancellationToken cancellationToken) => throw new NotSupportedException();
+    }
+
+    private sealed class SourceReader : INotebookSourceReader
+    {
+        public IReadOnlySet<string> GetAccessibleSourceUrls(IReadOnlyList<string> urls, IMessageContext messageContext) => urls.ToHashSet();
+
+        public Task<IReadOnlyList<NotebookSource>?> ReadSourcesAsync(
+            IReadOnlyList<string> urls,
+            IMessageContext messageContext,
+            CancellationToken cancellationToken
+        ) => throw new NotSupportedException();
     }
 
     private sealed class MemoryStore : ICustomerDisciplineStore

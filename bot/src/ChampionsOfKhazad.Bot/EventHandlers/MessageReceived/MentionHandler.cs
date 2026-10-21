@@ -24,7 +24,7 @@ public class MentionHandler(
 
         if (
             message.Channel is not ITextChannel textChannel
-            || (_options.GrubPreviewChannelId != textChannel.Id && _options.ChannelIds.All(x => x != textChannel.CategoryId && x != textChannel.Id))
+            || _options.ChannelIds.All(x => x != textChannel.CategoryId && x != textChannel.Id)
             || !message.MentionedUserIds.Contains(context.BotId)
         )
             return;
@@ -37,12 +37,8 @@ public class MentionHandler(
 
         using var typing = textChannel.EnterTypingState();
 
-        var isGrubPreview = _options.GrubPreviewChannelId == textChannel.Id;
-        var chatHistory = isGrubPreview
-            ? await historyBuilder.BuildAsync(message, context.BotId, cancellationToken, "Grub")
-            : await historyBuilder.BuildAsync(message, context.BotId, cancellationToken);
-        var personality = isGrubPreview ? completionService.GrubPreview : completionService.Lorekeeper;
-        var response = await personality.InvokeAsync(chatHistory, notification.Message.ToMessageContext(), cancellationToken);
+        var chatHistory = await historyBuilder.BuildAsync(message, context.BotId, cancellationToken);
+        var response = await completionService.Lorekeeper.InvokeAsync(chatHistory, notification.Message.ToMessageContext(), cancellationToken);
 
         await message.ReplyInChunksAsync(response, cancellationToken);
     }

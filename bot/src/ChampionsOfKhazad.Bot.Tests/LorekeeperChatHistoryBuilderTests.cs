@@ -8,25 +8,21 @@ namespace ChampionsOfKhazad.Bot.Tests;
 public class LorekeeperChatHistoryBuilderTests
 {
     [Fact]
-    public async Task BotHistoryDefaultsToHammerstoneAndCanBeNamedGrubWithoutChangingHumanNames()
+    public async Task BotHistoryUsesTheLorekeeperNameWithoutChangingHumanNames()
     {
         var fixture = new DiscordConversationFixture();
         fixture.AddMessage(1, "question", authorName: "Leaf");
         fixture.AddMessage(2, "answer", DiscordConversationFixture.BotId);
         var trigger = fixture.AddMessage(3, "continue", authorName: "Leaf", replyTo: 2);
-        var builder = fixture.CreateBuilder();
+        var history = await fixture.CreateBuilder().BuildAsync(trigger, DiscordConversationFixture.BotId, TestContext.Current.CancellationToken);
 
-        var regular = await builder.BuildAsync(trigger, DiscordConversationFixture.BotId, TestContext.Current.CancellationToken);
-        var preview = await builder.BuildAsync(trigger, DiscordConversationFixture.BotId, TestContext.Current.CancellationToken, "Grub");
-
-        Assert.Equal(new[] { "Leaf", "Hammerstone", "Leaf" }, regular.Select(message => message.AuthorName));
-        Assert.Equal(new[] { "Leaf", "Grub", "Leaf" }, preview.Select(message => message.AuthorName));
-        Assert.Equal(MessageIds(regular), MessageIds(preview));
-        Assert.Equal(regular.Select(message => message.Role), preview.Select(message => message.Role));
+        Assert.Equal(new[] { "Leaf", GenAi.Constants.OpenAiFriendlyLorekeeperName, "Leaf" }, history.Select(message => message.AuthorName));
+        Assert.Equal([1UL, 2UL, 3UL], MessageIds(history));
+        Assert.Equal(new[] { ChatRole.User, ChatRole.Assistant, ChatRole.User }, history.Select(message => message.Role));
     }
 
     [Fact]
-    public async Task GrubHistoryStillHonorsTheExistingAdminResetBoundary()
+    public async Task BotHistoryHonorsTheAdminResetBoundary()
     {
         var fixture = new DiscordConversationFixture();
         fixture.AddMessage(1, "stale");
@@ -34,12 +30,10 @@ public class LorekeeperChatHistoryBuilderTests
         fixture.AddMessage(3, "answer", DiscordConversationFixture.BotId);
         var trigger = fixture.AddMessage(4, "continue", replyTo: 1);
 
-        var history = await fixture
-            .CreateBuilder()
-            .BuildAsync(trigger, DiscordConversationFixture.BotId, TestContext.Current.CancellationToken, "Grub");
+        var history = await fixture.CreateBuilder().BuildAsync(trigger, DiscordConversationFixture.BotId, TestContext.Current.CancellationToken);
 
         Assert.Equal([3UL, 4UL], MessageIds(history));
-        Assert.Equal("Grub", history[0].AuthorName);
+        Assert.Equal(GenAi.Constants.OpenAiFriendlyLorekeeperName, history[0].AuthorName);
         Assert.Contains("reset boundary", Metadata(history[^1]).GetProperty("replyContextNote").GetString());
     }
 

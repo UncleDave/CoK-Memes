@@ -197,6 +197,8 @@ public class AuthorContextTests
         public ulong UserId => 42;
         public string UserName => "Changed display name";
         public ulong? ChannelId => 3;
+        public ulong? GuildId => 2;
+        public ulong? MessageId => 4;
 
         public Task Reply(string message) => Task.CompletedTask;
     }

@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.Reflection;
+using ChampionsOfKhazad.Bot.DiscordMemes.WordOfTheDay;
 using ChampionsOfKhazad.Bot.GenAi;
 using Discord;
 using Microsoft.Extensions.AI;
@@ -167,6 +168,97 @@ public class ConversationFollowerTests
         Assert.Empty(fixture.RespondedTo);
     }
 
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task PreviewSuppressesBothAiFollowersWithAndWithoutBotMentions(bool ratFacts, bool mentionBot)
+    {
+        var fixture = new FollowerFixture();
+        StrategyFollower follower = ratFacts
+            ? fixture.CreateRatFactsFollower(FollowerFixture.ChannelId)
+            : fixture.CreateFollower(100, grubPreviewChannelId: FollowerFixture.ChannelId);
+
+        await follower.Handle(new MessageReceived(fixture.CreateMessage(123, mentionBot: mentionBot)), TestContext.Current.CancellationToken);
+
+        Assert.Empty(fixture.Replies);
+        Assert.Empty(fixture.RespondedTo);
+        Assert.Empty(fixture.ReceivedHistories);
+    }
+
+    [Theory]
+    [InlineData(false, null)]
+    [InlineData(true, null)]
+    [InlineData(false, 200UL)]
+    [InlineData(true, 200UL)]
+    public async Task AiFollowersRemainEnabledWhenPreviewIsDisabledOrInAnotherChannel(bool ratFacts, ulong? grubPreviewChannelId)
+    {
+        var fixture = new FollowerFixture();
+        StrategyFollower follower = ratFacts
+            ? fixture.CreateRatFactsFollower(grubPreviewChannelId)
+            : fixture.CreateFollower(100, grubPreviewChannelId: grubPreviewChannelId);
+
+        await follower.Handle(new MessageReceived(fixture.CreateMessage(123)), TestContext.Current.CancellationToken);
+
+        Assert.Single(fixture.Replies);
+        Assert.Equal(new ulong[] { 123 }, fixture.RespondedTo);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task PreviewFollowerSuppressionDoesNotApplyToChannelsInAMatchingCategory(bool ratFacts)
+    {
+        var fixture = new FollowerFixture();
+        StrategyFollower follower = ratFacts
+            ? fixture.CreateRatFactsFollower(FollowerFixture.ChannelId)
+            : fixture.CreateFollower(100, grubPreviewChannelId: FollowerFixture.ChannelId);
+
+        await follower.Handle(
+            new MessageReceived(fixture.CreateMessage(123, channelId: 200, categoryId: FollowerFixture.ChannelId)),
+            TestContext.Current.CancellationToken
+        );
+
+        Assert.Single(fixture.Replies);
+        Assert.Equal(new ulong[] { 123 }, fixture.RespondedTo);
+    }
+
+    [Fact]
+    public async Task WordOfTheDayRemainsEnabledInThePreviewChannel()
+    {
+        var fixture = new FollowerFixture();
+        ulong? winnerId = null;
+        var follower = new WordOfTheDayFollower(
+            new BotContext(FollowerFixture.BotId, null!, null!),
+            DiscordConversationFixture.Stub<IGetTheWordOfTheDay>(
+                (method, _) =>
+                    method.Name == "GetWordOfTheDayAsync"
+                        ? Task.FromResult(new WordOfTheDay("message", DateOnly.FromDateTime(DateTime.UtcNow)))
+                        : throw new NotSupportedException(method.Name)
+            ),
+            DiscordConversationFixture.Stub<IWinTheWordOfTheDay>(
+                (method, args) =>
+                {
+                    if (method.Name != "WinWordOfTheDayAsync")
+                        throw new NotSupportedException(method.Name);
+                    winnerId = (ulong)args![0]!;
+                    return Task.FromResult((ushort)1);
+                }
+            )
+        );
+        var message = fixture.CreateMessage(123, mentionBot: true);
+
+        await fixture
+            .CreateFollower(100, grubPreviewChannelId: FollowerFixture.ChannelId)
+            .Handle(new MessageReceived(message), TestContext.Current.CancellationToken);
+        await follower.Handle(new MessageReceived(message), TestContext.Current.CancellationToken);
+
+        Assert.Equal(123UL, winnerId);
+        Assert.Contains("You found the word of the day!", Assert.Single(fixture.Replies));
+        Assert.Empty(fixture.RespondedTo);
+    }
+
     [Fact]
     public async Task DirectMessagesDoNotTrigger()
     {
@@ -253,7 +345,8 @@ public class ConversationFollowerTests
             double chance,
             ulong ignoreBotMentionsInChannelId = 0,
             ulong? targetRoleId = null,
-            double targetRoleChance = 1
+            double targetRoleChance = 1,
+            ulong? grubPreviewChannelId = null
         ) =>
             new(
                 Options.Create(new AllFollowersOptions { IgnoreBotMentionsInChannelId = ignoreBotMentionsInChannelId }),
@@ -278,7 +371,23 @@ public class ConversationFollowerTests
                         }
                 ),
                 new BotContext(BotId, null!, null!),
-                NullLogger<RandomChanceFollowerTriggerStrategy>.Instance
+                NullLogger<RandomChanceFollowerTriggerStrategy>.Instance,
+                Options.Create(new MentionHandlerOptions { ChannelIds = [], GrubPreviewChannelId = grubPreviewChannelId })
+            );
+
+        public RatFactsFollower CreateRatFactsFollower(ulong? grubPreviewChannelId) =>
+            new(
+                Options.Create(new AllFollowersOptions()),
+                Options.Create(new RatFactsFollowerOptions { UserId = 123, Chance = 100 }),
+                new BotContext(BotId, null!, null!),
+                NullLogger<RandomChanceFollowerTriggerStrategy>.Instance,
+                DiscordConversationFixture.Stub<ICompletionService>(
+                    (method, _) =>
+                        method.Name == "get_RatExpert"
+                            ? new CapturingPersonality("RatExpert", RespondedTo, ReceivedHistories)
+                            : throw new NotSupportedException(method.Name)
+                ),
+                Options.Create(new MentionHandlerOptions { ChannelIds = [], GrubPreviewChannelId = grubPreviewChannelId })
             );
 
         public IUserMessage CreateMessage(
@@ -287,7 +396,9 @@ public class ConversationFollowerTests
             IMessageChannel? channel = null,
             string content = "A message from anyone",
             IReadOnlyCollection<IAttachment>? attachments = null,
-            IReadOnlyCollection<ulong>? roleIds = null
+            IReadOnlyCollection<ulong>? roleIds = null,
+            ulong channelId = ChannelId,
+            ulong? categoryId = null
         )
         {
             object? AuthorCall(MethodInfo method, object?[]? _) =>
@@ -295,6 +406,7 @@ public class ConversationFollowerTests
                 {
                     "get_Id" => authorId,
                     "get_GlobalName" or "get_Username" or "get_DisplayName" => "Raider",
+                    "get_Mention" => $"<@{authorId}>",
                     "get_RoleIds" => roleIds,
                     _ => throw new NotSupportedException(method.Name),
                 };
@@ -305,7 +417,8 @@ public class ConversationFollowerTests
                 (method, args) =>
                     method.Name switch
                     {
-                        "get_Id" => ChannelId,
+                        "get_Id" => channelId,
+                        "get_CategoryId" => categoryId,
                         "EnterTypingState" => new NoopDisposable(),
                         "GetMessagesAsync" => GetHistory(),
                         "SendMessageAsync" => Send((string)args![0]!),

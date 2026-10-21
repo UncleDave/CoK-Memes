@@ -3,7 +3,8 @@ using MediatR;
 
 namespace ChampionsOfKhazad.Bot;
 
-public abstract class Follower(ulong ignoreBotMentionsInChannelId, BotContext botContext) : INotificationHandler<MessageReceived>
+public abstract class Follower(ulong ignoreBotMentionsInChannelId, BotContext botContext, ulong ignoredChannelId = 0)
+    : INotificationHandler<MessageReceived>
 {
     protected abstract Task<bool> ShouldTrigger(MessageReceived notification);
 
@@ -15,6 +16,7 @@ public abstract class Follower(ulong ignoreBotMentionsInChannelId, BotContext bo
 
         if (
             message.Channel is not ITextChannel textChannel
+            || (ignoredChannelId != 0 && textChannel.Id == ignoredChannelId)
             || (message.MentionedUserIds.Contains(botContext.BotId) && message.Channel.Id == ignoreBotMentionsInChannelId)
             || !await ShouldTrigger(notification)
         )

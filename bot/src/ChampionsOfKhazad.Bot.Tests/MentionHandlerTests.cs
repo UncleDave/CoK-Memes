@@ -5,6 +5,131 @@ namespace ChampionsOfKhazad.Bot.Tests;
 
 public class MentionHandlerTests
 {
+    [Fact]
+    public async Task PreviewIsDisabledByDefaultAndOrdinaryRepliesRemainUnlabelled()
+    {
+        var fixture = new DiscordConversationFixture();
+        var lorekeeper = new CapturingPersonality();
+        var grub = new CapturingPersonality();
+        fixture.AddMessage(1, "previous answer", DiscordConversationFixture.BotId);
+        var message = fixture.AddMessage(2, "question");
+
+        await CreateHandler(fixture, lorekeeper, grubPreview: grub).Handle(new MessageReceived(message), TestContext.Current.CancellationToken);
+
+        Assert.NotNull(lorekeeper.History);
+        Assert.Equal("Hammerstone", lorekeeper.History[0].AuthorName);
+        Assert.Null(grub.History);
+        Assert.Equal(["answer"], fixture.Replies);
+    }
+
+    [Theory]
+    [InlineData(1UL, 100UL)]
+    [InlineData(2UL, 200UL)]
+    [InlineData(99UL, 200UL)]
+    public async Task ExactPreviewChannelOverridesTheAllowlistForAnyHuman(ulong authorId, ulong allowedChannelId)
+    {
+        var fixture = new DiscordConversationFixture();
+        var lorekeeper = new CapturingPersonality();
+        var grub = new CapturingPersonality();
+        fixture.AddMessage(1, "previous answer", DiscordConversationFixture.BotId);
+        var message = fixture.AddMessage(2, "question", authorId);
+
+        await CreateHandler(fixture, lorekeeper, allowedChannelId, DiscordConversationFixture.ChannelId, grub)
+            .Handle(new MessageReceived(message), TestContext.Current.CancellationToken);
+
+        Assert.Null(lorekeeper.History);
+        Assert.NotNull(grub.History);
+        Assert.Equal("Grub", grub.History[0].AuthorName);
+        Assert.Equal(authorId, grub.Context!.UserId);
+        Assert.Equal(["**Grub:**\nanswer"], fixture.Replies);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task PreviewDoesNotMatchACategoryAndNormalCategoryRoutingRemainsUnchanged(bool allowCategory)
+    {
+        var fixture = new DiscordConversationFixture(channelId: 200, categoryId: DiscordConversationFixture.ChannelId);
+        var lorekeeper = new CapturingPersonality();
+        var grub = new CapturingPersonality();
+        var message = fixture.AddMessage(1, "question");
+
+        await CreateHandler(
+                fixture,
+                lorekeeper,
+                allowCategory ? DiscordConversationFixture.ChannelId : 300,
+                DiscordConversationFixture.ChannelId,
+                grub
+            )
+            .Handle(new MessageReceived(message), TestContext.Current.CancellationToken);
+
+        Assert.Null(grub.History);
+        if (allowCategory)
+        {
+            Assert.NotNull(lorekeeper.History);
+            Assert.Equal(["answer"], fixture.Replies);
+        }
+        else
+        {
+            Assert.Null(lorekeeper.History);
+            Assert.Equal(0, fixture.HistoryReads);
+            Assert.Empty(fixture.Replies);
+        }
+    }
+
+    [Fact]
+    public async Task ConfiguredPreviewLeavesOtherAllowedChannelsOnLorekeeper()
+    {
+        var fixture = new DiscordConversationFixture();
+        var lorekeeper = new CapturingPersonality();
+        var grub = new CapturingPersonality();
+        var message = fixture.AddMessage(1, "question");
+
+        await CreateHandler(fixture, lorekeeper, grubPreviewChannelId: 200, grubPreview: grub)
+            .Handle(new MessageReceived(message), TestContext.Current.CancellationToken);
+
+        Assert.NotNull(lorekeeper.History);
+        Assert.Null(grub.History);
+        Assert.Equal(["answer"], fixture.Replies);
+    }
+
+    [Theory]
+    [InlineData(true, true)]
+    [InlineData(false, false)]
+    public async Task PreviewStillRequiresAHumanMessageAndBotMention(bool authorIsBot, bool mentionBot)
+    {
+        var fixture = new DiscordConversationFixture();
+        var lorekeeper = new CapturingPersonality();
+        var grub = new CapturingPersonality();
+        var message = fixture.AddMessage(1, "question", authorIsBot: authorIsBot, mentionBot: mentionBot);
+
+        await CreateHandler(fixture, lorekeeper, grubPreviewChannelId: DiscordConversationFixture.ChannelId, grubPreview: grub)
+            .Handle(new MessageReceived(message), TestContext.Current.CancellationToken);
+
+        Assert.Null(lorekeeper.History);
+        Assert.Null(grub.History);
+        Assert.Equal(0, fixture.HistoryReads);
+        Assert.Empty(fixture.Replies);
+    }
+
+    [Fact]
+    public async Task PreviewAdminResetMarkerReactsWithoutInvokingEitherPersonality()
+    {
+        var fixture = new DiscordConversationFixture();
+        var lorekeeper = new CapturingPersonality();
+        var grub = new CapturingPersonality();
+        var marker = fixture.AddMessage(1, "<@9> you've had a stroke.", DiscordConversationFixture.AdminId);
+
+        await CreateHandler(fixture, lorekeeper, allowedChannelId: 200, grubPreviewChannelId: DiscordConversationFixture.ChannelId, grubPreview: grub)
+            .Handle(new MessageReceived(marker), TestContext.Current.CancellationToken);
+
+        Assert.Equal(["🧠"], fixture.Reactions);
+        Assert.Equal(0, fixture.HistoryReads);
+        Assert.Empty(fixture.Replies);
+        Assert.Null(lorekeeper.History);
+        Assert.Null(grub.History);
+    }
+
     [Theory]
     [InlineData("<@9> you've had a stroke.")]
     [InlineData("<@!9> you've had a stroke")]
@@ -90,13 +215,21 @@ public class MentionHandlerTests
     private static MentionHandler CreateHandler(
         DiscordConversationFixture fixture,
         CapturingPersonality personality,
-        ulong allowedChannelId = DiscordConversationFixture.ChannelId
+        ulong allowedChannelId = DiscordConversationFixture.ChannelId,
+        ulong? grubPreviewChannelId = null,
+        CapturingPersonality? grubPreview = null
     ) =>
         new(
-            Options.Create(new MentionHandlerOptions { ChannelIds = [allowedChannelId] }),
+            Options.Create(new MentionHandlerOptions { ChannelIds = [allowedChannelId], GrubPreviewChannelId = grubPreviewChannelId }),
             new BotContext(DiscordConversationFixture.BotId, null!, null!),
             DiscordConversationFixture.Stub<ICompletionService>(
-                (method, _) => method.Name == "get_Lorekeeper" ? personality : throw new NotSupportedException(method.Name)
+                (method, _) =>
+                    method.Name switch
+                    {
+                        "get_Lorekeeper" => personality,
+                        "get_GrubPreview" => grubPreview ?? throw new InvalidOperationException("Preview should not be invoked"),
+                        _ => throw new NotSupportedException(method.Name),
+                    }
             ),
             Options.Create(new DirectMessageHandlerOptions { AdminUserId = DiscordConversationFixture.AdminId }),
             fixture.CreateBuilder()

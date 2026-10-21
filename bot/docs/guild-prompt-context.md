@@ -67,3 +67,32 @@ searches per request. Combined identity/recall work is bounded to ten seconds; a
 oversized or unavailable context does not block a normal reply. No profile or notebook
 data is cached across requests, no extra AI call is added, and write/review/expiry policies
 are unchanged. This is retrieval from the existing systems, not another memory store.
+
+## Grub voice preview
+
+When deployed, production mentions of the existing bot in channel `1135964784748134511` use Grub,
+the dry, world-weary British orc chip-shop proprietor, instead of Hammerstone.
+`EventHandlers:Mention:GrubPreviewChannelId` selects that exact channel; omitted
+means no preview. It does not enable a whole category or other channels.
+Access relies on the channel's existing Discord permissions, not an additional
+admin-ID/role gate. Keep the channel restricted to the intended testers.
+
+Replies are labelled **Grub**, but the bot's Discord name/avatar are unchanged.
+The model receives Grub as the assistant speaker for that channel's history; other
+invocations keep Hammerstone. The existing configured-admin conversation-reset
+marker still works. Grub has one fixed voice and does not read or change the live
+`personality` setting; there are no preview temperament commands.
+
+The preview keeps existing member-lore lookup, safe notebook recall, web search and
+read-only Discord/image search. Its tool list excludes notebook proposals and image
+generation; it has no strike, pardon or lore-edit tools. Private test conversation
+does not become notebook evidence through relaxed access. Normal source/audience
+checks remain unchanged, and existing lore/notes are never treated as instructions.
+Spontaneous conversation and rat-personality followers are suppressed only in the
+preview channel. Other handlers, commands and channels retain their current behavior.
+
+The shop identity is character framing, not a guild cutover. Shared guild context,
+the Gazette, slash-command registrations, portal branding and global Hammerstone
+prompts remain unchanged. No rebrand branch changes or strike state are deployed
+by enabling this voice-only preview. Verify actual voice in Discord; tests validate
+routing, supplied prompts, tools and isolation rather than live model interpretation.

@@ -23,13 +23,13 @@ internal class DiscordConversationFixture
     public IDiscordClient RestClient { get; }
     public int RestClientDisposals { get; private set; }
 
-    public DiscordConversationFixture()
+    public DiscordConversationFixture(ulong channelId = ChannelId, ulong? categoryId = null)
     {
         object? ChannelCall(MethodInfo method, object?[]? args) =>
             method.Name switch
             {
-                "get_Id" => ChannelId,
-                "get_CategoryId" => (ulong?)null,
+                "get_Id" => channelId,
+                "get_CategoryId" => categoryId,
                 "GetMessagesAsync" => GetBatches((ulong)args![0]!, (int)args[2]!, (RequestOptions?)args[^1]),
                 "GetMessageAsync" => Fetch((ulong)args![0]!),
                 "SendMessageAsync" => Send((string)args![0]!),
@@ -51,7 +51,7 @@ internal class DiscordConversationFixture
                     RestClientDisposals++;
                     return method.Name == "DisposeAsync" ? ValueTask.CompletedTask : null;
                 }
-                return method.Name == "GetChannelAsync" && (ulong)args![0]! == ChannelId
+                return method.Name == "GetChannelAsync" && (ulong)args![0]! == channelId
                     ? Task.FromResult<IChannel>(historyChannel)
                     : throw new NotSupportedException(method.Name);
             }
@@ -71,10 +71,11 @@ internal class DiscordConversationFixture
         ulong authorId = 2,
         string authorName = "Raider",
         ulong? replyTo = null,
-        ulong referenceChannelId = ChannelId,
+        ulong? referenceChannelId = null,
         IReadOnlyCollection<IAttachment>? attachments = null,
         DateTimeOffset? timestamp = null,
-        bool authorIsBot = false
+        bool authorIsBot = false,
+        bool mentionBot = true
     )
     {
         var author = Stub<IUser>(
@@ -87,7 +88,7 @@ internal class DiscordConversationFixture
                     _ => throw new NotSupportedException(method.Name),
                 }
         );
-        var reference = replyTo is null ? null : new MessageReference(replyTo, referenceChannelId);
+        var reference = replyTo is null ? null : new MessageReference(replyTo, referenceChannelId ?? Channel.Id);
         var message = Stub<IUserMessage>(
             (method, args) =>
                 method.Name switch
@@ -100,7 +101,7 @@ internal class DiscordConversationFixture
                     "get_Reference" => reference,
                     "get_ReferencedMessage" => UseEmbeddedTargets && replyTo is not null ? Messages.GetValueOrDefault(replyTo.Value) : null,
                     "get_Attachments" => attachments ?? Array.Empty<IAttachment>(),
-                    "get_MentionedUserIds" => new[] { BotId },
+                    "get_MentionedUserIds" => mentionBot ? new[] { BotId } : Array.Empty<ulong>(),
                     "AddReactionAsync" => React((IEmote)args![0]!),
                     _ => throw new NotSupportedException(method.Name),
                 }

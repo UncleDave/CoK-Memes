@@ -8,4 +8,6 @@ public class MentionHandlerOptions
 
     [Required]
     public required IEnumerable<ulong> ChannelIds { get; init; }
+
+    public ulong? GrubPreviewChannelId { get; init; }
 }

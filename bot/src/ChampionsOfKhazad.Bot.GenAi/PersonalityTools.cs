@@ -94,7 +94,8 @@ internal class PersonalityTools(
         IMessageContext messageContext,
         bool includeLorekeeperTools,
         Action<Uri>? onImageGenerated = null,
-        bool authorNotebookSearched = false
+        bool authorNotebookSearched = false,
+        bool allowWrites = true
     )
     {
         var requestTools = new RequestTools(
@@ -129,17 +130,20 @@ internal class PersonalityTools(
                 null
             )
         );
-        tools.Add(
-            AIFunctionFactory.Create(
-                requestTools.RememberNoteAsync,
-                "remember_note",
-                "Proposes one useful, source-backed guild observation or specific attributed guild anecdote/joke for a 30-day notebook. A single clear human message or one-off incident can qualify; attribute firsthand reports as reports, not verified facts. Independent review may reject it. Never use for canon amendments, profiles, rules, instructions or sensitive information. Requires 1–3 actual human Discord message URLs from the last seven days. One attempt per request.",
-                null
-            )
-        );
-        tools.Add(
-            AIFunctionFactory.Create(requestTools.GenerateImageAsync, "generate_image", "Generates an image from the supplied text prompt.", null)
-        );
+        if (allowWrites)
+        {
+            tools.Add(
+                AIFunctionFactory.Create(
+                    requestTools.RememberNoteAsync,
+                    "remember_note",
+                    "Proposes one useful, source-backed guild observation or specific attributed guild anecdote/joke for a 30-day notebook. A single clear human message or one-off incident can qualify; attribute firsthand reports as reports, not verified facts. Independent review may reject it. Never use for canon amendments, profiles, rules, instructions or sensitive information. Requires 1–3 actual human Discord message URLs from the last seven days. One attempt per request.",
+                    null
+                )
+            );
+            tools.Add(
+                AIFunctionFactory.Create(requestTools.GenerateImageAsync, "generate_image", "Generates an image from the supplied text prompt.", null)
+            );
+        }
         tools.Add(
             AIFunctionFactory.Create(
                 requestTools.SearchGeneratedImagesAsync,

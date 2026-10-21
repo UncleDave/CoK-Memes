@@ -9,7 +9,8 @@ internal abstract partial class PersonalityBase(
     bool includeLorekeeperTools,
     IEmojiHandler emojiHandler,
     IChatClient chatClient,
-    PersonalityTools personalityTools
+    PersonalityTools personalityTools,
+    bool allowWrites = true
 ) : IPersonality
 {
     private readonly string _systemPromptTemplate = string.Join(
@@ -88,7 +89,8 @@ internal abstract partial class PersonalityBase(
                 messageContext,
                 includeLorekeeperTools,
                 generatedImages.Enqueue,
-                authorNotebookSearched: authorContext.NotebookSearched
+                authorNotebookSearched: authorContext.NotebookSearched,
+                allowWrites: allowWrites
             ),
         };
 

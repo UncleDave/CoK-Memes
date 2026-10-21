@@ -14,7 +14,8 @@ public class RatFactsFollower(
     IOptions<RatFactsFollowerOptions> options,
     BotContext botContext,
     ILogger<RandomChanceFollowerTriggerStrategy> triggerStrategyLogger,
-    ICompletionService completionService
+    ICompletionService completionService,
+    IOptions<MentionHandlerOptions> mentionOptions
 )
     : StrategyFollower(
         allFollowersOptions.Value.IgnoreBotMentionsInChannelId,
@@ -23,5 +24,6 @@ public class RatFactsFollower(
             new RandomChanceFollowerTriggerStrategy(options.Value.Chance, triggerStrategyLogger)
         ),
         new PersonalityFollowerResponseStrategy(completionService.RatExpert, botContext.BotId),
-        botContext
+        botContext,
+        mentionOptions.Value.GrubPreviewChannelId ?? 0
     );

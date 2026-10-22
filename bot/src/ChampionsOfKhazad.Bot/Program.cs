@@ -53,7 +53,6 @@ host.Services.AddSingleton<DiscordSocketClient>(services =>
                 | GatewayIntents.GuildMessages
                 | GatewayIntents.DirectMessages
                 | GatewayIntents.MessageContent
-                | GatewayIntents.GuildMessageReactions
                 | GatewayIntents.GuildVoiceStates
                 | GatewayIntents.GuildMembers,
             LogLevel = LogSeverity.Debug,
@@ -100,7 +99,6 @@ host.Services.AddOptionsWithEagerValidation<EmoteStreakHandlerOptions>(host.Conf
     .AddOptionsWithEagerValidation<QuestionMarkReactorOptions>(host.Configuration.GetEventHandlerSection(QuestionMarkReactorOptions.Key))
     .AddOptionsWithEagerValidation<HandOfSalvationReactorOptions>(host.Configuration.GetEventHandlerSection(HandOfSalvationReactorOptions.Key))
     .AddOptionsWithEagerValidation<MentionHandlerOptions>(host.Configuration.GetEventHandlerSection(MentionHandlerOptions.Key))
-    .AddOptionsWithEagerValidation<HallOfFameReactionHandlerOptions>(host.Configuration.GetEventHandlerSection(HallOfFameReactionHandlerOptions.Key))
     .AddOptionsWithEagerValidation<UserInfoHandlerOptions>(host.Configuration.GetEventHandlerSection(UserInfoHandlerOptions.Key))
     .AddOptionsWithEagerValidation<RaidsSlashCommandOptions>(host.Configuration.GetSlashCommandSection(RaidsSlashCommandOptions.Key))
     .AddOptionsWithEagerValidation<SuggestSlashCommandOptions>(host.Configuration.GetSlashCommandSection(SuggestSlashCommandOptions.Key))

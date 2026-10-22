@@ -33,7 +33,6 @@ public class BotService : IHostedService
         _client.GuildAvailable += GuildAvailableAsync;
         _client.Disconnected += DisconnectedAsync;
         _client.MessageReceived += MessageReceivedAsync;
-        _client.ReactionAdded += ReactionAddedAsync;
         _client.SlashCommandExecuted += SlashCommandExecutedAsync;
         _client.ButtonExecuted += ButtonExecutedAsync;
         _client.UserLeft += UserLeftAsync;
@@ -104,12 +103,6 @@ public class BotService : IHostedService
         if (message is SocketUserMessage userMessage && !message.Author.IsBot)
             _notificationQueue.TryEnqueue(new MessageReceived(userMessage));
 
-        return Task.CompletedTask;
-    }
-
-    private Task ReactionAddedAsync(Cacheable<IUserMessage, ulong> message, Cacheable<IMessageChannel, ulong> channel, SocketReaction reaction)
-    {
-        _notificationQueue.TryEnqueue(new ReactionAdded(reaction));
         return Task.CompletedTask;
     }
 

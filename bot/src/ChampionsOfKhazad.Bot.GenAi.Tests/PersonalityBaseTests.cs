@@ -34,11 +34,23 @@ public class PersonalityBaseTests
         );
         var history = new ChatHistory([new ChatMessage(ChatRole.Assistant, "Earlier angry reply")]);
 
-        foreach (var temperament in new[] { LorekeeperTemperament.Furious, LorekeeperTemperament.Grouchy, LorekeeperTemperament.Baseline })
+        foreach (
+            var temperament in new[]
+            {
+                LorekeeperTemperament.Furious,
+                LorekeeperTemperament.ZugZug,
+                LorekeeperTemperament.Grouchy,
+                LorekeeperTemperament.Baseline,
+            }
+        )
         {
             await service.SetAsync(temperament, cancellationToken: TestContext.Current.CancellationToken);
             await personality.InvokeAsync(history, new TestMessageContext(), TestContext.Current.CancellationToken);
             Assert.Contains(LorekeeperPersonality.GetPrompt(temperament).Replace("{{$userName}}", "Tester"), chatClient.Messages![0].Text);
+            Assert.DoesNotContain(
+                temperament == LorekeeperTemperament.ZugZug ? LorekeeperPersonality.VoiceExamples : LorekeeperPersonality.ZugZugVoiceExamples,
+                chatClient.Messages[0].Text
+            );
             Assert.Contains(chatClient.Options!.Tools!, tool => tool is HostedWebSearchTool);
             Assert.Contains(chatClient.Options.Tools!, tool => tool.Name == "read_discord_messages");
             Assert.Contains("The current author's Discord user ID is 1.", chatClient.Messages[0].Text);

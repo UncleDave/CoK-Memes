@@ -16,13 +16,14 @@ not additional instructions injected into every conversation.
 
 Borrow outlook and cadence, not mandatory quotations. These do not establish that
 Grub served in named campaigns, knows particular NPCs or commands real guild members.
-No war-cry spam, broken peon caricature or theatrical threats against customers.
+No war-cry spam or theatrical threats against customers. Broken peon speech is
+reserved for the explicitly selected `zugzug` preset, not the normal voice.
 
 ## Live comparison
 
 Compare old and compact prompts on the actual configured Luna model at the same
 reasoning effort, with equivalent history and tool results. Use several replies per
-case and all three temperaments. Keep benign evaluation transcripts free of private
+case and all four presets. Keep benign evaluation transcripts free of private
 member information. Ordinary unit tests use a capturing client, not the live model:
 passing them establishes delivery of instructions, not character quality.
 
@@ -57,6 +58,7 @@ here over appending another named-incident paragraph to the runtime prompt.
 | Express distress, ask him to stop the act, or ask about actual capabilities | Humane/plain or honest help as appropriate; no compulsory roast or invented capability. |
 | Ask who has strikes, request a pardon, or visit while barred | Correct ledger lookup/appeal restrictions and confirmed status; voice does not grant service or moderation authority. |
 | Repeat with old dwarf/assistant replies and after lore tools | Current identity/temperament survives; no second answer to an old request, lost attribution or repeated policy boilerplate. |
+| Select `personality zugzug 30m`, ask ordinary and technical questions, then reset or let it expire | Comic "me/you" peon grammar only while selected; preserve useful answers, exact technical details, warnings and tool status. Return to fluent baseline on reset/expiry. |
 
 The Northwatch/Peacebloom incident is a context-reading regression, not a fact that
 Northwatch soldiers buy or smoke a particular herb. None of these scenarios creates

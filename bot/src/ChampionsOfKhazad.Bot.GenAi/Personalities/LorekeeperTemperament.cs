@@ -5,4 +5,5 @@ public enum LorekeeperTemperament
     Baseline,
     Grouchy,
     Furious,
+    ZugZug,
 }

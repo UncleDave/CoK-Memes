@@ -11,6 +11,8 @@ public class PersonalityDirectMessageCommandTests
     [InlineData("  personality   furious  2h  ", LorekeeperTemperament.Furious, 120)]
     [InlineData("personality grouchy 30m", LorekeeperTemperament.Grouchy, 30)]
     [InlineData("personality furious 30d", LorekeeperTemperament.Furious, 43200)]
+    [InlineData("personality zugzug", LorekeeperTemperament.ZugZug, 0)]
+    [InlineData("PERSONALITY ZuGzUg 30m", LorekeeperTemperament.ZugZug, 30)]
     [InlineData("personality reset", LorekeeperTemperament.Baseline, 0)]
     public async Task ValidCommandsSaveAndConfirm(string command, LorekeeperTemperament temperament, int minutes)
     {
@@ -33,6 +35,8 @@ public class PersonalityDirectMessageCommandTests
     [InlineData("personality furious 999999999999999d")]
     [InlineData("personality furious 1s")]
     [InlineData("personality furious 1h extra")]
+    [InlineData("personality zugzug 0m")]
+    [InlineData("personality zugzug 1h extra")]
     [InlineData("personality reset 1h")]
     public async Task InvalidCommandsReturnHelpWithoutWriting(string command)
     {
@@ -51,11 +55,27 @@ public class PersonalityDirectMessageCommandTests
         var list = await handler.ExecuteAsync("personality list", TestContext.Current.CancellationToken);
         Assert.Contains("grouchy", list!);
         Assert.Contains("furious", list!);
+        Assert.Contains("zugzug", list!);
         Assert.DoesNotContain("Commands:", list!);
         Assert.DoesNotContain("Duration:", list!);
         Assert.Null(await handler.ExecuteAsync("word", TestContext.Current.CancellationToken));
         Assert.Null(await handler.ExecuteAsync("", TestContext.Current.CancellationToken));
         Assert.Null(store.Setting);
+    }
+
+    [Fact]
+    public async Task ResetTurnsOffZugZugAndClearsItsExpiry()
+    {
+        var store = new MemoryStore();
+        var handler = CreateCommand(store);
+        await handler.ExecuteAsync("personality zugzug 30m", TestContext.Current.CancellationToken);
+
+        var response = await handler.ExecuteAsync("personality reset", TestContext.Current.CancellationToken);
+
+        Assert.Equal(LorekeeperTemperament.Baseline, store.Setting!.Temperament);
+        Assert.Null(store.Setting.ExpiresAtUtc);
+        Assert.Contains("baseline", response!);
+        Assert.DoesNotContain("Returns to baseline", response!);
     }
 
     private static PersonalityDirectMessageCommand CreateCommand(MemoryStore store) =>

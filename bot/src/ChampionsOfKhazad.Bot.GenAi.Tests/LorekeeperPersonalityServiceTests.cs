@@ -11,16 +11,18 @@ public class LorekeeperPersonalityServiceTests
         Assert.Equal(LorekeeperTemperament.Baseline, (await service.GetAsync(TestContext.Current.CancellationToken)).Temperament);
     }
 
-    [Fact]
-    public async Task TemporarySettingExpiresAtTheExactDeadlineWithoutWriting()
+    [Theory]
+    [InlineData(LorekeeperTemperament.Furious)]
+    [InlineData(LorekeeperTemperament.ZugZug)]
+    public async Task TemporarySettingExpiresAtTheExactDeadlineWithoutWriting(LorekeeperTemperament temperament)
     {
         var store = new MemoryStore();
         var clock = new TestClock();
         var service = CreateService(store, clock);
-        await service.SetAsync(LorekeeperTemperament.Furious, TimeSpan.FromHours(2), TestContext.Current.CancellationToken);
+        await service.SetAsync(temperament, TimeSpan.FromHours(2), TestContext.Current.CancellationToken);
 
         clock.Now = clock.Now.AddHours(2).AddTicks(-1);
-        Assert.Equal(LorekeeperTemperament.Furious, (await service.GetAsync(TestContext.Current.CancellationToken)).Temperament);
+        Assert.Equal(temperament, (await service.GetAsync(TestContext.Current.CancellationToken)).Temperament);
         clock.Now = clock.Now.AddTicks(1);
         var expired = await service.GetAsync(TestContext.Current.CancellationToken);
         Assert.Equal(LorekeeperTemperament.Baseline, expired.Temperament);
@@ -28,15 +30,17 @@ public class LorekeeperPersonalityServiceTests
         Assert.Equal(1, store.Writes);
     }
 
-    [Fact]
-    public async Task NewServiceReadsPersistedSelectionAndUntimedChangeClearsExpiry()
+    [Theory]
+    [InlineData(LorekeeperTemperament.Furious)]
+    [InlineData(LorekeeperTemperament.ZugZug)]
+    public async Task NewServiceReadsPersistedSelectionAndUntimedChangeClearsExpiry(LorekeeperTemperament temperament)
     {
         var store = new MemoryStore();
         var clock = new TestClock();
         var service = CreateService(store, clock);
-        await service.SetAsync(LorekeeperTemperament.Furious, TimeSpan.FromHours(2), TestContext.Current.CancellationToken);
+        await service.SetAsync(temperament, TimeSpan.FromHours(2), TestContext.Current.CancellationToken);
         var restartedService = CreateService(store, clock);
-        Assert.Equal(LorekeeperTemperament.Furious, (await restartedService.GetAsync(TestContext.Current.CancellationToken)).Temperament);
+        Assert.Equal(temperament, (await restartedService.GetAsync(TestContext.Current.CancellationToken)).Temperament);
 
         await restartedService.SetAsync(LorekeeperTemperament.Grouchy, cancellationToken: TestContext.Current.CancellationToken);
         clock.Now = clock.Now.AddYears(1);
@@ -63,6 +67,7 @@ public class LorekeeperPersonalityServiceTests
     [InlineData(LorekeeperTemperament.Baseline)]
     [InlineData(LorekeeperTemperament.Grouchy)]
     [InlineData(LorekeeperTemperament.Furious)]
+    [InlineData(LorekeeperTemperament.ZugZug)]
     public void TemperamentInstructionsAreIncludedOnlyForTheSelectedPreset(LorekeeperTemperament temperament)
     {
         var prompt = LorekeeperPersonality.GetPrompt(temperament);
@@ -73,19 +78,34 @@ public class LorekeeperPersonalityServiceTests
             else
                 Assert.DoesNotContain(LorekeeperPersonality.GetTemperamentPrompt(preset), prompt);
         }
-        Assert.Contains(LorekeeperPersonality.VoiceExamples, prompt);
+        Assert.Contains(LorekeeperPersonality.GetVoiceExamples(temperament), prompt);
+        Assert.DoesNotContain(
+            temperament == LorekeeperTemperament.ZugZug ? LorekeeperPersonality.VoiceExamples : LorekeeperPersonality.ZugZugVoiceExamples,
+            prompt
+        );
         Assert.Contains(LorekeeperPersonality.ServicePolicy, prompt);
         Assert.Contains(LorekeeperPersonality.NotebookPolicy, prompt);
         Assert.Contains(LorekeeperPersonality.CustomerPolicy, prompt);
     }
 
-    [Fact]
-    public void CharacterBriefKeepsTheAcceptedOriginAndStaysCompact()
+    [Theory]
+    [InlineData(LorekeeperTemperament.Baseline)]
+    [InlineData(LorekeeperTemperament.Grouchy)]
+    [InlineData(LorekeeperTemperament.Furious)]
+    [InlineData(LorekeeperTemperament.ZugZug)]
+    public void CharacterBriefKeepsTheAcceptedOriginAndStaysCompact(LorekeeperTemperament temperament)
     {
         Assert.Contains("Orgrimmar", LorekeeperPersonality.IdentityPrompt);
         Assert.Contains("Barrens", LorekeeperPersonality.IdentityPrompt);
-        Assert.InRange(LorekeeperPersonality.CharacterPrompt.Length + LorekeeperPersonality.VoiceExamples.Length, 1, 2300);
+        Assert.InRange(LorekeeperPersonality.CharacterPrompt.Length + LorekeeperPersonality.GetVoiceExamples(temperament).Length, 1, 2300);
     }
+
+    [Theory]
+    [InlineData(LorekeeperTemperament.Baseline, 0)]
+    [InlineData(LorekeeperTemperament.Grouchy, 1)]
+    [InlineData(LorekeeperTemperament.Furious, 2)]
+    [InlineData(LorekeeperTemperament.ZugZug, 3)]
+    public void PersistedPresetValuesRemainStable(LorekeeperTemperament temperament, int value) => Assert.Equal(value, (int)temperament);
 
     [Fact]
     public async Task FailedReadFallsBackToBaselineWithoutChangingSavedSettingAndRecovers()

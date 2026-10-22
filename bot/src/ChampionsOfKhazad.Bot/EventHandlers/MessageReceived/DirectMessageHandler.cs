@@ -24,7 +24,7 @@ public class DirectMessageHandler(
         + "word — reveal today's word of the day\n"
         + "personality — show the current temperament and expiry\n"
         + "personality list — list the presets\n"
-        + "personality <baseline|grouchy|furious> [duration] — switch temperament\n"
+        + "personality <baseline|grouchy|furious|zugzug> [duration] — switch temperament\n"
         + "personality reset — restore baseline and clear any expiry\n\n"
         + "customers — customer commands; three strikes refuse service until pardoned\n"
         + "customers show <user-id> — show strikes and service status\n"

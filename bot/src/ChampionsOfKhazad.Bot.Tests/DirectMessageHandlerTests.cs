@@ -76,15 +76,19 @@ public class DirectMessageHandlerTests
     }
 
     [Theory]
-    [InlineData(true, true, false, true)]
-    [InlineData(false, true, false, false)]
-    [InlineData(true, false, false, false)]
-    [InlineData(true, true, true, false)]
-    public async Task OnlyHumanAdminInDmCanChangePersonality(bool admin, bool dm, bool bot, bool shouldSave)
+    [InlineData(true, true, false, true, "personality furious")]
+    [InlineData(false, true, false, false, "personality furious")]
+    [InlineData(true, false, false, false, "personality furious")]
+    [InlineData(true, true, true, false, "personality furious")]
+    [InlineData(true, true, false, true, "personality zugzug 30m")]
+    [InlineData(false, true, false, false, "personality zugzug 30m")]
+    [InlineData(true, false, false, false, "personality zugzug 30m")]
+    [InlineData(true, true, true, false, "personality zugzug 30m")]
+    public async Task OnlyHumanAdminInDmCanChangePersonality(bool admin, bool dm, bool bot, bool shouldSave, string command)
     {
         var store = new MemoryStore();
         var handler = CreateHandler(store, new WordGetter());
-        var message = CreateMessage(admin, dm, bot, "personality furious", []);
+        var message = CreateMessage(admin, dm, bot, command, []);
         await handler.Handle(new MessageReceived(message), TestContext.Current.CancellationToken);
         Assert.Equal(shouldSave, store.Setting is not null);
     }
@@ -114,7 +118,7 @@ public class DirectMessageHandlerTests
         var help = string.Concat(replies);
         Assert.Contains("word —", help);
         Assert.Contains("personality list", help);
-        Assert.Contains("baseline|grouchy|furious", help);
+        Assert.Contains("baseline|grouchy|furious|zugzug", help);
         Assert.Contains("personality reset", help);
         Assert.Contains("customers show <user-id>", help);
         Assert.Contains("customers pardon <user-id>", help);

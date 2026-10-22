@@ -34,6 +34,7 @@ public class ConversationPersonalityTests
         Assert.Contains(GuildPromptContext.Activity, messages[0].Text);
         Assert.DoesNotContain(LorekeeperPersonality.CharacterPrompt, messages[0].Text);
         Assert.DoesNotContain(LorekeeperPersonality.VoiceExamples, messages[0].Text);
+        Assert.DoesNotContain(LorekeeperPersonality.ZugZugVoiceExamples, messages[0].Text);
         Assert.DoesNotContain("{{$", messages[0].Text);
         Assert.Equal(history.Select(message => message.Text), messages.Skip(1).Select(message => message.Text));
         Assert.Equal(history.Select(message => message.AuthorName), messages.Skip(1).Select(message => message.AuthorName));

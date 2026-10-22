@@ -11,9 +11,11 @@ public class CustomerDisciplineReplyTests
     [InlineData(LorekeeperTemperament.Baseline, false)]
     [InlineData(LorekeeperTemperament.Grouchy, false)]
     [InlineData(LorekeeperTemperament.Furious, false)]
+    [InlineData(LorekeeperTemperament.ZugZug, false)]
     [InlineData(LorekeeperTemperament.Baseline, true)]
     [InlineData(LorekeeperTemperament.Grouchy, true)]
     [InlineData(LorekeeperTemperament.Furious, true)]
+    [InlineData(LorekeeperTemperament.ZugZug, true)]
     public async Task EveryTemperamentUsesTheSharedCharacterVoiceForServiceAndBarredReplies(LorekeeperTemperament temperament, bool barred)
     {
         using var fixture = new Fixture();
@@ -26,7 +28,7 @@ public class CustomerDisciplineReplyTests
         var prompt = fixture.Chat.Messages[0].Text!;
         Assert.Contains(LorekeeperPersonality.GetCharacterPrompt(temperament), prompt);
         Assert.Equal(2, prompt.Split(LorekeeperPersonality.CharacterPrompt, StringSplitOptions.None).Length);
-        Assert.Equal(2, prompt.Split(LorekeeperPersonality.VoiceExamples, StringSplitOptions.None).Length);
+        Assert.Equal(2, prompt.Split(LorekeeperPersonality.GetVoiceExamples(temperament), StringSplitOptions.None).Length);
         Assert.Equal(2, prompt.Split(LorekeeperPersonality.GetTemperamentPrompt(temperament), StringSplitOptions.None).Length);
         Assert.Contains(LorekeeperPersonality.CustomerPolicy, prompt);
         Assert.Equal(2, prompt.Split(LorekeeperPersonality.CustomerPolicy, StringSplitOptions.None).Length);
@@ -51,6 +53,7 @@ public class CustomerDisciplineReplyTests
     [InlineData(LorekeeperTemperament.Baseline)]
     [InlineData(LorekeeperTemperament.Grouchy)]
     [InlineData(LorekeeperTemperament.Furious)]
+    [InlineData(LorekeeperTemperament.ZugZug)]
     public async Task AzerothFramingAndFollowUpContextReachTheModelAfterLoreToolResults(LorekeeperTemperament temperament)
     {
         using var fixture = new Fixture();
@@ -177,6 +180,7 @@ public class CustomerDisciplineReplyTests
     [InlineData(LorekeeperTemperament.Baseline)]
     [InlineData(LorekeeperTemperament.Grouchy)]
     [InlineData(LorekeeperTemperament.Furious)]
+    [InlineData(LorekeeperTemperament.ZugZug)]
     public async Task ThirdStrikeRemovesServiceToolsAndUsesTheSameToolFollowUpForTheSendOff(LorekeeperTemperament temperament)
     {
         using var fixture = new Fixture();

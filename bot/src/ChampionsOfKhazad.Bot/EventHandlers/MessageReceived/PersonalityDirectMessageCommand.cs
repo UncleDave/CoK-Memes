@@ -6,7 +6,7 @@ namespace ChampionsOfKhazad.Bot;
 public class PersonalityDirectMessageCommand(LorekeeperPersonalityService personalityService)
 {
     private const string HelpText =
-        "Commands: personality | personality list | personality <baseline|grouchy|furious> [duration] | personality reset. Duration: whole minutes, hours, or days (e.g. 30m, 2h, 1d), up to 30 days; expires to baseline.";
+        "Commands: personality | personality list | personality <baseline|grouchy|furious|zugzug> [duration] | personality reset. Duration: whole minutes, hours, or days (e.g. 30m, 2h, 1d), up to 30 days; expires to baseline.";
 
     // Called only after the DM handler has verified the configured admin's identity.
     public async Task<string?> ExecuteAsync(string content, CancellationToken cancellationToken = default)
@@ -19,7 +19,7 @@ public class PersonalityDirectMessageCommand(LorekeeperPersonalityService person
             return Describe(await personalityService.GetAsync(cancellationToken));
 
         if (parts.Length == 2 && parts[1].Equals("list", StringComparison.OrdinalIgnoreCase))
-            return "baseline — original wise, helpful Lorekeeper\ngrouchy — first comic, rude persona\nfurious — intensified angry, foul-mouthed persona";
+            return "baseline — brusque, dependable orc\ngrouchy — argumentative, foul-mouthed orc\nfurious — intensely angry, foul-mouthed orc\nzugzug — dim-witted peon speech, still useful";
 
         if (parts.Length == 2 && parts[1].Equals("reset", StringComparison.OrdinalIgnoreCase))
             return Describe(await personalityService.SetAsync(LorekeeperTemperament.Baseline, cancellationToken: cancellationToken));
@@ -29,6 +29,7 @@ public class PersonalityDirectMessageCommand(LorekeeperPersonalityService person
             "baseline" => LorekeeperTemperament.Baseline,
             "grouchy" => LorekeeperTemperament.Grouchy,
             "furious" => LorekeeperTemperament.Furious,
+            "zugzug" => LorekeeperTemperament.ZugZug,
             _ => (LorekeeperTemperament?)null,
         };
 

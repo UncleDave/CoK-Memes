@@ -1,0 +1,7 @@
+{
+  "character": { "id": 1003, "name": "Torga Stonehand" },
+  "primaries": [],
+  "secondaries": [
+    { "profession": { "id": 356, "name": "Fishing" }, "skill_points": 75, "max_skill_points": 150 }
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "character": { "id": 1002, "name": "Élodie Firebrand" },
+  "primaries": [
+    { "profession": { "id": 171, "name": "Alchemy" }, "tiers": [{ "tier": { "id": 1, "name": "Classic" }, "skill_points": 149, "max_skill_points": 150 }] }
+  ],
+  "secondaries": []
+}

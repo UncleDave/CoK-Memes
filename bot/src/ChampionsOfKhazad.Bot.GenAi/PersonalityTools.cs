@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using ChampionsOfKhazad.Bot.Lore.Abstractions;
+using ChampionsOfKhazad.Bot.Roster;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 
@@ -15,7 +16,8 @@ internal class PersonalityTools(
     NotebookService notebook,
     ILogger<PersonalityTools> logger,
     IGetLore loreGetter,
-    CustomerDisciplineService customers
+    CustomerDisciplineService customers,
+    GuildRosterQueries? roster = null
 )
 {
     public async Task<(string? Text, bool NotebookSearched)> GetAuthorContextAsync(
@@ -115,13 +117,16 @@ internal class PersonalityTools(
             AIFunctionFactory.Create(
                 requestTools.SearchLoreAsync,
                 "search_lore",
-                "Searches guild lore. Call this before answering a question that could refer to a guild member, player, character, name, nickname, alias, event, history, rule, or inside joke, including ambiguous terms with an outside meaning. Do not claim there is no relevant guild lore without searching first.",
+                "Searches guild lore. Call this before answering a question that could refer to a guild member, player, character, name, nickname, alias, event, history, rule, or inside joke, including ambiguous terms with an outside meaning. For current character levels or professions, use roster tools instead when available; lore is not current roster data. Do not claim there is no relevant guild lore without searching first.",
                 null
             ),
         ];
 
         if (!includeLorekeeperTools)
             return tools;
+
+        if (messageContext.GuildId is > 0 && messageContext.ChannelId is > 0 && roster?.IsAvailableFor(messageContext.GuildId.Value) == true)
+            tools.AddRange(new RosterTools(roster, messageContext, logger).Create());
 
         tools.Add(new HostedWebSearchTool());
         tools.Add(

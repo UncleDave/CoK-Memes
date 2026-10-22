@@ -109,6 +109,43 @@ Permission bitmask: `274878032960`.
 For the rebrand rollout and external Discord profile changes, see
 [Guild identity and Grub](docs/guild-identity.md#rollout).
 
+### Mock guild roster
+
+The roster feature is off by default and currently has only a file-backed mock
+source. The normal bot credentials are still required to run the host; no Blizzard
+credentials are needed. Use a development guild and disposable Mongo database.
+
+| Setting | Default | Purpose |
+| --- | --- | --- |
+| `GuildRoster:Enabled` | `false` | Enable the worker, `/leaderboard`, and Grub roster tools |
+| `GuildRoster:MockFile` | `Fixtures/guild-roster.mock.json` | Roster fixture; relative to the bot output/publish directory, or an absolute path |
+| `GuildRoster:RefreshSeconds` | `60` | Roster check interval; minimum 10 seconds |
+| `GuildRoster:ProfessionRefreshSeconds` | `600` | Separate profession check interval; minimum 10 seconds |
+| `GuildRoster:MilestoneChannelId` | unset | Optional destination text channel ID in `Bot:GuildId` |
+| `GuildRoster:AllowMockNotifications` | `false` | Additional opt-in required to send mock notices |
+| `GuildRoster:LevelCap` | unset | Optional additional character-level milestone |
+| `GuildRoster:ProfessionMilestones` | `[75,150,225,300]` | Profession rank milestones |
+
+For an editable local trial, copy `src/ChampionsOfKhazad.Bot/Fixtures/` to a local
+directory and set `MockFile` to its roster file's absolute path. Keep the sibling
+`professions/{character-id}.json` files with it. Configure settings through user
+secrets or environment variables, as above; `Bot:GuildId` supplies the Discord scope.
+
+1. Enable the feature and start the bot. `/leaderboard` should show **Mock roster**;
+   `/leaderboard profession:alchemy` should show the sample profession rank.
+2. If testing notices, set the private test channel and allow mock notifications
+   **before** the first collection. The first collection should send nothing.
+3. Change Borin's level from 19 to 20 in the roster response; after a refresh,
+   expect a labelled mock milestone. Change Cooking from 74 to 75 in
+   `professions/1001.json` for a secondary-profession milestone. Wait for the
+   respective configured intervals, or use ten-second intervals for this trial.
+4. Remove a character from `members` and confirm queries omit it. Restart the bot
+   against the same database and confirm sent notices are not queued again.
+
+Do not edit the output-directory fixtures if you need changes to survive a build;
+the next build may replace them with the committed examples. No real API client
+is enabled by these settings. See [roster behaviour and API assumptions](docs/guild-roster-runtime.md).
+
 ## Run locally
 
 From `bot/`, start the Discord bot:

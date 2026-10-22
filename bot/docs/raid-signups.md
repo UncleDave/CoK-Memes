@@ -2,7 +2,9 @@
 
 `/raids` is de-registered independently of the guild rebrand. At startup, the bot
 registers enabled guild commands and removes its existing `/raids` slash-command
-registration, if present. Other command names and command types are not removed.
+registration, if present. The optional roster feature separately manages its own
+`/leaderboard` slash registration according to `GuildRoster:Enabled`. Other
+unrelated command names and command types are not removed.
 `/summarise` and `/suggest` remain registered.
 
 The command definition, handler, Raid Helper client, configuration, and old raid

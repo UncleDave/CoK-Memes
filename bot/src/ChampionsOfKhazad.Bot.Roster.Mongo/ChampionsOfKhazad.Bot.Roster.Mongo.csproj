@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\ChampionsOfKhazad.Bot.Mongo\ChampionsOfKhazad.Bot.Mongo.csproj" />
+    <ProjectReference Include="..\ChampionsOfKhazad.Bot.Roster\ChampionsOfKhazad.Bot.Roster.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="ChampionsOfKhazad.Bot.Tests" />
+  </ItemGroup>
+</Project>

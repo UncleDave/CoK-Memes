@@ -1,4 +1,5 @@
-﻿using Discord;
+﻿using ChampionsOfKhazad.Bot.Roster;
+using Discord;
 using Discord.WebSocket;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -13,13 +14,15 @@ public class BotService : IHostedService
     private readonly BotOptions _options;
     private readonly NotificationQueue _notificationQueue;
     private readonly BotContextProvider _botContextProvider;
+    private readonly bool _rosterEnabled;
 
     public BotService(
         DiscordSocketClient client,
         ILogger<BotService> logger,
         IOptions<BotOptions> options,
         NotificationQueue notificationQueue,
-        BotContextProvider botContextProvider
+        BotContextProvider botContextProvider,
+        GuildRosterOptions? rosterOptions = null
     )
     {
         _client = client;
@@ -27,6 +30,7 @@ public class BotService : IHostedService
         _options = options.Value;
         _notificationQueue = notificationQueue;
         _botContextProvider = botContextProvider;
+        _rosterEnabled = rosterOptions?.Enabled ?? false;
 
         _client.Ready += ReadyAsync;
         _client.Connected += ConnectedAsync;
@@ -67,7 +71,7 @@ public class BotService : IHostedService
         _botContextProvider.BotContext = new BotContext(_client.CurrentUser.Id, guild, _client);
         _botContextProvider.IsReady = true;
 
-        await SlashCommands.RegisterGuildCommandsAsync(guild);
+        await SlashCommands.RegisterGuildCommandsAsync(guild, _rosterEnabled);
 
         foreach (var slashCommand in SlashCommands.GlobalCommands)
             await _client.CreateGlobalApplicationCommandAsync(slashCommand.Properties);

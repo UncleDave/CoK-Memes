@@ -1,7 +1,10 @@
 # Guild roster, professions, and leaderboards — draft plan
 
-Status: production feature planning only; no roster import, leaderboard command,
-or roster tools are implemented. A standalone diagnostic addon exists in
+Status: the shared roster feature, leaderboard command, Grub tools, and milestone
+delivery are implemented behind an opt-in, file-backed mock. There is no live
+Forever API adapter or portal import. See [implemented behaviour and mock API
+assumptions](guild-roster-runtime.md) and [local configuration](../README.md#mock-guild-roster).
+A standalone diagnostic addon exists in
 [`addons/GrubRosterProbe`](../../addons/GrubRosterProbe), with local mock tests;
 it has not yet been verified in the Forever client and is now on the backburner.
 See the [in-game probe checklist](../../addons/docs/roster-probe.md).
@@ -34,7 +37,7 @@ before shipping an integration. The diagnostic report is not a production contra
 - External API support at release is a working assumption, not confirmed support
   or a promise that levels and professions will have the same endpoint coverage.
 
-## Proposed first version
+## First version
 
 `/leaderboard` posts the top 10 guild characters by level in the invoking guild
 channel. Include the character's full name (Firstname Lastname), class, and level.
@@ -314,31 +317,33 @@ retention and growth tracking are outside the first version.
   completeness, refresh timing, two-part names, and available identifiers. Verify
   profession names/ranks, primary/secondary coverage, and cached/unknown values
   separately. Capture sanitized fixtures and define the versioned export format.
-- [ ] Build the roster feature's normalized model, validator, snapshot store,
+- [x] Build the roster feature's normalized model, validator, snapshot store,
   ranking, and lookup services with fixture-based tests. Follow the existing
   feature-project/Mongo separation; keep Discord, portal, and AI dependencies out
   of roster domain logic. Cover optional profession data, unknown versus empty,
   nullable ranks, profession/tier queries, stable IDs versus reused names, guild
   departures/deletions/rejoins, and a no-realm character model. Add any new test
   projects to the solution.
-- [ ] Implement the API adapter and background refresh over shared roster queries,
-  with deduplicated requests, conditional requests, backoff, and separate
-  upstream/checked timestamps. Split profession refreshes only when the API shape
-  and savings justify it; test section-specific update ordering and retained
-  profession ages if split. Test stale/failed responses without losing the last
-  good roster, plus confirmed membership removals and late profile responses.
+- [x] Implement a mock response adapter and background refresh over shared queries,
+  with separate source/checked times, deduplicated refreshes, and independent
+  profession reads. Use Classic-style roster and provisional Retail-style
+  profession fixtures; do not guess a live Forever route. Test ordering, retained
+  profession ages, stale/failed responses, and membership changes.
+- [ ] Replace the mock with a verified live API adapter, including authentication,
+  conditional requests/cache headers, HTTP backoff and rate limits. Reassess
+  whether separate profession requests and their lower frequency remain useful.
 - [ ] Paused: adapt the tested probe into a production exporter and add the admin portal
   paste/preview/confirm flow. Test
   authorization, invalid and partial exports, stale/duplicate imports, concurrent
   confirmations, and atomic replacement. Exercise the flow with `npm run dev`.
-- [ ] Register `/leaderboard` as a guild command. Test acknowledgement, ranking,
+- [x] Register `/leaderboard` as an opt-in guild command. Test acknowledgement, ranking,
   profession filters, ties, pagination, output limits/escaping, observation times,
   empty/failure states, and isolation between guild scopes.
-- [ ] Expose the read-only Grub tools over the same queries. Test tool exposure,
+- [x] Expose the read-only Grub tools over the same queries. Test tool exposure,
   access guards, ambiguity, pagination, freshness, and failure semantics. Check
   representative live replies for accuracy and concise status copy.
-- [ ] Add milestone detection and configured-channel delivery after the API's
-  fields are verified. Test exact and skipped threshold crossings, silent first
+- [x] Add milestone detection and configured-channel delivery using mock source
+  fields. Live source coverage remains unverified. Test skipped threshold crossings, silent first
   observations, missing/failed data, source switches, regressions, profession tier
   separation, secondary professions, unique notice keys, database pending/sent
   persistence, and send-before-sent-status ordering. Verify departure cancellation

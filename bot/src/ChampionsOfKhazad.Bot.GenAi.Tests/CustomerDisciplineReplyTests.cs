@@ -1,5 +1,6 @@
 using System.Text.Json;
 using ChampionsOfKhazad.Bot.Lore.Abstractions;
+using ChampionsOfKhazad.Bot.Roster;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -519,6 +520,63 @@ public class CustomerDisciplineReplyTests
 
     private static JsonDocument ReadLedger(ConversationChatClient chat) => JsonDocument.Parse(chat.Messages[1].Text!);
 
+    [Fact]
+    public async Task NormalGrubReadsStructuredMockRosterWithoutTreatingLoreAsCurrentStats()
+    {
+        using var fixture = new Fixture(rosterEnabled: true);
+        fixture.Chat.Actions = ["get_guild_leaderboard"];
+        await fixture.InvokeAsync("Who is highest level?");
+        Assert.Contains("get_guild_leaderboard", fixture.Chat.InitialTools);
+        Assert.Contains("find_guild_characters", fixture.Chat.InitialTools);
+        Assert.Contains("find_guild_profession_members", fixture.Chat.InitialTools);
+        Assert.Contains("\"isMock\":true", Assert.Single(fixture.Chat.Results));
+        Assert.Contains("Borin Ironhide", fixture.Chat.Results[0]);
+        Assert.Equal(1, fixture.RosterStore.Reads);
+        Assert.Equal(0, fixture.Lore.Searches);
+    }
+
+    [Fact]
+    public async Task BarredCustomersAndFollowersCannotUseRosterTools()
+    {
+        using var fixture = new Fixture(rosterEnabled: true);
+        Assert.DoesNotContain(fixture.Tools.Create(fixture.Context, false), tool => tool.Name == "get_guild_leaderboard");
+        await fixture.AddStrikesAsync(3);
+        await fixture.InvokeAsync("Show the leaderboard");
+        Assert.DoesNotContain("get_guild_leaderboard", fixture.Chat.InitialTools);
+        Assert.Equal(0, fixture.RosterStore.Reads);
+    }
+
+    [Fact]
+    public void DmsAndOtherGuildsDoNotExposeRosterTools()
+    {
+        using var fixture = new Fixture(rosterEnabled: true);
+        fixture.Context.GuildId = null;
+        Assert.DoesNotContain(fixture.Tools.Create(fixture.Context, true), tool => tool.Name == "get_guild_leaderboard");
+        fixture.Context.GuildId = 999;
+        Assert.DoesNotContain(fixture.Tools.Create(fixture.Context, true), tool => tool.Name == "get_guild_leaderboard");
+    }
+
+    [Fact]
+    public async Task RosterLookupFailureIsNotAnEmptyGuildAndDoesNotLeakExceptionText()
+    {
+        using var fixture = new Fixture(rosterEnabled: true);
+        fixture.RosterStore.Fail = true;
+        fixture.Chat.Actions = ["get_guild_leaderboard"];
+        await fixture.InvokeAsync();
+        Assert.Contains("lookup failed", Assert.Single(fixture.Chat.Results));
+        Assert.DoesNotContain("Private", fixture.Chat.Results[0]);
+    }
+
+    [Fact]
+    public async Task AThirdStrikeStopsARosterLookupInTheSameConversation()
+    {
+        using var fixture = new Fixture(rosterEnabled: true);
+        await fixture.AddStrikesAsync(2);
+        fixture.Chat.Actions = ["issue_customer_strike", "get_guild_leaderboard"];
+        Assert.Contains("You're barred", await fixture.InvokeAsync());
+        Assert.Equal(0, fixture.RosterStore.Reads);
+    }
+
     private static JsonDocument ReadResult(string result) => JsonDocument.Parse(result.Split('\n')[0]);
 
     private sealed class Fixture : IDisposable
@@ -530,25 +588,37 @@ public class CustomerDisciplineReplyTests
         public LoreGetter Lore { get; } = new();
         public NotebookStore Notes { get; } = new();
         public PersonalityStore Personality { get; } = new();
+        public RosterReadStore RosterStore { get; } = new();
+        public PersonalityTools Tools { get; }
+        private readonly GuildRosterService? _rosterService;
         private readonly IChatClient _client;
         private readonly IPersonality _personality;
 
-        public Fixture()
+        public Fixture(bool rosterEnabled = false)
         {
             Service = new CustomerDisciplineService(Store, TimeProvider.System);
             _client = new ChatClientBuilder(Chat).UseFunctionInvocation().Build();
+            GuildRosterQueries? queries = null;
+            if (rosterEnabled)
+            {
+                var options = new GuildRosterOptions { Enabled = true, GuildId = 2 };
+                _rosterService = new GuildRosterService(options, new MockGuildRosterSource("unused"), RosterStore, null!, TimeProvider.System);
+                queries = new GuildRosterQueries(options, _rosterService, RosterStore);
+            }
+            Tools = new PersonalityTools(
+                Lore,
+                null!,
+                null!,
+                new NotebookService(Notes, new SourceReader(), null!, null!, TimeProvider.System, NullLogger<NotebookService>.Instance),
+                NullLogger<PersonalityTools>.Instance,
+                Lore,
+                Service,
+                queries
+            );
             _personality = new LorekeeperPersonality(
                 new EmojiHandler(),
                 _client,
-                new PersonalityTools(
-                    Lore,
-                    null!,
-                    null!,
-                    new NotebookService(Notes, new SourceReader(), null!, null!, TimeProvider.System, NullLogger<NotebookService>.Instance),
-                    NullLogger<PersonalityTools>.Instance,
-                    Lore,
-                    Service
-                ),
+                Tools,
                 new LorekeeperPersonalityService(Personality, TimeProvider.System, NullLogger<LorekeeperPersonalityService>.Instance),
                 Service,
                 NullLogger<LorekeeperPersonality>.Instance
@@ -574,7 +644,46 @@ public class CustomerDisciplineReplyTests
                 await Service.IssueStrikeAsync(2, 1, id, "Existing strike", TestContext.Current.CancellationToken);
         }
 
-        public void Dispose() => _client.Dispose();
+        public void Dispose()
+        {
+            _client.Dispose();
+            _rosterService?.Dispose();
+        }
+    }
+
+    private sealed class RosterReadStore : IRosterStore
+    {
+        public int Reads { get; private set; }
+        public bool Fail { get; set; }
+
+        public Task<RosterState?> GetAsync(string id, CancellationToken cancellationToken)
+        {
+            Reads++;
+            if (Fail)
+                throw new InvalidOperationException("Private database detail");
+            return Task.FromResult<RosterState?>(
+                new RosterState
+                {
+                    Id = id,
+                    IsMock = true,
+                    ObservedAtUtc = DateTime.UtcNow,
+                    GuildName = "Mock Guild",
+                    Characters =
+                    [
+                        new()
+                        {
+                            Id = "1",
+                            FirstName = "Borin",
+                            LastName = "Ironhide",
+                            ClassName = "Warrior",
+                            Level = 20,
+                        },
+                    ],
+                }
+            );
+        }
+
+        public Task<bool> TrySaveAsync(RosterState state, CancellationToken cancellationToken) => throw new NotSupportedException();
     }
 
     private sealed class ConversationChatClient : IChatClient
@@ -683,7 +792,7 @@ public class CustomerDisciplineReplyTests
         public ulong UserId => 1;
         public string UserName => "Tester";
         public ulong? ChannelId => 3;
-        public ulong? GuildId => 2;
+        public ulong? GuildId { get; set; } = 2;
         public ulong? MessageId { get; set; } = 4;
 
         public Task Reply(string message) => Task.CompletedTask;

@@ -25,10 +25,41 @@ public class CustomerDisciplineReplyTests
 
         var prompt = fixture.Chat.Messages[0].Text!;
         Assert.Contains(LorekeeperPersonality.CharacterPrompt, prompt);
+        Assert.Contains(LorekeeperPersonality.WorldFramingPrompt, prompt);
         Assert.Contains(LorekeeperPersonality.GetPrompt(temperament).Split('\n')[0], prompt);
         Assert.Contains(LorekeeperPersonality.CustomerPolicy, prompt);
         Assert.Equal(barred, prompt.Contains("## Barred customer:", StringComparison.Ordinal));
         Assert.Equal(1, fixture.Chat.Calls);
+    }
+
+    [Theory]
+    [InlineData(LorekeeperTemperament.Baseline)]
+    [InlineData(LorekeeperTemperament.Grouchy)]
+    [InlineData(LorekeeperTemperament.Furious)]
+    public async Task AzerothFramingAndFollowUpContextReachTheModelAfterLoreToolResults(LorekeeperTemperament temperament)
+    {
+        using var fixture = new Fixture();
+        fixture.Personality.Setting = new LorekeeperPersonalitySetting(temperament);
+        fixture.Chat.Actions = ["search_lore"];
+        var history = new ChatHistory([
+            new ChatMessage(ChatRole.User, "Know any weed dealers? Heard the Northwatch Hold lot get their smokes round here."),
+            new ChatMessage(ChatRole.Assistant, "If this is WoW banter, keep it in-game and I'll play along."),
+            new ChatMessage(ChatRole.User, "He means Peacebloom, boss."),
+        ]);
+
+        await fixture.InvokeAsync(history);
+
+        Assert.Equal(2, fixture.Chat.Calls);
+        Assert.Equal(1, fixture.Lore.Searches);
+        Assert.Contains(LorekeeperPersonality.WorldFramingPrompt, fixture.Chat.Messages[0].Text);
+        Assert.Contains(
+            LorekeeperPersonality.GetPrompt(temperament).Replace("{{$userName}}", fixture.Context.UserName),
+            fixture.Chat.Messages[0].Text
+        );
+        Assert.Equal(history, fixture.Chat.Messages.Skip(2).Take(history.Count));
+        Assert.Single(fixture.Chat.Results);
+        Assert.Contains("search_lore", fixture.Chat.FinalTools);
+        Assert.Empty((await fixture.GetAsync()).Strikes);
     }
 
     [Theory]
@@ -532,6 +563,8 @@ public class CustomerDisciplineReplyTests
             history.Add(new ChatMessage(ChatRole.User, content));
             return _personality.InvokeAsync(history, Context, cancellationToken ?? TestContext.Current.CancellationToken);
         }
+
+        public Task<string> InvokeAsync(ChatHistory history) => _personality.InvokeAsync(history, Context, TestContext.Current.CancellationToken);
 
         public Task<CustomerDisciplineState> GetAsync() => Service.GetAsync(2, 1, TestContext.Current.CancellationToken);
 

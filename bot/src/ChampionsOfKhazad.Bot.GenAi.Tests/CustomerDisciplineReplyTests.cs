@@ -8,6 +8,30 @@ namespace ChampionsOfKhazad.Bot.GenAi.Tests;
 public class CustomerDisciplineReplyTests
 {
     [Theory]
+    [InlineData(LorekeeperTemperament.Baseline, false)]
+    [InlineData(LorekeeperTemperament.Grouchy, false)]
+    [InlineData(LorekeeperTemperament.Furious, false)]
+    [InlineData(LorekeeperTemperament.Baseline, true)]
+    [InlineData(LorekeeperTemperament.Grouchy, true)]
+    [InlineData(LorekeeperTemperament.Furious, true)]
+    public async Task EveryTemperamentUsesTheSharedCharacterVoiceForServiceAndBarredReplies(LorekeeperTemperament temperament, bool barred)
+    {
+        using var fixture = new Fixture();
+        fixture.Personality.Setting = new LorekeeperPersonalitySetting(temperament);
+        if (barred)
+            await fixture.AddStrikesAsync(3);
+
+        await fixture.InvokeAsync();
+
+        var prompt = fixture.Chat.Messages[0].Text!;
+        Assert.Contains(LorekeeperPersonality.CharacterPrompt, prompt);
+        Assert.Contains(LorekeeperPersonality.GetPrompt(temperament).Split('\n')[0], prompt);
+        Assert.Contains(LorekeeperPersonality.CustomerPolicy, prompt);
+        Assert.Equal(barred, prompt.Contains("## Barred customer:", StringComparison.Ordinal));
+        Assert.Equal(1, fixture.Chat.Calls);
+    }
+
+    [Theory]
     [InlineData("Hello")]
     [InlineData("Shame. I liked the old clanker more")]
     [InlineData("whomst amongst us have strikes?")]

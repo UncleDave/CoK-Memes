@@ -2,11 +2,20 @@
 
 ## Purpose and status
 
-This standalone addon is the first, experimental slice of the
+**Paused:** the roster feature now plans around an assumed release-time Blizzard
+web API. Keep this addon as a fallback experiment; in-game probe testing is no
+longer a prerequisite for the API path. API availability is still unconfirmed.
+
+The paused probe still records realm-shaped diagnostic fields from the APIs it
+was built to inspect. Those are not a production identity model: Forever has no
+realms and uses Firstname Lastname character names. Revisit this collector's name
+and identity handling if addon work resumes; do not reuse its schema unchanged.
+
+This standalone addon is an experimental slice of the
 [guild roster plan](../../bot/docs/guild-roster.md). Its job is to establish what
-Forever actually exposes before designing production imports or building the
-bot, portal, database, slash command, or Grub tools. It is not a production import
-format and must not be used to replace a guild membership list.
+Forever actually exposes before designing a production addon import path.
+It is not a production import format and must not be used to replace a guild
+membership list.
 
 Local mock tests exist. **The addon has not yet been verified in the Forever
 client.** A successful mock test, an existing function name, or an update event
@@ -110,10 +119,10 @@ differences between conditions are the evidence we need.
    values, and privately shared or consistently anonymized reports. Especially
    call out missing APIs, issues, offline gaps, and profession mismatches.
 
-## Gate for subsequent work
+## Gate if addon work resumes
 
-Do not advance the production roster feature merely because the addon runs.
-First decide from the in-game results:
+Do not advance a production addon exporter merely because the probe runs.
+If that path resumes, first decide from the in-game results:
 
 - Can one ordinary guild member reliably collect complete membership and levels?
 - Which profession fields are guild-wide versus self-only, with what offline,
@@ -122,9 +131,10 @@ First decide from the in-game results:
 - Does an exporter need a UI action, a different API, or a narrower initial scope?
 
 Then capture sanitized fixtures, document the observed constraints, and choose
-the stable production export contract. If collection is inadequate, revise the
-plan before implementing consumers. Neither this probe nor its JSON schema
-commits us to a particular production adapter or to a future Blizzard web API.
+the stable production addon export contract. If collection is inadequate, revise
+the fallback plan before implementing its importer. Neither this probe nor its
+JSON schema commits us to a particular production adapter or to a future Blizzard
+web API.
 
 ## API references used for the probe
 

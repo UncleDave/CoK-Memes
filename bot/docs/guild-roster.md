@@ -3,15 +3,23 @@
 Status: production feature planning only; no roster import, leaderboard command,
 or roster tools are implemented. A standalone diagnostic addon exists in
 [`addons/GrubRosterProbe`](../../addons/GrubRosterProbe), with local mock tests;
-it has not yet been verified in the Forever client. See the
-[in-game probe checklist](../../addons/docs/roster-probe.md).
+it has not yet been verified in the Forever client and is now on the backburner.
+See the [in-game probe checklist](../../addons/docs/roster-probe.md).
 This records the requested direction and proposed first-version defaults,
 not a claim that every detail below has been approved.
 
-**Current gate:** build and test the addon in Forever before implementing any
-production roster services, persistence, portal imports, commands, or Grub tools.
-Use the observed results to revise this draft and choose a production export
-contract. The diagnostic report is not that contract.
+Review decisions: keep this small. Use database-backed pending/sent notifications,
+not transactional crash recovery or exactly-once delivery. Secondary professions
+can announce milestones. Do not build catch-up throttling/expiry controls unless
+spam becomes an observed problem. API-terms-specific expiry/compliance feature
+work is outside the initial implementation scope. The notification channel is TBD.
+
+**Current direction:** assume an external Blizzard API will be available at
+release for planning purposes, without treating that as a confirmed announcement.
+Keep the source-independent model, but prioritize an API adapter rather than an
+addon exporter. Addon testing is paused, not a prerequisite for API-path work.
+Actual API endpoints, fields, completeness, and freshness still need verification
+before shipping an integration. The diagnostic report is not a production contract.
 
 ## Direction
 
@@ -19,20 +27,21 @@ contract. The diagnostic report is not that contract.
 - Include character professions and skill ranks where the source exposes them,
   supporting profession-specific rankings and guild crafter lookup.
 - Make the same roster queries available to Grub through read-only tools.
-- Keep consumers independent of collection method: start with an addon export
-  pasted into the portal, with an external Blizzard API adapter possible later.
-- External API support is unconfirmed. Addon roster fields and complete offline
-  roster collection must be checked in the Forever client before committing to
-  an export contract. An API adapter is a future option, not a launch dependency.
+- Announce selected level and profession milestones after observing them in
+  accepted roster data, without turning every poll into a Discord post.
+- Keep consumers independent of collection method: plan for an external Blizzard
+  API adapter first. Retain the addon/paste approach as a paused fallback.
+- External API support at release is a working assumption, not confirmed support
+  or a promise that levels and professions will have the same endpoint coverage.
 
 ## Proposed first version
 
 `/leaderboard` posts the top 10 guild characters by level in the invoking guild
-channel. Include character name, realm where needed, class, and level. Alts count
-as separate characters; this is not a ranking of Discord members or mains.
+channel. Include the character's full name (Firstname Lastname), class, and level.
+Alts count as separate characters; this is not a ranking of Discord members or mains.
 Defer the interaction before querying, following the existing command pattern.
 
-Equal levels share a rank (1, 1, 3); names and realms give deterministic ordering
+Equal levels share a rank (1, 1, 3); full names give deterministic ordering
 within ties, not evidence of who reached a level first. Bound each page to 10
 rows and allow an optional page number; ranks apply across the entire snapshot.
 Show the roster observation timestamp once. No data, unavailable storage, and an
@@ -62,8 +71,10 @@ The [GetGuildTradeSkillInfo reference](https://warcraft.wiki.gg/wiki/API:GetGuil
 lists profession IDs, member names, and skill ranks, and marks the function as
 available in Forever. That is a collection lead, not proof of complete/current
 guild data. The client spike must test offline visibility, refresh behaviour,
-secondary profession coverage, and whether maximum ranks are exposed. If one
-exporter cannot see other members' professions, per-character addon exports or
+secondary profession coverage, and whether maximum ranks are exposed if addon
+work resumes. This investigation is paused; the API path instead needs to verify
+its own profession endpoints and fields. If one exporter cannot see other
+members' professions, per-character addon exports or
 addon-to-addon sharing are possible later fallbacks, not assumed first-version
 capabilities. Level collection can ship without profession collection.
 
@@ -71,7 +82,7 @@ Proposed Grub tools:
 
 - `get_guild_leaderboard`: the same ranked, bounded pages as the command, with an
   optional profession filter; defaults to character level.
-- `find_guild_characters`: bounded name lookup returning level, class, realm,
+- `find_guild_characters`: bounded name lookup returning full name, level, class,
   known professions, observation timestamps, and explicit ambiguity/pagination.
 - `find_guild_profession_members`: bounded profession lookup with an optional
   minimum skill, returning matching characters, ranks, timestamps, and coverage.
@@ -82,8 +93,8 @@ not DMs, spontaneous followers, or the barred-customer branch. Keep the existing
 customer-service execution guards. There are no import or edit tools.
 
 Current levels and professions come from roster tools, not lore, notebook entries,
-chat claims, or model memory. Preserve lore lookup for identity/history questions, but update
-tool guidance so numeric roster queries do not depend on a lore search. Names
+chat claims, or model memory. Preserve lore lookup for identity/history questions,
+but update tool guidance so numeric roster queries do not depend on a lore search. Names
 are data, never instructions; missing records are not invented. A tool result
 must distinguish no snapshot, no match, and lookup failure. Grub should state the
 snapshot age once when reporting levels, without repeating internal caveats.
@@ -91,21 +102,27 @@ snapshot age once when reporting levels, without repeating internal caveats.
 ## Shared data boundary
 
 ```text
-Addon paste adapter ─┐
-                     ├─> validated roster snapshot ─> Mongo store
-Future API adapter ──┘                                  │
-                                           shared roster queries
-                                              ├─> /leaderboard
-                                              └─> Grub tools
+Planned API adapter ──┐
+Paused paste adapter ─┴─> validated roster data ─> Mongo store
+                                                   │
+                                          shared roster queries
+                                             ├─> /leaderboard
+                                             ├─> Grub tools
+                                             └─> milestone detection
 ```
 
 Proposed normalized snapshot fields:
 
-- Scope: Discord guild mapping plus game variant, region, realm, and WoW guild.
+- Scope: Discord guild mapping plus game variant, API region where applicable,
+  and WoW guild ID/name. Forever has no realms; do not require a realm field or
+  invent a realm slug to fit another version's API routes.
 - Provenance: source kind, export/schema version, observed-at and imported-at UTC
   timestamps, importing actor, and a snapshot ID/content hash for repeat imports.
-- Characters: name, realm, stable class identifier, and integer level. Keep source
-  character IDs optional; do not require Blizzard IDs from an addon export.
+- Characters: stable source character ID where available, first name, last name,
+  full display name, stable class identifier, and integer level. Preserve the
+  spelling/Unicode of both name parts. Prefer API-provided name parts; do not
+  reuse `Name-Realm` parsing or guess a split for ambiguous full-name input.
+  Keep IDs optional for adapters that cannot provide them.
 - Optional profession observations per character: stable profession/skill-line ID,
   tier where applicable, display name, nullable current/maximum skill, observation
   time, and coverage status (unknown, partial, or complete). Collection time is not
@@ -120,25 +137,149 @@ Keep their actual observation times, and never relabel cached/previous values as
 fresh after another roster import. An adapter without profession support reports
 unknown rather than silently merging data from the previous source.
 
-Use game variant + region + normalized realm + normalized name as the initial
-character key, preserving original display spelling and Unicode. Validate
-normalization against real exports. Renames/transfers are not automatically
-linked; class is not part of identity. Do not hard-code the level cap to 60.
+Prefer game variant + API scope + stable source character ID as the identity key.
+Names are display/search fields, not the identity when an ID exists. A different
+ID reusing the same Firstname Lastname is a new character and gets a fresh silent
+baseline, not the previous character's milestones. A rename with the same ID
+keeps progression attached to that ID. Class is not part of identity.
 
-Prefer one accepted complete snapshot and one active source per roster. Publish
-the whole validated snapshot atomically; readers never see a half-imported roster.
-Reject stale observations, repeat imports idempotently, and prevent concurrent
-confirmations from overwriting a newer accepted revision. Reuploading an old
-export must not make its observations appear fresh. Switching sources is explicit,
-not a field-by-field merge or silent fallback to older addon data.
+For a name-only adapter, use normalized first name + last name within game/API
+scope, retaining original display spelling. Validate normalization against actual
+payloads. Do not silently carry progression across a known departure and later
+ambiguous name reuse; rebaseline conservatively. Name-only data cannot reliably
+distinguish all renames or deleted/recreated characters between observations.
+Do not hard-code the level cap to 60.
+
+Keep one active source and one accepted complete membership/level snapshot per
+roster. Publish that snapshot atomically so readers never see a half-imported list.
+If professions come from separate requests, store their observations separately
+per character/skill track, with independent timestamps and update ordering. A
+roster-only refresh must not clear known same-source profession data; a late
+profession response must not overwrite levels, membership, or newer profession
+data. Compose these observations for queries, retaining their individual ages.
+If one response supplies both levels and professions, consume both without
+introducing an unnecessary second request or refresh schedule.
+
+Reject stale updates and repeat imports idempotently. Prevent concurrent import
+confirmations from overwriting a newer revision; reuploading an old export must
+not make it appear fresh. Switching sources is explicit, not a field-by-field
+multi-source merge or silent fallback to older addon data.
 
 Only a verified complete roster can replace the current membership list. Reject
 partial/online-only exports for the initial version rather than treating absent
 characters as guild departures. Snapshot replacement does not delete lore or
-member links. Imported data is a member-supplied observation, not Blizzard-verified
-ownership or proof of a person's identity.
+member links. Pasted addon data is a member-supplied observation, not
+Blizzard-verified ownership or proof of a person's identity.
 
-## Copy/paste import
+### Membership lifecycle
+
+Use the guild roster as the source of current membership when the API provides
+it. An ID absent from a newly accepted complete roster stops appearing in the
+leaderboard and Grub's current-guild queries. Stop its profession polling and
+discard its unsent milestone notifications. A failed/partial roster request or a
+failed profile request must not be interpreted as a departure.
+
+Roster absence can cover a departure or deletion without proving which occurred.
+A confirmed deleted profile also stops being shown as a current character.
+Neither case deletes unrelated lore or Discord member links. Keep progression
+keyed by stable ID so a different character reusing a name does not inherit it.
+After a known departure, baseline the character silently if it later rejoins,
+rather than celebrating progress made outside the guild. Discard late profession
+results for characters that are no longer current members.
+
+## API freshness — proposed starting policy
+
+Assuming Forever follows the existing WoW web-API model, polling can only detect
+published data, not observe live game events. Visible delay is Blizzard's
+publication delay plus up to one polling interval and request/processing time.
+Publication can depend on logout and server-side intervals; there is no verified
+Forever latency bound. Fast polling cannot fix stale upstream data.
+
+- Start with one guild roster check every 60 seconds, subject to actual endpoint
+  caching guidance, rate limits, and observed publication cadence. Use roster
+  levels directly if available rather than fan-out per character unnecessarily.
+- Only use a separate 5–15-minute profession schedule if professions require
+  different requests and polling them less often saves meaningful calls, payload,
+  or processing. Use bounded concurrency and a shared budget if so. If roster
+  responses already contain professions, refresh those fields with the roster.
+- Commands and Grub read the shared cache. A request may trigger a deduplicated
+  refresh when due; concurrent users must not each trigger a full guild scan.
+- Honour cache/conditional-request support where available, and back off on 429s
+  and service errors. Preserve the last successful data without claiming a
+  failed refresh succeeded. A failed character lookup is not a guild departure.
+- Store last-check/last-success times separately from source document modification
+  times. A successful poll or 304 does not prove the underlying character state
+  is current. `Last-Modified`, when supplied, describes the API document, not the
+  exact moment every character level or profession rank changed.
+
+The 60-second roster and conditional 5–15-minute profession intervals are starting
+proposals, not guarantees or measured Forever behaviour. Measure launch-day level,
+roster, and profession
+publication after controlled changes/logout, then tune polling. Show honest source
+age/check status; do not advertise real-time levelling or first-to-cap timing.
+
+References for existing WoW behaviour, not a Forever contract:
+[Blizzard's historical logout/interval explanation](https://us.forums.blizzard.com/en/blizzard/t/character-profile-api-not-updating-since-830/2967/4),
+[conditional requests and document timestamps](https://us.forums.blizzard.com/en/blizzard/t/world-of-warcraft-api-update-visions-of-nzoth/3461/15),
+and [Raidbots' profile update guidance](https://support.raidbots.com/article/12-why-is-my-character-out-of-date).
+
+## Milestone notifications
+
+- Character levels: every ten levels (10, 20, 30, etc.) and the verified game
+  level cap, even if it is not a multiple of ten. Keep thresholds configurable.
+- Professions: configurable rank thresholds, initially 75, 150, 225, and 300
+  where applicable to Forever's actual profession model. Treat these as numeric
+  milestones, not proof of a trained tier, recipe, or specialisation. A reported
+  maximum changing from 75 to 150 is not itself a skill-rank milestone. Secondary
+  professions are included when their ranks are available.
+- Post to one configured guild channel (destination TBD), with no automatic
+  member/role mentions. Use full character names; do not infer Discord ownership.
+  The normal roster/Grub read tools do not grant posting authority.
+- Use short deterministic copy, for example `Borin Ironhide reached level 20!` or
+  `Élodie Firebrand reached 150 Alchemy!`. Combine observations for readability,
+  splitting at Discord's message limits without silently truncating notices.
+  No LLM call is needed to detect milestones or write each announcement.
+
+Compare successive accepted, known numeric observations for the same character
+and, for professions, the same skill line/tier. Trigger when the previous value
+was below a configured threshold and the new value reaches or exceeds it; exact
+equality is not required. If several thresholds were crossed between observations,
+announce only the highest newly crossed threshold per character/progression track.
+Do not invent an achievement time or ordering: these are newly observed milestones,
+not proof that the character just dinged or reached a cap before someone else.
+
+The first successful observation seeds a baseline silently, both for the initial
+guild import and for newly seen characters/professions. Unknown/missing values,
+failed/unchanged/stale responses, and a newly joined high-level member do not
+generate retrospective celebrations. Rebaseline on an explicit source switch;
+do not turn adapter differences into milestones.
+
+Persist high-water marks and notification records in the database. Numeric
+regressions or temporarily missing professions must not reset a baseline and
+announce an already-recorded milestone again. Give each notice a unique key for
+guild scope + character identity + progression track + threshold, preventing
+ordinary repeated polls from creating duplicate records.
+
+Keep delivery simple: save a pending notice first, send it through one delivery
+worker, then save its sent status, sent time, and Discord message ID when available.
+Only send notices successfully saved as pending; leave known send failures pending
+for retry. The existing in-memory `NotificationQueue` is not the persistent store
+for these notices.
+
+Do not add transactions spanning snapshots, high-water marks, and pending records,
+crash-point replay, or automatic uncertain-send reconciliation to the first
+version. A crash before recording a notice can miss a milestone; a send accepted
+by Discord followed by a failed sent-status save can produce a duplicate on retry.
+These rare gaps/duplicates are an accepted best-effort tradeoff, not an exactly-once
+guarantee. Normal pending/sent state survives restarts.
+
+No outage-specific catch-up throttles, backlog expiry, or cooldown policy is needed
+unless spam is actually observed. Keep the highest-crossed-threshold behaviour
+above, rather than replaying intermediate thresholds. Secondary professions are
+approved; only the destination channel is still TBD. This requires small
+progression/delivery state, not a full historical snapshot archive or race system.
+
+## Copy/paste import — paused fallback
 
 Use the existing portal admin authorization policy initially; officer/self-service
 permissions are a separate decision. The addon presents a versioned export string
@@ -164,17 +305,29 @@ retention and growth tracking are outside the first version.
 
 - [x] Build a standalone collection probe with copyable diagnostics and local
   mock tests. No bot, portal, or database integration.
-- [ ] Verify Forever addon collection in-client, especially offline members,
-  completeness, refresh timing, realm names, and available identifiers. Verify
+- [ ] Verify the assumed release API: namespace, guild membership/level fields,
+  stable character IDs and Firstname/Lastname fields, profession coverage, whether
+  profession queries are separate, authentication, limits/cache headers, and actual
+  publication delay. Forever has no realms. Capture sanitized fixtures; do not
+  invent an endpoint contract.
+- [ ] Paused: verify Forever addon collection in-client, especially offline members,
+  completeness, refresh timing, two-part names, and available identifiers. Verify
   profession names/ranks, primary/secondary coverage, and cached/unknown values
   separately. Capture sanitized fixtures and define the versioned export format.
 - [ ] Build the roster feature's normalized model, validator, snapshot store,
   ranking, and lookup services with fixture-based tests. Follow the existing
   feature-project/Mongo separation; keep Discord, portal, and AI dependencies out
   of roster domain logic. Cover optional profession data, unknown versus empty,
-  nullable ranks, and profession/tier-specific queries. Add any new test projects
-  to the solution.
-- [ ] Adapt the tested probe into a production exporter and add the admin portal
+  nullable ranks, profession/tier queries, stable IDs versus reused names, guild
+  departures/deletions/rejoins, and a no-realm character model. Add any new test
+  projects to the solution.
+- [ ] Implement the API adapter and background refresh over shared roster queries,
+  with deduplicated requests, conditional requests, backoff, and separate
+  upstream/checked timestamps. Split profession refreshes only when the API shape
+  and savings justify it; test section-specific update ordering and retained
+  profession ages if split. Test stale/failed responses without losing the last
+  good roster, plus confirmed membership removals and late profile responses.
+- [ ] Paused: adapt the tested probe into a production exporter and add the admin portal
   paste/preview/confirm flow. Test
   authorization, invalid and partial exports, stale/duplicate imports, concurrent
   confirmations, and atomic replacement. Exercise the flow with `npm run dev`.
@@ -184,6 +337,13 @@ retention and growth tracking are outside the first version.
 - [ ] Expose the read-only Grub tools over the same queries. Test tool exposure,
   access guards, ambiguity, pagination, freshness, and failure semantics. Check
   representative live replies for accuracy and concise status copy.
+- [ ] Add milestone detection and configured-channel delivery after the API's
+  fields are verified. Test exact and skipped threshold crossings, silent first
+  observations, missing/failed data, source switches, regressions, profession tier
+  separation, secondary professions, unique notice keys, database pending/sent
+  persistence, and send-before-sent-status ordering. Verify departure cancellation
+  and Discord message splitting. Test complete message copy and disabled mentions;
+  do not require transactional crash recovery or exactly-once send tests.
 
 Run the relevant backend build/tests/format checks and frontend build/tests/lint
 for implementation changes. Replace this draft's proposals with confirmed
@@ -193,14 +353,23 @@ behavior as each slice ships; do not mark planned work as implemented.
 
 - Command name and defaults: `/leaderboard`, top 10, public response, all alts.
 - Optional profession rankings and crafter lookup; exact collection coverage is
-  gated on the Forever client spike, not assumed from the level roster.
-- Guild realm/region and who will supply imports; admin-only portal is the default.
+  gated on the available API, not assumed from the level roster. The client spike
+  is needed only if the addon fallback resumes.
+- Guild identity, API region where relevant, and API configuration (no realm);
+  import permissions can wait while the addon path is paused (admin-only portal
+  remains its proposed default).
+- Proposed polling cadence: roster every 60 seconds; profession details every
+  5–15 minutes only if separate requests make that worthwhile. Otherwise consume
+  professions alongside the roster. Adjust to actual API behaviour and limits.
 - Whether to expose an exact age only or also mark snapshots stale after a chosen
   threshold; never silently hide old data or label it current.
+- Milestone destination channel: TBD. Threshold defaults remain ten-level steps
+  plus level cap, and profession ranks 75/150/225/300 where applicable. Secondary
+  professions are included; no pings. No catch-up spam controls unless needed.
 
 Defer mains-only/player rankings, Discord ownership claims, XP-within-level,
-historical gains, first-to-cap races, scheduled posts, desktop uploaders, and
-multi-source merging. Also defer recipes, crafting specialisations, per-member
+historical gains, first-to-cap races, scheduled leaderboard posts, desktop
+uploaders, and multi-source merging. Also defer recipes, crafting specialisations, per-member
 profession submissions, and addon-to-addon sharing. If member links are added
 later, use explicit structured assignments rather than inferring ownership from
 lore names or Discord nicknames.

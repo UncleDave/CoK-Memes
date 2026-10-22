@@ -1,0 +1,8 @@
+## Interface: 16001
+## Title: Grub Roster Probe
+## Notes: On-demand guild roster and profession diagnostics for WoW: Forever.
+## Author: Crossroads Mega Chippy
+## Version: 0.1.0
+
+Probe.lua
+UI.lua

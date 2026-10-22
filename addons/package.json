@@ -1,0 +1,11 @@
+{
+  "name": "grub-roster-probe-tests",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/*.test.mjs"
+  },
+  "devDependencies": {
+    "luaparse": "0.3.1",
+    "wasmoon": "1.16.0"
+  }
+}

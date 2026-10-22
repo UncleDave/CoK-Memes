@@ -66,14 +66,25 @@ public class LorekeeperPersonalityServiceTests
     public void TemperamentInstructionsAreIncludedOnlyForTheSelectedPreset(LorekeeperTemperament temperament)
     {
         var prompt = LorekeeperPersonality.GetPrompt(temperament);
-        if (temperament == LorekeeperTemperament.Baseline)
-            Assert.DoesNotContain("## Your Temperament:", prompt);
-        else
-            Assert.Contains("## Your Temperament:", prompt);
-        if (temperament == LorekeeperTemperament.Furious)
-            Assert.Contains("## Voice Examples", prompt);
-        else
-            Assert.DoesNotContain("## Voice Examples", prompt);
+        foreach (var preset in Enum.GetValues<LorekeeperTemperament>())
+        {
+            if (preset == temperament)
+                Assert.Contains(LorekeeperPersonality.GetTemperamentPrompt(preset), prompt);
+            else
+                Assert.DoesNotContain(LorekeeperPersonality.GetTemperamentPrompt(preset), prompt);
+        }
+        Assert.Contains(LorekeeperPersonality.VoiceExamples, prompt);
+        Assert.Contains(LorekeeperPersonality.ServicePolicy, prompt);
+        Assert.Contains(LorekeeperPersonality.NotebookPolicy, prompt);
+        Assert.Contains(LorekeeperPersonality.CustomerPolicy, prompt);
+    }
+
+    [Fact]
+    public void CharacterBriefKeepsTheAcceptedOriginAndStaysCompact()
+    {
+        Assert.Contains("Orgrimmar", LorekeeperPersonality.IdentityPrompt);
+        Assert.Contains("Barrens", LorekeeperPersonality.IdentityPrompt);
+        Assert.InRange(LorekeeperPersonality.CharacterPrompt.Length + LorekeeperPersonality.VoiceExamples.Length, 1, 2300);
     }
 
     [Fact]

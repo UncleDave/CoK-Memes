@@ -30,6 +30,10 @@ public class ConversationPersonalityTests
         Assert.Equal(ChatRole.System, messages[0].Role);
         Assert.Contains("You are responding to a Discord message from: CurrentRaider", messages[0].Text);
         Assert.Contains("The current author's Discord user ID is 456.", messages[0].Text);
+        Assert.Contains(GuildPromptContext.Identity, messages[0].Text);
+        Assert.Contains(GuildPromptContext.Activity, messages[0].Text);
+        Assert.DoesNotContain(LorekeeperPersonality.CharacterPrompt, messages[0].Text);
+        Assert.DoesNotContain(LorekeeperPersonality.VoiceExamples, messages[0].Text);
         Assert.DoesNotContain("{{$", messages[0].Text);
         Assert.Equal(history.Select(message => message.Text), messages.Skip(1).Select(message => message.Text));
         Assert.Equal(history.Select(message => message.AuthorName), messages.Skip(1).Select(message => message.AuthorName));

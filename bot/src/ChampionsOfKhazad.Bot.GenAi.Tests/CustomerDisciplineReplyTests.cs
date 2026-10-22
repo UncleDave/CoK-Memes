@@ -24,10 +24,25 @@ public class CustomerDisciplineReplyTests
         await fixture.InvokeAsync();
 
         var prompt = fixture.Chat.Messages[0].Text!;
-        Assert.Contains(LorekeeperPersonality.CharacterPrompt, prompt);
-        Assert.Contains(LorekeeperPersonality.WorldFramingPrompt, prompt);
-        Assert.Contains(LorekeeperPersonality.GetPrompt(temperament).Split('\n')[0], prompt);
+        Assert.Contains(LorekeeperPersonality.GetCharacterPrompt(temperament), prompt);
+        Assert.Equal(2, prompt.Split(LorekeeperPersonality.CharacterPrompt, StringSplitOptions.None).Length);
+        Assert.Equal(2, prompt.Split(LorekeeperPersonality.VoiceExamples, StringSplitOptions.None).Length);
+        Assert.Equal(2, prompt.Split(LorekeeperPersonality.GetTemperamentPrompt(temperament), StringSplitOptions.None).Length);
         Assert.Contains(LorekeeperPersonality.CustomerPolicy, prompt);
+        Assert.Equal(2, prompt.Split(LorekeeperPersonality.CustomerPolicy, StringSplitOptions.None).Length);
+        if (barred)
+        {
+            Assert.DoesNotContain(LorekeeperPersonality.ServicePolicy, prompt);
+            Assert.DoesNotContain(LorekeeperPersonality.NotebookPolicy, prompt);
+        }
+        else
+        {
+            Assert.Contains(LorekeeperPersonality.ServicePolicy, prompt);
+            Assert.Contains(LorekeeperPersonality.NotebookPolicy, prompt);
+        }
+        // Fixed text only: no linked member/notes, guild emoji list or history/tool payload.
+        Assert.InRange(prompt.Length, 1, barred ? 6000 : 10000);
+        TestContext.Current.TestOutputHelper?.WriteLine($"{temperament}, barred={barred}: {prompt.Length} fixed system-prompt characters");
         Assert.Equal(barred, prompt.Contains("## Barred customer:", StringComparison.Ordinal));
         Assert.Equal(1, fixture.Chat.Calls);
     }
@@ -51,7 +66,7 @@ public class CustomerDisciplineReplyTests
 
         Assert.Equal(2, fixture.Chat.Calls);
         Assert.Equal(1, fixture.Lore.Searches);
-        Assert.Contains(LorekeeperPersonality.WorldFramingPrompt, fixture.Chat.Messages[0].Text);
+        Assert.Contains(LorekeeperPersonality.GetCharacterPrompt(temperament), fixture.Chat.Messages[0].Text);
         Assert.Contains(
             LorekeeperPersonality.GetPrompt(temperament).Replace("{{$userName}}", fixture.Context.UserName),
             fixture.Chat.Messages[0].Text

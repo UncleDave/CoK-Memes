@@ -160,6 +160,9 @@ public class PersonalityBaseTests
 
     [Theory]
     [InlineData("Aye! [Cat](https://example.com/cat.png)\nhttps://example.com/dog.png")]
+    [InlineData("I couldn't save that change. Try again later.")]
+    [InlineData("I can't verify the source. Treat this as uncertain.")]
+    [InlineData("If you're in immediate danger, contact local emergency services.")]
     [InlineData("\\![Cat](https://example.com/cat.png)")]
     [InlineData("Use `![Cat](https://example.com/cat.png)` for a Markdown image.")]
     [InlineData("Use ``![Cat `anime`](https://example.com/cat.png)`` for a Markdown image.")]

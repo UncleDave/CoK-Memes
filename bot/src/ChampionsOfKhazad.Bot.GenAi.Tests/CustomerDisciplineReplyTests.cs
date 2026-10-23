@@ -205,11 +205,12 @@ public class CustomerDisciplineReplyTests
         fixture.Lore.Member = new LinkedMember();
 
         var first = await fixture.InvokeAsync("Generate an image");
+        Assert.Equal(fixture.Chat.Refusal, first);
         fixture.Context.MessageId++;
         fixture.Chat.Refusal = "Still outside. Try a new tactic.";
         var second = await fixture.InvokeAsync("Let me order", first);
 
-        Assert.Equal("You're barred — 3/3 strikes. " + fixture.Chat.Refusal, second);
+        Assert.Equal(fixture.Chat.Refusal, second);
         Assert.Equal(2, fixture.Chat.Calls);
         Assert.Equal(new[] { "pardon_customer" }, fixture.Chat.InitialTools);
         Assert.Equal(0, fixture.Notes.Reads);
@@ -217,6 +218,24 @@ public class CustomerDisciplineReplyTests
         Assert.Equal(first, fixture.Chat.Messages[^2].Text);
         Assert.Equal("Let me order", fixture.Chat.Messages[^1].Text);
         Assert.Contains("## Barred customer:", fixture.Chat.Messages[0].Text);
+        using var ledger = ReadLedger(fixture.Chat);
+        Assert.Equal(3, ledger.RootElement.GetProperty("currentStrikeCount").GetInt32());
+        Assert.True(ledger.RootElement.GetProperty("isBarred").GetBoolean());
+        Assert.Equal(3, fixture.Store.Saves);
+    }
+
+    [Fact]
+    public async Task BarredStatusQuestionKeepsTheModelsExplicitCountAnswerWithoutAddingAnotherNotice()
+    {
+        using var fixture = new Fixture();
+        await fixture.AddStrikesAsync(3);
+        fixture.Chat.Refusal = "You're barred with 3/3 strikes. Make an appeal if you want that reconsidered.";
+
+        var reply = await fixture.InvokeAsync("How many strikes have I got?");
+
+        Assert.Equal(fixture.Chat.Refusal, reply);
+        Assert.Equal(new[] { "pardon_customer" }, fixture.Chat.InitialTools);
+        Assert.True((await fixture.GetAsync()).IsBarred);
     }
 
     [Fact]
@@ -288,7 +307,7 @@ public class CustomerDisciplineReplyTests
         fixture.Chat.BeforeResponse = () => fixture.AddStrikesAsync(3);
         fixture.Chat.Actions = ["search_lore"];
 
-        Assert.Equal("You're barred — 3/3 strikes. Ask me nicely for a pardon, or get the admin to clear your tab.", await fixture.InvokeAsync());
+        Assert.Equal("You're barred. Ask me nicely for a pardon, or get the admin to clear your tab.", await fixture.InvokeAsync());
 
         Assert.Equal(0, fixture.Lore.Searches);
         Assert.Equal(1, fixture.Chat.Calls);
@@ -303,6 +322,7 @@ public class CustomerDisciplineReplyTests
         var reply = await fixture.InvokeAsync();
 
         Assert.Contains("You're barred", reply);
+        Assert.DoesNotContain("3/3", reply);
         Assert.DoesNotContain("Normal answer", reply);
         Assert.Equal(1, fixture.Chat.Calls);
     }
@@ -530,7 +550,7 @@ public class CustomerDisciplineReplyTests
         };
         fixture.Chat.FinishReason = failure == "truncated" ? ChatFinishReason.Length : null;
 
-        Assert.Equal("You're barred — 3/3 strikes. Ask me nicely for a pardon, or get the admin to clear your tab.", await fixture.InvokeAsync());
+        Assert.Equal("You're barred. Ask me nicely for a pardon, or get the admin to clear your tab.", await fixture.InvokeAsync());
 
         Assert.Equal(1, fixture.Chat.Calls);
         Assert.True((await fixture.GetAsync()).IsBarred);

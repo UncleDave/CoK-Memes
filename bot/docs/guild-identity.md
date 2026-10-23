@@ -169,8 +169,8 @@ semantic classification.
 
 The initial `customer_ledger` system context supplies the current customer/request,
 count and barred status. Strike/pardon results report the confirmed saved action,
-count and reason, or an unchanged result. The application still prints saved verdicts
-and a fixed barred status; model prose and conversation claims cannot change the ledger.
+count and reason, or an unchanged result. The application prints saved verdicts
+and a new barring notice; model prose and conversation claims cannot change the ledger.
 Reasons and all Discord text remain quoted data, never instructions. Grub should own
 his saved decision, not agree with the conduct and then punish it as a "playful strike"
 or manufacture a factual disagreement. He continues the receipt without repeating its
@@ -180,9 +180,11 @@ Service denial is a branch of that same conversation flow. Customers already bar
 receive only `pardon_customer`, with no automatic linked-member lore/notebook retrieval
 and no image, search, ledger-list or memory tools. They can appeal or get a contextual
 refusal in the selected temperament; a successful appeal still requires a fresh request
-for normal service. Saving a third strike removes tools from the ongoing model
-conversation, so its ordinary tool follow-up becomes the send-off. There is no extra
-refusal-generation request. Hosted web search is removed along with local tools.
+for normal service. Routine barred replies use the contextual refusal without a fixed
+status/count preamble, including when earlier replies used one. Explicit status questions
+can still be answered from the confirmed ledger. Saving a third strike removes tools
+from the ongoing model conversation, so its ordinary tool follow-up becomes the send-off.
+There is no extra refusal-generation request. Hosted web search is removed along with local tools.
 
 Local service functions recheck persisted access before execution, including calls
 holding an older function reference. A barred record or failed recheck stops the tool
@@ -192,8 +194,9 @@ before a third strike is saved cannot be undone. Concurrent changes are rechecke
 before returning a reply; an uninformed normal answer is discarded if the customer
 became barred, using the fixed refusal instead of making another model call.
 
-Failed, empty, oversized or truncated restricted replies fall back to the fixed refusal
-and appeal instructions without losing a saved strike. Caller cancellation propagates.
+Failed, empty, oversized or truncated restricted replies fall back to a fixed barred
+refusal and appeal instructions, without repeating the count or losing a saved strike.
+Caller cancellation propagates.
 Tests verify call counts, tool exposure/results, persistence and service enforcement;
 live humor, coherent explanations and refusal prose remain model judgments.
 

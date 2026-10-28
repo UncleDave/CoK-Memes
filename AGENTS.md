@@ -47,6 +47,8 @@ C# is formatted by CSharpier with a 150-column width. Preserve nullable referenc
 
 Backend tests use xUnit in clearly named `*.Tests` projects included in the solution. Frontend request and action tests use Node's built-in test runner in `frontend/tests/`. There is no coverage threshold. Validate every change with the relevant tests, build, and lint commands. For UI work, also exercise the changed flow with `npm run dev`. Add regression tests for behavior changes, and include new backend test projects in the solution.
 
+Do not test a string-literal prompt constant by asserting that it contains literal fragments of that same prompt. These tautological wording checks do not validate model behavior and make editorial changes unnecessarily brittle. Test observable application behavior, request/schema contracts, dynamic prompt composition and data boundaries instead. Assess prompt effectiveness with representative model evaluations or live trials, not substring assertions against static instructions.
+
 ## Commit & Publishing Guidelines
 
 This repository does not use feature branches or pull requests. Work, commit, and push directly on the current branch only when the user asks to publish. History favors short, imperative summaries without scope prefixes, for example `add week check event` or `Update AI model constants`. Keep commits focused; reserve `Bump ...` wording for dependency updates. Ensure all applicable GitHub Actions checks pass.

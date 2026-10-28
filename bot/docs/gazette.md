@@ -92,6 +92,17 @@ publication snapshots, and old attachments are retained. Display rebranding does
 start a new publication history or rewrite previous editions.
 
 Aim for one lead plus two distinct smaller dispatches when the sample supports them.
+Before writing, the writer surveys incidents across the whole sample and compares their
+guild significance. Meaningful milestones and achievements, consequential announcements,
+standout shared events and unusually memorable incidents generally outrank routine recent
+chatter. Impact on members, lasting consequences and exceptionalness must be supported by
+the evidence: do not invent a guild first or progression significance. Recency is only a
+tie-breaker; message volume and input position are not importance scores. An older eligible
+major event should lead over a newer disposable joke, and genuine achievements need not
+contain a ready-made punchline. A hypothetical editorial example models that comparison.
+Selection and writing are distinct phases within the same isolated model request, not
+additional AI calls or a persisted candidate archive. Candidate rankings are not printed.
+
 The lead gets the strongest incident; secondary stories have a lower newsworthiness
 bar and can come from a funny handful of ordinary messages. The writer is instructed
 to continue searching the sample after choosing the lead, not stop at one headline
@@ -128,13 +139,36 @@ Reuse the existing normal-member channel permission calculations:
 - Include human text messages only; ignore bot/webhook/system messages and attachments.
   Complete evidence longer than 4,000 characters is skipped, never silently truncated.
 
-A request reads at most 12 eligible channels (channel-ID order), the latest 100 raw
-messages per channel through Discord REST, then selects up to 160 recent human messages
-within a 40,000-character content/metadata allowance, newest first and supplied to the
-writer chronologically. This is bounded sampling, not a seven-day exhaustive backfill;
-busy channels may cover much less than seven days. The private response reports messages,
-channels read/eligible and read failures. A failed channel does not prevent drafting
-from other safe channels. Draft commands remain serialised but have no artificial
+A request reads at most 12 eligible channels (channel-ID order). The seven-day window
+is divided into seven consecutive 24-hour slices anchored to the request, not calendar
+midnights. For each channel/slice, one Discord REST history request reads at most the
+latest 100 raw messages at or before its upper boundary, using a timestamp-derived
+before cursor; local timestamp checks exclude records outside that slice. Shorter
+windows use at most one slice per day, and all windows are capped at seven slices.
+This raises the maximum history reads to 84 and raw records to 8,400 per normal draft,
+without additional AI calls or persistent chat storage. Channel access and evidence
+filtering are rechecked on every read. A failed slice discards that channel's sample;
+other safe channels remain usable.
+
+Selection then rotates across occupied slices and channels, starting at the oldest
+slice and offsetting the starting channel across slices. Each turn considers a block
+of up to four chronologically neighbouring human messages from that channel/slice,
+beginning with its earliest sampled records. Blocks also have a soft size bound of
+one seventh of the character budget, so long messages do not immediately consume other
+days' space; a single larger message stands alone rather than being truncated.
+Complete blocks that fit the remaining
+budget are admitted; blocks that do not fit are skipped so smaller blocks elsewhere
+can still qualify. The writer receives at most 160 messages within the unchanged
+40,000-character content/metadata allowance, in chronological order. This preserves
+short runs of context while preventing recent chatter or a busy channel from taking
+the whole budget. Records at shared slice boundaries are deduplicated.
+
+This is bounded sampling, not an exhaustive backfill or a guarantee of finding the
+week's biggest event. Earlier messages within a very busy slice, channels beyond the
+12-channel cap, and blocks outside the writer budget can still be missed. Neighbouring
+records are not necessarily the same incident, and missing replies do not establish an
+outcome. The private response reports messages, channels read/eligible and read failures.
+Draft commands remain serialised but have no artificial
 cooldown, command deadline or illustration deadline. Caller cancellation and underlying
 provider/SDK/Discord timeouts still apply; a slow request can hold the command gate
 until it completes, fails or is cancelled.
@@ -382,8 +416,9 @@ Backend tests cover admin-only DM routing, private delivery before approval, rep
 expiry, discard, concurrent/repeated approval, exact-edition publishing, evidence/access
 failures, source access without an admin member-cache entry, private drafting without
 posting permissions, approval-only posting checks, draft-specific failure wording,
-ambiguous sends, quiet inputs, sampling bounds, REST source filtering and the
-writer's tool-free prompt/JSON/citation contracts, server-name resolution, issue-number
+ambiguous sends, quiet inputs, daily-slice reads, temporal/channel sampling balance,
+complete context blocks and input bounds, before-cursor boundaries and REST source filtering, and the
+writer's tool-free request/JSON/citation contracts, server-name resolution, issue-number
 reservation/acknowledgement, one-image-per-draft behavior, exact-evidence artwork reuse,
 cache expiry and explicit missing-image reasons. Reader tests cover private loading
 acknowledgement, ephemeral-only replies, message/audience binding, malformed IDs,
@@ -395,7 +430,9 @@ sending. Preview tests reject approval if even the inside-page delivery fails.
 Rendering tests exercise real PNG output, teaser selection and one/two-page composition
 and wrapping. Live Mongo compare-and-swap/concurrency checks require a disposable Mongo
 instance, and test doubles are not proof of server semantics. Live editorial quality and actual
-Discord permissions/delivery require an admin trial after deployment.
+Discord permissions/delivery require an admin trial after deployment. In particular,
+trial significance-first selection with an older substantial guild event competing
+against newer routine banter; deterministic sampling tests do not prove model ranking.
 
 `GazetteMongoIntegrationTests` is opt-in: set `COK_GAZETTE_MONGO_TEST_CONNECTION` to a
 disposable loopback Mongo server before running the backend tests. It creates/removes

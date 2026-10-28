@@ -183,7 +183,6 @@ public class GazetteWriterTests
                 Assert.StartsWith("Full supported story", article.Body);
             }
         );
-        Assert.Contains("return null for the lead", client.Messages![0].Text!);
     }
 
     [Theory]

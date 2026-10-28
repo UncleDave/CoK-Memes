@@ -17,7 +17,9 @@ internal sealed class DiscordGazetteGateway(
 ) : IGazetteGateway
 {
     internal const int MaximumChannels = 12;
-    internal const int MaximumMessagesPerChannel = 100;
+    internal const int MaximumMessagesPerSlice = 100;
+    internal const int MaximumSamplingSlices = 7;
+    private const int ContextBlockSize = 4;
     internal const int MaximumInputCharacters = 40000;
     internal const int MaximumSources = 160;
     internal const int MaximumPreviousEditions = 5;
@@ -104,13 +106,18 @@ internal sealed class DiscordGazetteGateway(
             cancellationToken.ThrowIfCancellationRequested();
             try
             {
-                var batch = await reader.ReadRecentBatchAsync(id, MaximumMessagesPerChannel, cancellationToken);
-                if (batch is null)
+                var channelSources = await ReadChannelSampleAsync(
+                    since,
+                    until,
+                    (start, end, token) => reader.ReadWindowBatchAsync(id, start, end, MaximumMessagesPerSlice, token),
+                    cancellationToken
+                );
+                if (channelSources is null)
                     failures++;
                 else
                 {
                     read++;
-                    collected.AddRange(batch.Messages.Select(message => message.Source));
+                    collected.AddRange(channelSources);
                 }
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -162,21 +169,108 @@ internal sealed class DiscordGazetteGateway(
     {
         var selected = new List<NotebookSource>();
         var characters = 0;
-        foreach (
-            var source in sources
-                .Where(source => source.TimestampUtc >= since.UtcDateTime && source.TimestampUtc <= until.UtcDateTime)
-                .DistinctBy(source => source.Url)
-                .OrderByDescending(source => source.TimestampUtc)
-        )
+        var windows = GetSamplingWindows(since, until);
+        var eligible = sources
+            .Where(source => source.TimestampUtc >= since.UtcDateTime && source.TimestampUtc <= until.UtcDateTime)
+            .DistinctBy(source => source.Url)
+            .OrderBy(source => source.TimestampUtc)
+            .ThenBy(source => source.Url, StringComparer.Ordinal)
+            .ToArray();
+        var days = windows
+            .Select(
+                (window, index) =>
+                    eligible
+                        .Where(source =>
+                            source.TimestampUtc >= window.Since.UtcDateTime
+                            && (source.TimestampUtc < window.Until.UtcDateTime || index == windows.Count - 1)
+                        )
+                        .GroupBy(source => source.Url[..source.Url.LastIndexOf('/')])
+                        .OrderBy(group => group.Key, StringComparer.Ordinal)
+                        .Select(group => new Queue<NotebookSource[]>(CreateContextBlocks(group)))
+                        .ToArray()
+            )
+            .ToArray();
+        // Each turn visits every occupied day and rotates its channels. Keep short runs of
+        // neighbouring evidence, rather than scattering isolated lines or favouring busy channels.
+        var turns = days.Select((_, index) => index).ToArray();
+        while (selected.Count < MaximumSources && days.Any(channels => channels.Any(channel => channel.Count > 0)))
         {
-            // Include metadata allowance; keep complete messages rather than truncating away qualifications/corrections.
-            var size = source.Content.Length + source.AuthorName.Length + source.Url.Length + source.MentionedUsers.Count * 100 + 200;
-            if (characters + size > MaximumInputCharacters || selected.Count == MaximumSources)
-                break;
-            selected.Add(source);
-            characters += size;
+            for (var day = 0; day < days.Length; day++)
+            {
+                var channels = days[day];
+                for (var attempt = 0; attempt < channels.Length; attempt++)
+                {
+                    var channel = channels[turns[day]++ % channels.Length];
+                    if (!channel.TryDequeue(out var block))
+                        continue;
+                    // Include metadata allowance; admit complete blocks, never truncated corrections.
+                    var size = block.Sum(SourceSize);
+                    if (characters + size <= MaximumInputCharacters && selected.Count + block.Length <= MaximumSources)
+                    {
+                        selected.AddRange(block);
+                        characters += size;
+                    }
+                    break;
+                }
+            }
         }
         return selected.OrderBy(source => source.TimestampUtc).ToArray();
+    }
+
+    private static IEnumerable<NotebookSource[]> CreateContextBlocks(IEnumerable<NotebookSource> sources)
+    {
+        var block = new List<NotebookSource>(ContextBlockSize);
+        var characters = 0;
+        foreach (var source in sources)
+        {
+            var size = SourceSize(source);
+            // Leave room for other days on the first turn, even when messages are long.
+            // A single larger record still stands alone; no message is cut to meet this soft bound.
+            if (block.Count > 0 && (block.Count == ContextBlockSize || characters + size > MaximumInputCharacters / MaximumSamplingSlices))
+            {
+                yield return block.ToArray();
+                block.Clear();
+                characters = 0;
+            }
+            block.Add(source);
+            characters += size;
+        }
+        if (block.Count > 0)
+            yield return block.ToArray();
+    }
+
+    private static int SourceSize(NotebookSource source) =>
+        source.Content.Length + source.AuthorName.Length + source.Url.Length + source.MentionedUsers.Count * 100 + 200;
+
+    internal static IReadOnlyList<(DateTimeOffset Since, DateTimeOffset Until)> GetSamplingWindows(DateTimeOffset since, DateTimeOffset until)
+    {
+        if (until <= since)
+            return [];
+        var count = (int)Math.Clamp(Math.Ceiling((until - since).TotalDays), 1, MaximumSamplingSlices);
+        var ticks = (until - since).Ticks;
+        return Enumerable
+            .Range(0, count)
+            .Select(index => (since.AddTicks(ticks * index / count), since.AddTicks(ticks * (index + 1) / count)))
+            .ToArray();
+    }
+
+    internal static async Task<IReadOnlyList<NotebookSource>?> ReadChannelSampleAsync(
+        DateTimeOffset since,
+        DateTimeOffset until,
+        Func<DateTimeOffset, DateTimeOffset, CancellationToken, Task<NotebookObservationBatch?>> readWindow,
+        CancellationToken cancellationToken
+    )
+    {
+        var sources = new List<NotebookSource>();
+        foreach (var window in GetSamplingWindows(since, until))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var batch = await readWindow(window.Since, window.Until, cancellationToken);
+            if (batch is null)
+                return null;
+            sources.AddRange(batch.Messages.Select(message => message.Source));
+        }
+        return sources.DistinctBy(source => source.Url).ToArray();
     }
 
     public async Task<bool> VerifyAsync(ulong destinationId, IReadOnlyList<NotebookSource> sources, CancellationToken cancellationToken)

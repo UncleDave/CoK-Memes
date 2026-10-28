@@ -27,6 +27,45 @@ public class DiscordNotebookSourceReaderTests
     }
 
     [Fact]
+    public async Task WindowReadsUseABeforeSnowflakeAndFilterExactTimestampsWithTheSameEvidenceRules()
+    {
+        var fixture = new ReaderFixture();
+        var until = ReaderFixture.Timestamp;
+        var since = until.AddDays(-1);
+        fixture.Add(SnowflakeUtils.ToSnowflake(since.AddHours(1)), "Within the window", timestamp: since.AddHours(1));
+        fixture.Add(SnowflakeUtils.ToSnowflake(until), "At upper boundary", timestamp: until);
+        fixture.Add(SnowflakeUtils.ToSnowflake(since.AddSeconds(-1)), "Before window", timestamp: since.AddSeconds(-1));
+        fixture.Add(SnowflakeUtils.ToSnowflake(until.AddMilliseconds(1)), "After cursor", timestamp: until);
+        fixture.Add(SnowflakeUtils.ToSnowflake(since.AddHours(2)), "Bot", bot: true, timestamp: since.AddHours(2));
+        using var cancellation = new CancellationTokenSource();
+        var batch = await fixture.CreateReader().ReadWindowBatchAsync(3, since, until, 200, cancellation.Token);
+        Assert.NotNull(batch);
+        Assert.Equal(SnowflakeUtils.ToSnowflake(until.AddMilliseconds(1)), fixture.AfterMessageId);
+        Assert.Equal(Direction.Before, fixture.Direction);
+        Assert.Equal(100, fixture.Limit);
+        Assert.Equal(new[] { "Within the window", "At upper boundary" }, batch.Messages.Select(message => message.Source.Content));
+        Assert.All(fixture.Tokens, token => Assert.Equal(cancellation.Token, token));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task WindowReadsFailClosedIfAccessChangesDuringNetworkOrMetadata(bool duringMetadata)
+    {
+        var fixture = new ReaderFixture();
+        fixture.Add(42, "Observation <@2>", mentions: [2]);
+        if (duringMetadata)
+            fixture.MetadataRead = fixture.Access.Clear;
+        else
+            fixture.MessagesRead = fixture.Access.Clear;
+        Assert.Null(
+            await fixture
+                .CreateReader()
+                .ReadWindowBatchAsync(3, ReaderFixture.Timestamp.AddDays(-1), ReaderFixture.Timestamp, 100, TestContext.Current.CancellationToken)
+        );
+    }
+
+    [Fact]
     public void ChannelEnumerationUsesFreshAccessAndDoesNotReadOrDisposeRest()
     {
         var fixture = new ReaderFixture();
@@ -344,7 +383,8 @@ public class DiscordNotebookSourceReaderTests
             MessageSource source = MessageSource.User,
             ulong channelId = 3,
             string authorName = "Raider",
-            IReadOnlyCollection<ulong>? mentions = null
+            IReadOnlyCollection<ulong>? mentions = null,
+            DateTimeOffset? timestamp = null
         )
         {
             var author = Stub<IUser>(
@@ -367,7 +407,7 @@ public class DiscordNotebookSourceReaderTests
                         "get_Author" => author,
                         "get_Source" => source,
                         "get_Content" => content,
-                        "get_Timestamp" => Timestamp,
+                        "get_Timestamp" => timestamp ?? Timestamp,
                         "get_MentionedUserIds" => mentions ?? Array.Empty<ulong>(),
                         _ => throw new NotSupportedException(method.Name),
                     }

@@ -24,11 +24,32 @@ internal sealed class DiscordNotebookSourceReader(
     public Task<NotebookObservationBatch?> ReadRecentBatchAsync(ulong channelId, int limit, CancellationToken cancellationToken) =>
         ReadBatchCoreAsync(channelId, null, limit, cancellationToken);
 
+    public async Task<NotebookObservationBatch?> ReadWindowBatchAsync(
+        ulong channelId,
+        DateTimeOffset since,
+        DateTimeOffset until,
+        int limit,
+        CancellationToken cancellationToken
+    )
+    {
+        // Before is exclusive. Include the upper boundary's millisecond, then filter exact timestamps locally.
+        var batch = await ReadBatchCoreAsync(channelId, null, limit, cancellationToken, SnowflakeUtils.ToSnowflake(until.AddMilliseconds(1)));
+        return batch is null
+            ? null
+            : batch with
+            {
+                Messages = batch
+                    .Messages.Where(message => message.Source.TimestampUtc >= since.UtcDateTime && message.Source.TimestampUtc <= until.UtcDateTime)
+                    .ToArray(),
+            };
+    }
+
     private async Task<NotebookObservationBatch?> ReadBatchCoreAsync(
         ulong channelId,
         ulong? afterMessageId,
         int limit,
-        CancellationToken cancellationToken
+        CancellationToken cancellationToken,
+        ulong? beforeMessageId = null
     )
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -43,8 +64,9 @@ internal sealed class DiscordNotebookSourceReader(
             if (channel is null)
                 return null;
             var size = Math.Clamp(limit, 1, MaximumBatchSize);
-            var batches = afterMessageId is { } cursor
-                ? channel.GetMessagesAsync(cursor, Direction.After, size, options: requestOptions)
+            var batches =
+                afterMessageId is { } cursor ? channel.GetMessagesAsync(cursor, Direction.After, size, options: requestOptions)
+                : beforeMessageId is { } before ? channel.GetMessagesAsync(before, Direction.Before, size, options: requestOptions)
                 : channel.GetMessagesAsync(size, options: requestOptions);
             messages = (await batches.FlattenAsync()).ToArray();
         }
@@ -57,7 +79,11 @@ internal sealed class DiscordNotebookSourceReader(
         if (!accessibleChannels.ContainsKey(channelId))
             return null;
         var consumed = messages
-            .Where(message => message.Channel.Id == channelId && (afterMessageId is null || message.Id > afterMessageId.Value))
+            .Where(message =>
+                message.Channel.Id == channelId
+                && (afterMessageId is null || message.Id > afterMessageId.Value)
+                && (beforeMessageId is null || message.Id < beforeMessageId.Value)
+            )
             .DistinctBy(message => message.Id)
             .OrderBy(message => message.Id)
             .ToArray();

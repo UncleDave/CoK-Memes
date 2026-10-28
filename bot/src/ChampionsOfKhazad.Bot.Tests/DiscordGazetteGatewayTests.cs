@@ -98,8 +98,8 @@ public class DiscordGazetteGatewayTests
         var result = DiscordGazetteGateway.SelectSources(sources, Now.AddDays(-7), Now);
         Assert.InRange(result.Count, 1, 12);
         Assert.All(result, source => Assert.EndsWith("Correction: this was fictional.", source.Content));
-        Assert.Contains(result, source => source.Url.EndsWith("/1"));
-        Assert.DoesNotContain(result, source => source.Url.EndsWith("/100"));
+        Assert.True(result.Sum(SourceSize) <= DiscordGazetteGateway.MaximumInputCharacters);
+        Assert.Contains(result, source => source.Url.EndsWith("/100"));
     }
 
     [Fact]
@@ -108,6 +108,135 @@ public class DiscordGazetteGatewayTests
         var sources = Enumerable.Range(1, 1000).Select(index => Source(index, Now.AddSeconds(-index), "X"));
         var result = DiscordGazetteGateway.SelectSources(sources, Now.AddDays(-7), Now);
         Assert.InRange(result.Count, 1, DiscordGazetteGateway.MaximumSources);
+    }
+
+    [Fact]
+    public void BusyRecentChatCannotCrowdOutOlderDaysOrQuieterChannels()
+    {
+        var milestone = Source(10000, Now.AddDays(-6), "We finally defeated the boss after four evenings of attempts.") with
+        {
+            Url = "https://discord.com/channels/1/4/10000",
+        };
+        var sources = Enumerable
+            .Range(0, 7)
+            .SelectMany(day =>
+                Enumerable.Range(1, 100).Select(index => Source(day * 100 + index, Now.AddDays(-day).AddMinutes(-index), "Recent ordinary chatter."))
+            );
+        var result = DiscordGazetteGateway.SelectSources(sources.Append(milestone), Now.AddDays(-7), Now);
+        Assert.Contains(milestone, result);
+        Assert.Equal(7, result.Select(source => (int)(source.TimestampUtc - Now.AddDays(-7).UtcDateTime).TotalDays).Distinct().Count());
+        Assert.InRange(result.Count, 1, DiscordGazetteGateway.MaximumSources);
+        Assert.True(result.Sum(SourceSize) <= DiscordGazetteGateway.MaximumInputCharacters);
+    }
+
+    [Fact]
+    public void LongMessagesStillLeaveRoomForEverySampledDay()
+    {
+        var sources = Enumerable
+            .Range(0, 7)
+            .SelectMany(day =>
+                Enumerable.Range(1, 20).Select(index => Source(day * 100 + index, Now.AddDays(-day).AddMinutes(-index), new string('x', 4000)))
+            );
+        var result = DiscordGazetteGateway.SelectSources(sources, Now.AddDays(-7), Now);
+        Assert.Equal(7, result.Select(source => source.TimestampUtc.Date).Distinct().Count());
+        Assert.All(result, source => Assert.Equal(4000, source.Content.Length));
+        Assert.True(result.Sum(SourceSize) <= DiscordGazetteGateway.MaximumInputCharacters);
+    }
+
+    [Fact]
+    public void BlocksThatDoNotFitDoNotPreventSmallerBlocksElsewhereFromBeingSelected()
+    {
+        var oversized = Source(1, Now.AddDays(-6), "X") with
+        {
+            MentionedUsers = Enumerable.Range(1, 500).Select(id => new NotebookMentionedUser((ulong)id, "Member")).ToArray(),
+        };
+        var small = Source(2, Now.AddMinutes(-1), "Small, complete evidence.");
+        var result = DiscordGazetteGateway.SelectSources([oversized, small], Now.AddDays(-7), Now);
+        Assert.Equal(small, Assert.Single(result));
+    }
+
+    [Fact]
+    public void SelectionBalancesChannelsWithinDaysAndKeepsNeighbouringMessagesTogether()
+    {
+        var sources = Enumerable
+            .Range(0, 7)
+            .SelectMany(day =>
+                Enumerable
+                    .Range(3, 2)
+                    .SelectMany(channel =>
+                        Enumerable
+                            .Range(1, 100)
+                            .Select(index =>
+                                Source(day * 1000 + channel * 100 + index, Now.AddDays(-day).AddMinutes(-index), "X") with
+                                {
+                                    Url = $"https://discord.com/channels/1/{channel}/{day * 1000 + channel * 100 + index}",
+                                }
+                            )
+                    )
+            )
+            .ToArray();
+        var result = DiscordGazetteGateway.SelectSources(sources, Now.AddDays(-7), Now);
+        var buckets = result.GroupBy(source => (Day: source.TimestampUtc.Date, Channel: source.Url.Split('/')[5]));
+        Assert.Equal(14, buckets.Count());
+        Assert.All(
+            buckets,
+            bucket =>
+            {
+                Assert.True(bucket.Count() >= 4);
+                var timestamps = bucket.Take(4).Select(source => source.TimestampUtc).ToArray();
+                Assert.Equal(TimeSpan.FromMinutes(3), timestamps[^1] - timestamps[0]);
+            }
+        );
+        Assert.Equal(result, DiscordGazetteGateway.SelectSources(sources.Reverse(), Now.AddDays(-7), Now));
+    }
+
+    [Fact]
+    public async Task ChannelSamplingReadsEveryDayWithBoundedWindowsAndForwardsCancellation()
+    {
+        var windows = new List<(DateTimeOffset Since, DateTimeOffset Until)>();
+        var result = await DiscordGazetteGateway.ReadChannelSampleAsync(
+            Now.AddDays(-7),
+            Now,
+            (since, until, token) =>
+            {
+                Assert.Equal(TestContext.Current.CancellationToken, token);
+                windows.Add((since, until));
+                var source = Source(windows.Count, since.AddHours(1), "Daily evidence");
+                return Task.FromResult<NotebookObservationBatch?>(new(3, (ulong)windows.Count, [new((ulong)windows.Count, source)]));
+            },
+            TestContext.Current.CancellationToken
+        );
+        Assert.Equal(7, windows.Count);
+        Assert.Equal(Now.AddDays(-7), windows[0].Since);
+        Assert.Equal(Now, windows[^1].Until);
+        Assert.All(windows, window => Assert.Equal(TimeSpan.FromDays(1), window.Until - window.Since));
+        Assert.Equal(7, result!.Count);
+    }
+
+    [Fact]
+    public async Task FailedWindowDiscardsTheChannelsEarlierSamplesAndStopsReading()
+    {
+        var calls = 0;
+        var result = await DiscordGazetteGateway.ReadChannelSampleAsync(
+            Now.AddDays(-7),
+            Now,
+            (_, _, _) =>
+                Task.FromResult<NotebookObservationBatch?>(
+                    ++calls == 1 ? new(3, 1, [new(1, Source(1, Now.AddDays(-6), "No longer accessible"))]) : null
+                ),
+            TestContext.Current.CancellationToken
+        );
+        Assert.Null(result);
+        Assert.Equal(2, calls);
+    }
+
+    [Fact]
+    public void SamplingWindowsRemainBoundedForLongerOrInvalidRanges()
+    {
+        Assert.Equal(7, DiscordGazetteGateway.GetSamplingWindows(Now.AddDays(-30), Now).Count);
+        Assert.Single(DiscordGazetteGateway.GetSamplingWindows(Now.AddHours(-1), Now));
+        Assert.Empty(DiscordGazetteGateway.GetSamplingWindows(Now, Now));
+        Assert.Empty(DiscordGazetteGateway.GetSamplingWindows(Now.AddHours(1), Now));
     }
 
     [Fact]
@@ -136,4 +265,7 @@ public class DiscordGazetteGatewayTests
 
     private static NotebookSource Source(int id, DateTimeOffset at, string content) =>
         new($"https://discord.com/channels/1/3/{id}", 9, "Raider", at.UtcDateTime, content);
+
+    private static int SourceSize(NotebookSource source) =>
+        source.Content.Length + source.AuthorName.Length + source.Url.Length + source.MentionedUsers.Count * 100 + 200;
 }

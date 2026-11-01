@@ -3,10 +3,17 @@
 ## Status and API assumptions
 
 The roster, query, command, Grub-tool, and milestone paths are implemented against
-an opt-in file-backed mock. **There is no live Blizzard HTTP/OAuth adapter yet.**
-No request is made to a guessed Forever endpoint. The addon stays paused.
+an opt-in file-backed mock. **There is no live roster HTTP/OAuth adapter yet.**
+The roster worker makes no Blizzard requests. A separate, manually run
+[API probe](../README.md#forever-api-probe) now checks namespace and candidate-route
+availability without importing data. The addon stays paused.
 See [configuration](../README.md#mock-guild-roster) to run it and the
 [design plan](guild-roster.md) for accepted scope and deferred work.
+
+See [the November API research checkpoint](forever-api-research.md) for the discovered
+namespaces, community-reported account `name`/`surname` fields, internal API realms,
+and the still-unverified guild/profession contract. These findings do not turn the
+fictional fixtures below into verified Forever response schemas.
 
 The user's Classic API references informed the mock:
 

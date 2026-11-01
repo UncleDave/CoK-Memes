@@ -2,7 +2,9 @@
 
 Status: the shared roster feature, leaderboard command, Grub tools, and milestone
 delivery are implemented behind an opt-in, file-backed mock. There is no live
-Forever API adapter or portal import. See [implemented behaviour and mock API
+Forever roster API adapter or portal import. A separate manual app-token
+[API probe and research checkpoint](forever-api-research.md) checks availability
+without feeding the roster. See [implemented behaviour and mock API
 assumptions](guild-roster-runtime.md) and [local configuration](../README.md#mock-guild-roster).
 A standalone diagnostic addon exists in
 [`addons/GrubRosterProbe`](../../addons/GrubRosterProbe), with local mock tests;
@@ -117,8 +119,10 @@ Paused paste adapter ─┴─> validated roster data ─> Mongo store
 Proposed normalized snapshot fields:
 
 - Scope: Discord guild mapping plus game variant, API region where applicable,
-  and WoW guild ID/name. Forever has no realms; do not require a realm field or
-  invent a realm slug to fit another version's API routes.
+  and WoW guild ID/name. Do not require a player-facing realm field or invent a realm
+  slug to fit another version's routes. Community probes expose internal API realms;
+  an adapter may need verified internal routing/identity scope without adding a realm
+  requirement to the shared model. See [current research](forever-api-research.md).
 - Provenance: source kind, export/schema version, observed-at and imported-at UTC
   timestamps, importing actor, and a snapshot ID/content hash for repeat imports.
 - Characters: stable source character ID where available, first name, last name,
@@ -308,10 +312,14 @@ retention and growth tracking are outside the first version.
 
 - [x] Build a standalone collection probe with copyable diagnostics and local
   mock tests. No bot, portal, or database integration.
+- [x] Add a separate manual app-token HTTP probe with local credential setup,
+  bounded status/shape output, and fake-HTTP regression tests. Confirm initial EU
+  dynamic/static namespace access; this does not complete the guild/profile checks below.
 - [ ] Verify the assumed release API: namespace, guild membership/level fields,
   stable character IDs and Firstname/Lastname fields, profession coverage, whether
   profession queries are separate, authentication, limits/cache headers, and actual
-  publication delay. Forever has no realms. Capture sanitized fixtures; do not
+  publication delay. Verify internal API realm scope without requiring player-facing
+  realm selection. Capture sanitized fixtures; do not
   invent an endpoint contract.
 - [ ] Paused: verify Forever addon collection in-client, especially offline members,
   completeness, refresh timing, two-part names, and available identifiers. Verify

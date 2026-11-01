@@ -146,6 +146,45 @@ Do not edit the output-directory fixtures if you need changes to survive a build
 the next build may replace them with the committed examples. No real API client
 is enabled by these settings. See [roster behaviour and API assumptions](docs/guild-roster-runtime.md).
 
+### Forever API probe
+
+The standalone probe uses .NET 10 and does not start the bot or access MongoDB/Discord.
+Create a client at [Battle.net API Access](https://develop.battle.net/access/clients).
+Store its credentials in the probe's dedicated local user-secrets store (PowerShell 7):
+
+```powershell
+dotnet user-secrets set --id cok-forever-api-probe "Blizzard:ClientId" (Read-Host "Client ID")
+dotnet user-secrets set --id cok-forever-api-probe "Blizzard:ClientSecret" (Read-Host "Client secret" -MaskInput)
+```
+
+The client ID is public; only the client secret is confidential. User secrets live outside
+the repository but are not encrypted. The existing bot user-secrets store is unchanged.
+Alternatively, supply `COK_PROBE_Blizzard__ClientId` and
+`COK_PROBE_Blizzard__ClientSecret` as environment variables; they override user secrets.
+Never put the secret in committed settings, chat, or command-line arguments.
+
+Run from `bot/`:
+
+```sh
+dotnet run --project src/ChampionsOfKhazad.Bot.BlizzardProbe -- --region eu
+dotnet run --project src/ChampionsOfKhazad.Bot.BlizzardProbe -- --help
+```
+
+Optional public targets: `--character firstname-surname` probes the reported realm-free
+character/profile-professions paths; `--realm internal-realm-slug --guild guild-slug`
+probes provisional realm-based guild and roster paths. Use known target slugs rather
+than fabricated names. `--static-build 1.60.1_70399` overrides the candidate static build
+(the displayed value is also the default). Regions: `eu` (default), `us`, `tw`, `kr`.
+No URLs or credential arguments are accepted.
+
+Output contains HTTP statuses, selected cache headers, and allowlisted JSON shape/count
+summaries, not tokens or response bodies. The probe makes one sequential pass with no
+retries and stops on unexpected HTTP errors, including 401/429/5xx and redirects.
+403/404 are recorded observations; exit code zero means the pass completed, **not**
+that guild/profile support works. Exit code one means setup/authentication/transport
+failure or an interrupted pass. Nothing is imported, saved to MongoDB, or announced.
+See [current evidence and interpretation](docs/forever-api-research.md).
+
 ## Run locally
 
 From `bot/`, start the Discord bot:

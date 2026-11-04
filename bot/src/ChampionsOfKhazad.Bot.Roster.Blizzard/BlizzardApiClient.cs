@@ -149,7 +149,7 @@ public sealed class BlizzardApiClient(HttpClient http, BlizzardRosterOptions opt
             || resource == "OAuth"
         )
             _blockedUntil = until > now ? until : now.AddSeconds(60);
-        throw new BlizzardApiException($"Blizzard {resource} request returned HTTP {(int)response.StatusCode}.", response.StatusCode);
+        throw new BlizzardApiException($"Blizzard {resource} request returned HTTP {(int)response.StatusCode}.", response.StatusCode, resource);
     }
 
     private static DateTimeOffset Expires(HttpResponseMessage response, DateTimeOffset now)

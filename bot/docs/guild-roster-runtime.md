@@ -83,6 +83,13 @@ exceptions. The worker records a failed refresh while preserving the previous
 accepted roster. Until the first valid response, queries report no usable data or
 refresh failure, not an empty guild. There is no switch to fictional data on failure.
 
+A 404 from the membership request specifically becomes expected source
+unavailability: it is logged at Information with no exception stack, below the
+Discord Serilog sink's Error threshold. Polling continues and prior membership is
+retained. This does not demote OAuth failures, missing static-class resources,
+invalid response schemas, or notification delivery failures. The application does
+not apply a broad 404/message filter to the logging sink.
+
 ## Shared feature and persistence
 
 - `ChampionsOfKhazad.Bot.Roster` owns normalization, validation, refresh, queries,
@@ -92,7 +99,8 @@ refresh failure, not an empty guild. There is no switch to fictional data on fai
 - `ChampionsOfKhazad.Bot.Roster.Mongo` stores current members/high-water marks in
   `guildRosters` and pending/sent notices in `guildRosterNotices`.
 - One host worker checks due refresh/delivery work every ten seconds while Discord
-  is ready. The configured membership interval is 60 seconds and separate profession
+  is ready and `BotContext` is available. Readiness is checked again before delivery
+  if a refresh spans a disconnect. The configured membership interval is 60 seconds and separate profession
   interval 600 seconds, subject to upstream cache/backoff. Commands and Grub read
   the shared database-backed cache rather than starting individual scans.
 - Live source identity contains region, guild slug, and route templates. A source
@@ -122,6 +130,13 @@ execution guards still apply after a third strike. Roster-specific prompt guidan
 is composed only when the tools are actually present, independent of main's newer
 Grub voice prompt. Current levels/skills come from roster data, not lore or the web;
 tool results are quoted data and cannot establish recipes, ownership, or event times.
+
+Gateway notifications are queued only after Discord is ready with a non-null
+`BotContext`. Messages/member departures received before that are not sent to
+context-dependent scoped handlers; early slash commands/buttons get a private retry
+response. Disconnects stop new queue submissions without clearing the previous
+context, so already accepted notifications can still drain safely. This prevents
+pre-Ready handler construction from raising `BotContext is not available`.
 
 ## Milestones
 

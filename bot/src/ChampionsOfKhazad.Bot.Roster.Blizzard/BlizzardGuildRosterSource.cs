@@ -16,7 +16,15 @@ public sealed class BlizzardGuildRosterSource(BlizzardApiClient api, BlizzardRos
     public async Task<RosterObservation> GetRosterAsync(CancellationToken cancellationToken)
     {
         var path = options.RosterPathTemplate.Replace("{guild}", Uri.EscapeDataString(options.GuildSlug), StringComparison.Ordinal);
-        var document = await api.GetAsync(path, options.ProfileNamespace, cancellationToken);
+        BlizzardDocument document;
+        try
+        {
+            document = await api.GetAsync(path, options.ProfileNamespace, cancellationToken);
+        }
+        catch (BlizzardApiException exception) when (exception.StatusCode == HttpStatusCode.NotFound && exception.Resource == "resource")
+        {
+            throw new RosterSourceUnavailableException("The configured Blizzard guild roster endpoint returned HTTP 404.");
+        }
         try
         {
             var root = document.Data;
@@ -108,7 +116,7 @@ public sealed class BlizzardGuildRosterSource(BlizzardApiClient api, BlizzardRos
         {
             document = await api.GetAsync(path, options.ProfileNamespace, cancellationToken);
         }
-        catch (BlizzardApiException exception) when (exception.StatusCode == HttpStatusCode.NotFound)
+        catch (BlizzardApiException exception) when (exception.StatusCode == HttpStatusCode.NotFound && exception.Resource == "resource")
         {
             return null;
         }

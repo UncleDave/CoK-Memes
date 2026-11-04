@@ -1,6 +1,7 @@
 ﻿using ChampionsOfKhazad.Bot.Roster;
 using Discord;
 using Discord.WebSocket;
+using MediatR;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -105,26 +106,28 @@ public class BotService : IHostedService
     private Task MessageReceivedAsync(SocketMessage message)
     {
         if (message is SocketUserMessage userMessage && !message.Author.IsBot)
-            _notificationQueue.TryEnqueue(new MessageReceived(userMessage));
+            TryEnqueueWhenReady(new MessageReceived(userMessage));
 
         return Task.CompletedTask;
     }
 
     private async Task SlashCommandExecutedAsync(SocketSlashCommand command)
     {
+        if (!await EnsureReadyAsync(command))
+            return;
         var slashCommand = SlashCommands.All.Single(x => x.Properties.Name.Value == command.CommandName);
 
         // Only the initial Discord acknowledgement is awaited here, never application handlers.
         // Acknowledging before enqueueing keeps the three-second deadline independent of queue backlog.
         await slashCommand.AcknowledgeAsync(command);
 
-        if (!_notificationQueue.TryEnqueue(slashCommand.CreateNotification(command)))
-            await command.FollowupAsync("I'm busy or shutting down. Please try again shortly.", ephemeral: true);
+        if (!TryEnqueueWhenReady(slashCommand.CreateNotification(command)))
+            await command.FollowupAsync("I'm unavailable just now. Please try again shortly.", ephemeral: true);
     }
 
     private Task UserLeftAsync(SocketGuild guild, SocketUser user)
     {
-        _notificationQueue.TryEnqueue(new UserLeft(user));
+        TryEnqueueWhenReady(new UserLeft(user));
         return Task.CompletedTask;
     }
 
@@ -132,13 +135,30 @@ public class BotService : IHostedService
     {
         if (!GazetteReadButton.TryParse(interaction.Data.CustomId, out _))
             return;
+        if (!await EnsureReadyAsync(interaction))
+            return;
         // Acknowledge privately within Discord's deadline; database work belongs in the notification queue.
         await GazetteReadButton.AcknowledgeAsync(interaction);
-        if (!_notificationQueue.TryEnqueue(new GazetteReadRequested(interaction)))
+        if (!TryEnqueueWhenReady(new GazetteReadRequested(interaction)))
             await interaction.FollowupAsync(
-                "I'm busy or shutting down. Please try again shortly.",
+                "I'm unavailable just now. Please try again shortly.",
                 ephemeral: true,
                 allowedMentions: AllowedMentions.None
             );
+    }
+
+    internal bool TryEnqueueWhenReady(INotification notification) =>
+        _botContextProvider.IsReady && _botContextProvider.BotContext is not null && _notificationQueue.TryEnqueue(notification);
+
+    internal async Task<bool> EnsureReadyAsync(IDiscordInteraction interaction)
+    {
+        if (_botContextProvider.IsReady && _botContextProvider.BotContext is not null)
+            return true;
+        await interaction.RespondAsync(
+            "I'm starting up or reconnecting. Please try again shortly.",
+            ephemeral: true,
+            allowedMentions: AllowedMentions.None
+        );
+        return false;
     }
 }

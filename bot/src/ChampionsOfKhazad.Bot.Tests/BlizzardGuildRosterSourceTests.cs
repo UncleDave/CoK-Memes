@@ -73,7 +73,7 @@ public class BlizzardGuildRosterSourceTests
         Assert.All(memory.Notices.Items.Values, notice => Assert.False(notice.IsMock));
         fixture.Clock.Now = fixture.Clock.Now.AddSeconds(61);
         fixture.ResourceStatus = HttpStatusCode.NotFound;
-        await Assert.ThrowsAsync<BlizzardApiException>(() => service.RefreshAsync(fixture.Token, force: true));
+        await Assert.ThrowsAsync<RosterSourceUnavailableException>(() => service.RefreshAsync(fixture.Token, force: true));
         var retained = memory.Store.States[service.ScopeId];
         Assert.Equal(20, Assert.Single(retained.Characters).Level);
         Assert.True(retained.LastRefreshFailed);
@@ -218,7 +218,6 @@ public class BlizzardGuildRosterSourceTests
     [Theory]
     [InlineData(301)]
     [InlineData(403)]
-    [InlineData(404)]
     [InlineData(503)]
     public async Task HttpFailuresAreNeverAcceptedAsAnEmptyRoster(int status)
     {
@@ -226,6 +225,29 @@ public class BlizzardGuildRosterSourceTests
         var error = await Assert.ThrowsAsync<BlizzardApiException>(() => fixture.Source.GetRosterAsync(fixture.Token));
         Assert.Equal((HttpStatusCode)status, error.StatusCode);
         Assert.DoesNotContain("private", error.ToString());
+    }
+
+    [Fact]
+    public async Task MissingGuildRosterIsExpectedUnavailabilityRatherThanAnEmptyRoster()
+    {
+        using var fixture = new Fixture { ResourceStatus = HttpStatusCode.NotFound };
+        var error = await Assert.ThrowsAsync<RosterSourceUnavailableException>(() => fixture.Source.GetRosterAsync(fixture.Token));
+        Assert.DoesNotContain("private", error.ToString());
+    }
+
+    [Theory]
+    [InlineData("OAuth")]
+    [InlineData("class-index")]
+    public async Task Other404sAreNotMisclassifiedAsAnUnpublishedGuild(string endpoint)
+    {
+        using var fixture = new Fixture();
+        if (endpoint == "OAuth")
+            fixture.OAuthStatus = HttpStatusCode.NotFound;
+        else
+            fixture.ClassStatus = HttpStatusCode.NotFound;
+        var error = await Assert.ThrowsAsync<BlizzardApiException>(() => fixture.Source.GetRosterAsync(fixture.Token));
+        Assert.Equal(HttpStatusCode.NotFound, error.StatusCode);
+        Assert.Equal(endpoint == "OAuth" ? "OAuth" : "resource", error.Resource);
     }
 
     [Fact]
@@ -262,6 +284,8 @@ public class BlizzardGuildRosterSourceTests
         public string ProfessionJson { get; set; } = Professions;
         public HttpStatusCode ResourceStatus { get; set; } = HttpStatusCode.OK;
         public HttpStatusCode ProfessionStatus { get; set; } = HttpStatusCode.OK;
+        public HttpStatusCode OAuthStatus { get; set; } = HttpStatusCode.OK;
+        public HttpStatusCode ClassStatus { get; set; } = HttpStatusCode.OK;
         public int CacheSeconds { get; set; }
         public bool NotModified { get; set; }
         public bool NoStore { get; set; }
@@ -297,7 +321,7 @@ public class BlizzardGuildRosterSourceTests
                 OAuthCalls++;
                 Assert.Equal("Basic", request.Headers.Authorization!.Scheme);
                 Assert.Equal(Convert.ToBase64String(Encoding.UTF8.GetBytes("public-client:private-secret")), request.Headers.Authorization.Parameter);
-                return Response(HttpStatusCode.OK, """{"access_token":"private-token","expires_in":3600}""");
+                return Response(OAuthStatus, """{"access_token":"private-token","expires_in":3600}""");
             }
             Assert.Equal("private-token", request.Headers.Authorization!.Parameter);
             if (UnauthorizedOnce)
@@ -311,12 +335,9 @@ public class BlizzardGuildRosterSourceTests
                 return Response(HttpStatusCode.NotModified, "");
             if (request.RequestUri.AbsolutePath.EndsWith("/professions", StringComparison.Ordinal))
                 return Response(ProfessionStatus, ProfessionJson);
-            return Response(
-                HttpStatusCode.OK,
-                request.RequestUri.AbsolutePath.EndsWith("/roster", StringComparison.Ordinal)
-                    ? RosterJson
-                    : """{"classes":[{"id":1,"name":"Warrior"}]}"""
-            );
+            return request.RequestUri.AbsolutePath.EndsWith("/roster", StringComparison.Ordinal)
+                ? Response(HttpStatusCode.OK, RosterJson)
+                : Response(ClassStatus, """{"classes":[{"id":1,"name":"Warrior"}]}""");
         }
 
         private HttpResponseMessage Response(HttpStatusCode status, string body)

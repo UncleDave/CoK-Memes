@@ -16,34 +16,45 @@ public class GuildRosterWorker(
     {
         while (!stoppingToken.IsCancellationRequested)
         {
-            if (context.IsReady)
-            {
-                try
-                {
-                    await service.RefreshAsync(stoppingToken);
-                }
-                catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
-                {
-                    throw;
-                }
-                catch (Exception exception)
-                {
-                    logger.LogError(exception, "Guild roster refresh failed");
-                }
-                try
-                {
-                    await service.DeliverAsync(sender, stoppingToken);
-                }
-                catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
-                {
-                    throw;
-                }
-                catch (Exception exception)
-                {
-                    logger.LogError(exception, "Guild milestone delivery failed; pending notices retained");
-                }
-            }
+            await RefreshAndDeliverAsync(stoppingToken);
             await Task.Delay(TimeSpan.FromSeconds(10), clock, stoppingToken);
+        }
+    }
+
+    internal async Task RefreshAndDeliverAsync(CancellationToken cancellationToken)
+    {
+        if (!context.IsReady || context.BotContext is null)
+            return;
+        try
+        {
+            await service.RefreshAsync(cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (RosterSourceUnavailableException)
+        {
+            // The Discord Serilog sink receives Error+, not normal launch-time guild absence.
+            logger.LogInformation("Guild roster endpoint returned HTTP 404; collection will retry");
+        }
+        catch (Exception exception)
+        {
+            logger.LogError(exception, "Guild roster refresh failed");
+        }
+        if (!context.IsReady || context.BotContext is null)
+            return;
+        try
+        {
+            await service.DeliverAsync(sender, cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            logger.LogError(exception, "Guild milestone delivery failed; pending notices retained");
         }
     }
 }

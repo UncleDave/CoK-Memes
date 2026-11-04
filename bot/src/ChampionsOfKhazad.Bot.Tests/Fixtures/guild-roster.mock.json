@@ -1,0 +1,9 @@
+{
+  "_mock_complete": true,
+  "guild": { "id": 1, "name": "Mock Chippy" },
+  "members": [
+    { "character": { "id": 1001, "name": "Borin Ironhide", "first_name": "Borin", "last_name": "Ironhide", "level": 19, "playable_class": { "id": 1, "name": "Warrior" } }, "rank": 1 },
+    { "character": { "id": 1002, "name": "Élodie Firebrand", "first_name": "Élodie", "last_name": "Firebrand", "level": 20, "playable_class": { "id": 8, "name": "Mage" } }, "rank": 1 },
+    { "character": { "id": 1003, "name": "Torga Stonehand", "first_name": "Torga", "last_name": "Stonehand", "level": 20, "playable_class": { "id": 7, "name": "Shaman" } }, "rank": 1 }
+  ]
+}

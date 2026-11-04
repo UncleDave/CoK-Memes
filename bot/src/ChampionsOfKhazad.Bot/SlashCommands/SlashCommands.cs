@@ -34,22 +34,41 @@ public static class SlashCommands
 
     public static readonly SlashCommand[] GuildCommands = [Summarise];
 
+    public static readonly SlashCommand Leaderboard = new(
+        new SlashCommandBuilder()
+            .WithName("leaderboard")
+            .WithDescription("Show guild character or profession ranks")
+            .AddOption("profession", ApplicationCommandOptionType.String, "Profession name or skill-line ID")
+            .AddOption(
+                new SlashCommandOptionBuilder()
+                    .WithName("page")
+                    .WithDescription("Page number")
+                    .WithType(ApplicationCommandOptionType.Integer)
+                    .WithMinValue(1)
+            )
+            .Build(),
+        command => new LeaderboardSlashCommandExecuted(command),
+        command => command.DeferAsync()
+    );
+
     public static readonly SlashCommand[] GlobalCommands = [Suggest];
 
-    public static readonly SlashCommand[] All = GuildCommands.Concat(GlobalCommands).ToArray();
+    public static readonly SlashCommand[] All = GuildCommands.Concat(GlobalCommands).Append(Leaderboard).ToArray();
 
-    internal static async Task RegisterGuildCommandsAsync(IGuild guild)
+    internal static async Task RegisterGuildCommandsAsync(IGuild guild, bool rosterEnabled = false)
     {
-        foreach (var command in GuildCommands)
+        foreach (var command in rosterEnabled ? GuildCommands.Append(Leaderboard) : GuildCommands)
             await guild.CreateApplicationCommandAsync(command.Properties);
 
         // Creating enabled commands does not remove existing Discord registrations.
-        // Retain /raids locally, but remove its remote registration until explicitly re-enabled.
-        if (!GuildCommands.Contains(Raids))
+        // Retain retired/optional handlers locally, but remove their own disabled slash registrations.
+        if (!GuildCommands.Contains(Raids) || !rosterEnabled)
         {
             foreach (var command in await guild.GetApplicationCommandsAsync())
             {
-                if (command.Name == Raids.Properties.Name.Value && command.Type == ApplicationCommandType.Slash)
+                if (!GuildCommands.Contains(Raids) && command.Name == Raids.Properties.Name.Value && command.Type == ApplicationCommandType.Slash)
+                    await command.DeleteAsync();
+                if (!rosterEnabled && command.Name == Leaderboard.Properties.Name.Value && command.Type == ApplicationCommandType.Slash)
                     await command.DeleteAsync();
             }
         }

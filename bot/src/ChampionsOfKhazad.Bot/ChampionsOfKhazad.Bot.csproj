@@ -25,6 +25,8 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\ChampionsOfKhazad.Bot.DiscordMemes.Mongo\ChampionsOfKhazad.Bot.DiscordMemes.Mongo.csproj" />
+    <ProjectReference Include="..\ChampionsOfKhazad.Bot.Roster.Mongo\ChampionsOfKhazad.Bot.Roster.Mongo.csproj" />
+    <ProjectReference Include="..\ChampionsOfKhazad.Bot.Roster.Blizzard\ChampionsOfKhazad.Bot.Roster.Blizzard.csproj" />
     <ProjectReference Include="..\ChampionsOfKhazad.Bot.DiscordMemes\ChampionsOfKhazad.Bot.DiscordMemes.csproj" />
     <ProjectReference Include="..\ChampionsOfKhazad.Bot.GenAi.Embeddings\ChampionsOfKhazad.Bot.GenAi.Embeddings.csproj" />
     <ProjectReference Include="..\ChampionsOfKhazad.Bot.GenAi.Mongo\ChampionsOfKhazad.Bot.GenAi.Mongo.csproj" />

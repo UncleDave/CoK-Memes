@@ -8,6 +8,7 @@ public class SlashCommandAcknowledgementTests
     [InlineData("raids", "RespondAsync", true)]
     [InlineData("suggest", "RespondAsync", true)]
     [InlineData("summarise", "DeferAsync", false)]
+    [InlineData("leaderboard", "DeferAsync", false)]
     public async Task EveryCommandDefinesOneInitialAcknowledgementWithItsOriginalVisibility(string name, string expectedMethod, bool ephemeral)
     {
         var slashCommand = SlashCommands.All.Append(SlashCommands.Raids).Single(x => x.Properties.Name.Value == name);

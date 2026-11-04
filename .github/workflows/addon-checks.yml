@@ -1,0 +1,32 @@
+name: Check Addons
+
+on:
+  push:
+    paths:
+      - addons/**
+      - .github/workflows/addon-checks.yml
+  pull_request:
+    paths:
+      - addons/**
+      - .github/workflows/addon-checks.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check-addons:
+    name: Check Addons
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: addons
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: 'npm'
+          cache-dependency-path: addons/package-lock.json
+      - run: npm ci --ignore-scripts
+      - run: npm test

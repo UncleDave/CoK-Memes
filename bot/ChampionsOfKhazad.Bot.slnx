@@ -23,6 +23,10 @@
     <File Path=".config\dotnet-tools.json" />
   </Folder>
   <Folder Name="/src/">
+    <Project Path="src/ChampionsOfKhazad.Bot.Roster.Blizzard/ChampionsOfKhazad.Bot.Roster.Blizzard.csproj" />
+    <Project Path="src/ChampionsOfKhazad.Bot.BlizzardProbe/ChampionsOfKhazad.Bot.BlizzardProbe.csproj" />
+    <Project Path="src/ChampionsOfKhazad.Bot.Roster/ChampionsOfKhazad.Bot.Roster.csproj" />
+    <Project Path="src/ChampionsOfKhazad.Bot.Roster.Mongo/ChampionsOfKhazad.Bot.Roster.Mongo.csproj" />
     <Project Path="src/ChampionsOfKhazad.Bot.Lore.Abstractions/ChampionsOfKhazad.Bot.Lore.Abstractions.csproj" />
     <Project Path="src/ChampionsOfKhazad.Bot/ChampionsOfKhazad.Bot.csproj" Type="C#" />
     <Project Path="src\ChampionsOfKhazad.Bot.Tests\ChampionsOfKhazad.Bot.Tests.csproj" Type="C#" />

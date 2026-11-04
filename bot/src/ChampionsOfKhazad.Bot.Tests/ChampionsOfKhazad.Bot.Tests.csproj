@@ -12,9 +12,17 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\ChampionsOfKhazad.Bot.BlizzardProbe\ChampionsOfKhazad.Bot.BlizzardProbe.csproj" />
     <ProjectReference Include="..\ChampionsOfKhazad.Bot\ChampionsOfKhazad.Bot.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Using Include="Xunit" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content
+      Include="..\ChampionsOfKhazad.Bot\appsettings*.json"
+      Link="RosterConfiguration\%(Filename)%(Extension)"
+      CopyToOutputDirectory="PreserveNewest"
+    />
   </ItemGroup>
 </Project>

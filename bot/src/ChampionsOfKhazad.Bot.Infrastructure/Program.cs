@@ -87,6 +87,7 @@ return await Pulumi.Deployment.RunAsync(() =>
     const string storageAccountAccessKeySecretName = "storage-account-access-key";
     const string portalAuthClientSecretName = "portal-auth-client-secret";
     const string mediatrLicenseKeySecretName = "mediatr-license-key";
+    const string blizzardClientSecretName = "blizzard-client-secret";
 
     const string timezone = "Europe/Copenhagen";
     var dotnetEnvironment = config.Require("environment");
@@ -108,6 +109,8 @@ return await Pulumi.Deployment.RunAsync(() =>
         new() { Name = "AzureStorageAccountName", Value = storageAccount.Name },
         new() { Name = "AzureStorageAccountAccessKey", SecretRef = storageAccountAccessKeySecretName },
         new() { Name = "MediatR__LicenseKey", SecretRef = mediatrLicenseKeySecretName },
+        new() { Name = "Blizzard__ClientId", Value = config.Require("blizzardClientId") },
+        new() { Name = "Blizzard__ClientSecret", SecretRef = blizzardClientSecretName },
     };
 
     var registryCredentials = new RegistryCredentialsArgs
@@ -141,6 +144,7 @@ return await Pulumi.Deployment.RunAsync(() =>
                     },
                     new SecretArgs { Name = storageAccountAccessKeySecretName, Value = storageAccountKey },
                     new SecretArgs { Name = mediatrLicenseKeySecretName, Value = config.RequireSecret("mediatrLicenseKey") },
+                    new SecretArgs { Name = blizzardClientSecretName, Value = config.RequireSecret("blizzardClientSecret") },
                 },
             },
             Template = new TemplateArgs

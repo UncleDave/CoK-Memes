@@ -4,6 +4,8 @@ using ChampionsOfKhazad.Bot.Core;
 using ChampionsOfKhazad.Bot.EventLoop;
 using ChampionsOfKhazad.Bot.GenAi;
 using ChampionsOfKhazad.Bot.RaidHelper;
+using ChampionsOfKhazad.Bot.Roster;
+using ChampionsOfKhazad.Bot.Roster.Blizzard;
 using Discord;
 using Discord.WebSocket;
 using MediatR.NotificationPublishers;
@@ -41,6 +43,35 @@ host.Services.AddOptionsWithEagerValidation<BotOptions>(host.Configuration.GetSe
 host.Services.AddOptionsWithEagerValidation<DiscordMessageToolsOptions>(host.Configuration.GetSection(DiscordMessageToolsOptions.Key));
 host.Services.AddOptionsWithEagerValidation<GazetteOptions>(host.Configuration.GetSection(GazetteOptions.Key));
 host.Services.AddSingleton(typeof(CooldownTracker<>));
+
+var rosterOptions = host.Configuration.GetSection(GuildRosterOptions.Key).Get<GuildRosterOptions>() ?? new();
+rosterOptions.GuildId = host.Configuration.GetValue<ulong>("Bot:GuildId");
+rosterOptions.Validate();
+host.Services.AddSingleton(rosterOptions);
+if (rosterOptions.Enabled)
+{
+    var blizzardOptions = host.Configuration.GetSection(BlizzardRosterOptions.Key).Get<BlizzardRosterOptions>() ?? new();
+    if (host.Environment.IsDevelopment())
+    {
+        var probeSecrets = new ConfigurationBuilder().AddUserSecrets("cok-forever-api-probe").Build();
+        blizzardOptions.ClientId ??= probeSecrets["Blizzard:ClientId"];
+        blizzardOptions.ClientSecret ??= probeSecrets["Blizzard:ClientSecret"];
+    }
+    blizzardOptions.Validate();
+    host.Services.AddSingleton(blizzardOptions);
+    host.Services.AddHttpClient("BlizzardRoster", client => client.Timeout = TimeSpan.FromSeconds(30))
+        .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false, UseCookies = false });
+    host.Services.AddSingleton(services => new BlizzardApiClient(
+            services.GetRequiredService<IHttpClientFactory>().CreateClient("BlizzardRoster"),
+            blizzardOptions,
+            services.GetRequiredService<TimeProvider>()
+        ))
+        .AddSingleton<IGuildRosterSource, BlizzardGuildRosterSource>()
+        .AddSingleton<GuildRosterService>()
+        .AddSingleton<GuildRosterQueries>()
+        .AddSingleton<IRosterNotificationSender, DiscordRosterNotificationSender>()
+        .AddHostedService<GuildRosterWorker>();
+}
 
 host.Services.AddSingleton<DiscordSocketClient>(services =>
     ActivatorUtilities.CreateInstance<LoggingDiscordSocketClient>(
@@ -89,7 +120,8 @@ host.Services.AddBot(configuration =>
         configuration.ImageGeneration.DailyAllowances =
             host.Configuration.GetSection("ImageGeneration:DailyAllowances").Get<Dictionary<ulong, short>>() ?? new Dictionary<ulong, short>();
     })
-    .AddGenAiMongoPersistence();
+    .AddGenAiMongoPersistence()
+    .AddRosterMongoPersistence();
 
 host.Services.AddRaidHelperClient(host.Configuration.GetRequiredString("RaidHelper:ApiKey"));
 

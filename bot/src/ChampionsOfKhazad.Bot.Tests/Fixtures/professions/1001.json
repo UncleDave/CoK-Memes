@@ -1,0 +1,9 @@
+{
+  "character": { "id": 1001, "name": "Borin Ironhide" },
+  "primaries": [
+    { "profession": { "id": 164, "name": "Blacksmithing" }, "tiers": [{ "tier": { "id": 1, "name": "Classic" }, "skill_points": 74, "max_skill_points": 75 }] }
+  ],
+  "secondaries": [
+    { "profession": { "id": 185, "name": "Cooking" }, "skill_points": 74, "max_skill_points": 75 }
+  ]
+}

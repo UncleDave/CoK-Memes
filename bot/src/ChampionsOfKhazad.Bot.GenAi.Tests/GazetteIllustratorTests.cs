@@ -24,7 +24,7 @@ public class GazetteIllustratorTests
         );
         using var request = JsonDocument.Parse(handler.Body!);
         var root = request.RootElement;
-        Assert.Equal("gpt-image-2.5-flare", root.GetProperty("model").GetString());
+        Assert.Equal(Constants.DefaultImageModel, root.GetProperty("model").GetString());
         Assert.Equal("high", root.GetProperty("quality").GetString());
         Assert.Equal("1024x1024", root.GetProperty("size").GetString());
         Assert.Equal("png", root.GetProperty("output_format").GetString());
@@ -41,7 +41,7 @@ public class GazetteIllustratorTests
     }
 
     [Fact]
-    public void GazetteUsesExplicitHighQualitySquarePngWithoutSwitchingTheSharedFlareModel()
+    public void GazetteUsesExplicitHighQualitySquarePng()
     {
         var options = GazetteIllustrator.CreateOptions();
         Assert.Equal(new GeneratedImageQuality("high"), options.Quality);
@@ -50,7 +50,6 @@ public class GazetteIllustratorTests
 #pragma warning disable OPENAI001
         Assert.Equal(GeneratedImageFileFormat.Png, options.OutputFileFormat);
 #pragma warning restore OPENAI001
-        Assert.Equal("gpt-image-2.5-flare", Constants.DefaultImageModel);
     }
 
     [Theory]

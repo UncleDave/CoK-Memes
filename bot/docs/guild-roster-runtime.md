@@ -119,7 +119,24 @@ identity support in the shared model is not used to hide missing live character 
 queued work and returns ten characters per page with shared ranks, full names,
 class, level/rank, and observation age. Profession filters accept names, IDs, or an
 unambiguous ID:tier. Unknown ranks are not zero-filled; incomplete profession
-coverage and failed refreshes remain visible. Empty, no-match, unavailable,
+coverage and failed refreshes remain visible. Coverage reports unique affected
+characters out of the whole guild (or name-filtered set), with separate counts for
+unavailable observations, partial observations, failed refreshes, and unknown ranks
+in the requested profession. Counts can overlap, and known complete empty lists
+are not counted as missing. This coverage is independent of pagination and minimum
+skill filters; it is not a claim that the displayed practitioners lack data.
+
+Level results label the roster check and source timestamp separately. Profession
+results show the displayed rows' check and source timestamp ranges, collapsing
+equal bounds to one timestamp. Check times include failed attempts and HTTP cache
+hits/revalidation, not just fresh network downloads; source timestamps retain the
+upstream Last-Modified or original receipt time described above. Profession check
+times are recorded when each attempt completes. Missing historical profession
+check times are omitted rather than replaced with membership check times. Empty
+profession results show no fabricated profession age. Grub receives the same
+coverage counts and per-character profession check times in structured results.
+
+Empty, no-match, unavailable,
 out-of-range, and failure states stay distinct. Text is bounded/escaped and pings
 are disabled.
 
@@ -183,6 +200,20 @@ Discord query. Inspect safe status logs and the independent probe when a route o
 schema needs adjustment. Correct path templates or parsing against sanitized real
 fixtures without accepting partial membership or fabricating stats. The first
 successful snapshot stays a silent baseline, even if availability was delayed.
+
+Profession scan summaries are logged at Information when a separate-profession
+scan runs: attempted, unavailable, failed, partial, and older-response counts,
+duration, and retained skill source-timestamp bounds. A newer retained observation
+is not overwritten by an older response. For detailed troubleshooting, enable
+Debug for `ChampionsOfKhazad.Bot.Roster` and
+`ChampionsOfKhazad.Bot.Roster.Blizzard`. These logs distinguish fetched documents,
+local cache hits, 304 revalidation, HTTP status failures, shared backoff skips, and
+invalid-data/source-failure categories. Cache diagnostics include numeric max-age
+and Age values, expiry, and source timestamp. They do not log response bodies,
+tokens, credentials, character URLs/names, or raw exception details. Numeric
+character IDs may appear in failed-refresh diagnostics. Existing roster and
+notification Error-level logging is unchanged; profession diagnostics do not send
+routine Discord alerts. Polling intervals and cache/backoff behavior are unchanged.
 
 Emergency stop: set `GuildRoster__Enabled=false` and restart the bot. This stops
 collection, tool exposure, leaderboard registration, and delivery without deleting

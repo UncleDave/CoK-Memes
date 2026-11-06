@@ -8,7 +8,8 @@ public record RosterPage
     public DateTime? ObservedAtUtc { get; init; }
     public DateTime? CheckedAtUtc { get; init; }
     public bool LastRefreshFailed { get; init; }
-    public bool IncompleteProfessionCoverage { get; init; }
+    public ProfessionCoverage? ProfessionCoverage { get; init; }
+    public bool IncompleteProfessionCoverage => ProfessionCoverage?.AffectedCharacters > 0;
     public int Page { get; init; }
     public int TotalPages { get; init; }
     public int TotalCount { get; init; }

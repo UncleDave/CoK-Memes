@@ -609,6 +609,57 @@ public class CustomerDisciplineReplyTests
     }
 
     [Fact]
+    public async Task ProfessionToolReportsCoverageCountsAndCheckTimeSeparatelyFromSourceAge()
+    {
+        using var fixture = new Fixture(rosterEnabled: true);
+        var checkedAt = new DateTime(2026, 11, 6, 12, 40, 0, DateTimeKind.Utc);
+        var sourceAt = checkedAt.AddDays(-1);
+        var member = new RosterCharacter
+        {
+            Id = "1",
+            FirstName = "Borin",
+            LastName = "Ironhide",
+            ClassName = "Warrior",
+            Level = 20,
+            ProfessionsCheckedAtUtc = checkedAt,
+            ProfessionRefreshFailed = true,
+            Professions = new()
+            {
+                Complete = false,
+                ObservedAtUtc = sourceAt,
+                Skills =
+                [
+                    new()
+                    {
+                        Id = "171",
+                        Name = "Alchemy",
+                        Skill = 102,
+                        ObservedAtUtc = sourceAt,
+                    },
+                ],
+            },
+        };
+        fixture.RosterStore.Characters = [member, member with { Id = "2", Professions = null, ProfessionRefreshFailed = false }];
+        var tool = Assert.IsAssignableFrom<AIFunction>(
+            fixture.Tools.Create(fixture.Context, true).Single(tool => tool.Name == "get_guild_leaderboard")
+        );
+        var response = await tool.InvokeAsync(new AIFunctionArguments { ["profession"] = "Alchemy" }, TestContext.Current.CancellationToken);
+        using var document = JsonDocument.Parse(Assert.IsType<JsonElement>(response).GetString()!);
+        var root = document.RootElement;
+        Assert.True(root.GetProperty("incompleteProfessionCoverage").GetBoolean());
+        var coverage = root.GetProperty("professionCoverage");
+        Assert.Equal(2, coverage.GetProperty("totalCharacters").GetInt32());
+        Assert.Equal(2, coverage.GetProperty("affectedCharacters").GetInt32());
+        Assert.Equal(1, coverage.GetProperty("unavailableCharacters").GetInt32());
+        Assert.Equal(1, coverage.GetProperty("partialCharacters").GetInt32());
+        Assert.Equal(1, coverage.GetProperty("failedRefreshCharacters").GetInt32());
+        var character = Assert.Single(root.GetProperty("characters").EnumerateArray());
+        Assert.Equal(checkedAt, character.GetProperty("professionsCheckedAtUtc").GetDateTime());
+        Assert.Equal(sourceAt, character.GetProperty("matchedProfession").GetProperty("observedAtUtc").GetDateTime());
+        Assert.Equal(102, character.GetProperty("matchedProfession").GetProperty("skill").GetInt32());
+    }
+
+    [Fact]
     public async Task BarredCustomersAndFollowersCannotUseRosterTools()
     {
         using var fixture = new Fixture(rosterEnabled: true);
@@ -740,6 +791,7 @@ public class CustomerDisciplineReplyTests
     {
         public int Reads { get; private set; }
         public bool Fail { get; set; }
+        public RosterCharacter[]? Characters { get; set; }
 
         public Task<RosterState?> GetAsync(string id, CancellationToken cancellationToken)
         {
@@ -754,16 +806,18 @@ public class CustomerDisciplineReplyTests
                     ObservedAtUtc = DateTime.UtcNow,
                     GuildName = "Mock Guild",
                     Characters =
-                    [
-                        new()
-                        {
-                            Id = "1",
-                            FirstName = "Borin",
-                            LastName = "Ironhide",
-                            ClassName = "Warrior",
-                            Level = 20,
-                        },
-                    ],
+                        Characters
+                        ??
+                        [
+                            new()
+                            {
+                                Id = "1",
+                                FirstName = "Borin",
+                                LastName = "Ironhide",
+                                ClassName = "Warrior",
+                                Level = 20,
+                            },
+                        ],
                 }
             );
         }

@@ -64,7 +64,8 @@ if (rosterOptions.Enabled)
     host.Services.AddSingleton(services => new BlizzardApiClient(
             services.GetRequiredService<IHttpClientFactory>().CreateClient("BlizzardRoster"),
             blizzardOptions,
-            services.GetRequiredService<TimeProvider>()
+            services.GetRequiredService<TimeProvider>(),
+            services.GetRequiredService<Microsoft.Extensions.Logging.ILogger<BlizzardApiClient>>()
         ))
         .AddSingleton<IGuildRosterSource, BlizzardGuildRosterSource>()
         .AddSingleton<GuildRosterService>()

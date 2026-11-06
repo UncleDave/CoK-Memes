@@ -2,10 +2,12 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 
 namespace ChampionsOfKhazad.Bot.Roster.Blizzard;
 
-public sealed class BlizzardApiClient(HttpClient http, BlizzardRosterOptions options, TimeProvider clock) : IDisposable
+public sealed class BlizzardApiClient(HttpClient http, BlizzardRosterOptions options, TimeProvider clock, ILogger<BlizzardApiClient>? logger = null)
+    : IDisposable
 {
     private const int MaximumBodyBytes = 2 * 1024 * 1024;
     private const int MaximumCacheBytes = 16 * 1024 * 1024;
@@ -30,15 +32,25 @@ public sealed class BlizzardApiClient(HttpClient http, BlizzardRosterOptions opt
         if (apiNamespace != options.ProfileNamespace && apiNamespace != options.StaticNamespace)
             throw new BlizzardApiException("Unexpected Blizzard namespace.");
         var uri = new Uri($"https://{options.ApiHost}{path}?namespace={Uri.EscapeDataString(apiNamespace)}&locale=en_GB");
+        var resourceKind =
+            path.EndsWith("/professions", StringComparison.Ordinal) ? "professions"
+            : path.EndsWith("/roster", StringComparison.Ordinal) ? "roster"
+            : "static_data";
         await _gate.WaitAsync(cancellationToken);
         try
         {
             var now = clock.GetUtcNow();
             if (now < _blockedUntil)
+            {
+                logger?.LogDebug("Blizzard {ResourceKind} request skipped; backed off until {BlockedUntilUtc}", resourceKind, _blockedUntil);
                 throw new BlizzardApiException("Blizzard requests are temporarily backed off after an upstream failure.");
+            }
             _cache.TryGetValue(uri.AbsoluteUri, out var cached);
             if (cached is not null && now < cached.Expires)
+            {
+                LogCache(resourceKind, "cache_hit", cached, null);
                 return Document(cached);
+            }
 
             for (var attempt = 0; attempt < 2; attempt++)
             {
@@ -66,9 +78,10 @@ public sealed class BlizzardApiClient(HttpClient http, BlizzardRosterOptions opt
                     }
                     else
                         Store(uri.AbsoluteUri, cached);
+                    LogCache(resourceKind, "not_modified", cached, response);
                     return Document(cached);
                 }
-                CheckStatus(response, "resource");
+                CheckStatus(response, "resource", resourceKind);
                 var body = await ReadBodyAsync(response.Content, cancellationToken);
                 // Validate JSON before accepting it into the HTTP cache. Shape validation belongs to the source.
                 using var parsed = JsonDocument.Parse(body);
@@ -83,6 +96,7 @@ public sealed class BlizzardApiClient(HttpClient http, BlizzardRosterOptions opt
                     Store(uri.AbsoluteUri, document);
                 else if (_cache.Remove(uri.AbsoluteUri, out var removed))
                     _cacheBytes -= removed.Body.Length;
+                LogCache(resourceKind, "fetched", document, response);
                 return Document(document);
             }
             throw new BlizzardApiException("Blizzard authentication could not be renewed.");
@@ -98,6 +112,7 @@ public sealed class BlizzardApiClient(HttpClient http, BlizzardRosterOptions opt
         catch (Exception)
         {
             _blockedUntil = clock.GetUtcNow().AddSeconds(60);
+            logger?.LogWarning("Blizzard {ResourceKind} transport or JSON failure; backed off until {BlockedUntilUtc}", resourceKind, _blockedUntil);
             throw new BlizzardApiException("Blizzard request failed or returned invalid diagnostic data; private response details were suppressed.");
         }
         finally
@@ -136,7 +151,7 @@ public sealed class BlizzardApiClient(HttpClient http, BlizzardRosterOptions opt
         _tokenExpires = clock.GetUtcNow().AddSeconds(Math.Max(1, seconds - Math.Min(60, seconds / 10)));
     }
 
-    private void CheckStatus(HttpResponseMessage response, string resource)
+    private void CheckStatus(HttpResponseMessage response, string resource, string? resourceKind = null)
     {
         if (response.IsSuccessStatusCode)
             return;
@@ -149,8 +164,25 @@ public sealed class BlizzardApiClient(HttpClient http, BlizzardRosterOptions opt
             || resource == "OAuth"
         )
             _blockedUntil = until > now ? until : now.AddSeconds(60);
+        logger?.LogDebug(
+            "Blizzard {ResourceKind} request failed with HTTP {StatusCode}; backed off until {BlockedUntilUtc}",
+            resourceKind ?? resource,
+            (int)response.StatusCode,
+            _blockedUntil > now ? (DateTimeOffset?)_blockedUntil : null
+        );
         throw new BlizzardApiException($"Blizzard {resource} request returned HTTP {(int)response.StatusCode}.", response.StatusCode, resource);
     }
+
+    private void LogCache(string resourceKind, string outcome, CachedDocument document, HttpResponseMessage? response) =>
+        logger?.LogDebug(
+            "Blizzard {ResourceKind} {CacheOutcome}; source timestamp {SourceAtUtc}; cache expires {CacheExpiresUtc}; max-age {MaxAgeSeconds} s; Age {AgeSeconds} s",
+            resourceKind,
+            outcome,
+            document.ObservedAtUtc,
+            document.Expires,
+            response?.Headers.CacheControl?.MaxAge?.TotalSeconds,
+            response?.Headers.Age?.TotalSeconds
+        );
 
     private static DateTimeOffset Expires(HttpResponseMessage response, DateTimeOffset now)
     {

@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging;
+
 namespace ChampionsOfKhazad.Bot.Roster;
 
 public sealed class GuildRosterService(
@@ -5,7 +7,8 @@ public sealed class GuildRosterService(
     IGuildRosterSource source,
     IRosterStore store,
     IRosterNoticeStore notices,
-    TimeProvider clock
+    TimeProvider clock,
+    ILogger<GuildRosterService>? logger = null
 ) : IDisposable
 {
     private readonly SemaphoreSlim _gate = new(1, 1);
@@ -34,6 +37,11 @@ public sealed class GuildRosterService(
                 if (previous.ObservedAtUtc is { } observed && observation.ObservedAtUtc < observed)
                     throw new InvalidDataException("The roster response is older than the accepted observation.");
                 var members = new List<RosterCharacter>();
+                var professionAttempts = 0;
+                var professionUnavailable = 0;
+                var professionFailures = 0;
+                var professionPartial = 0;
+                var professionOlder = 0;
                 var oldMembers = previous.Characters.ToDictionary(member => member.LookupKey, StringComparer.Ordinal);
                 foreach (var incoming in observation.Characters)
                 {
@@ -60,15 +68,25 @@ public sealed class GuildRosterService(
                         )
                     )
                     {
+                        professionAttempts++;
                         try
                         {
                             var separate = await source.GetProfessionsAsync(incoming, cancellationToken);
+                            var checkedAtUtc = clock.GetUtcNow().UtcDateTime;
+                            var validated = separate is null ? null : RosterValidator.Validate(separate, checkedAtUtc, checkedAtUtc);
+                            if (validated is null)
+                                professionUnavailable++;
+                            else
+                            {
+                                if (!validated.Complete)
+                                    professionPartial++;
+                                if (member.Professions is { } known && validated.ObservedAtUtc < known.ObservedAtUtc)
+                                    professionOlder++;
+                            }
                             member = member with
                             {
-                                Professions = separate is null
-                                    ? member.Professions
-                                    : Merge(member.Professions, RosterValidator.Validate(separate, now, now)),
-                                ProfessionsCheckedAtUtc = now,
+                                Professions = validated is null ? member.Professions : Merge(member.Professions, validated),
+                                ProfessionsCheckedAtUtc = checkedAtUtc,
                                 ProfessionRefreshFailed = separate is null,
                             };
                         }
@@ -76,9 +94,15 @@ public sealed class GuildRosterService(
                         {
                             throw;
                         }
-                        catch
+                        catch (Exception exception)
                         {
-                            member = member with { ProfessionsCheckedAtUtc = now, ProfessionRefreshFailed = true };
+                            professionFailures++;
+                            logger?.LogDebug(
+                                "Profession refresh failed for character {CharacterId}; category {FailureCategory}",
+                                incoming.Id,
+                                exception is InvalidDataException ? "invalid_data" : "source_failure"
+                            );
+                            member = member with { ProfessionsCheckedAtUtc = clock.GetUtcNow().UtcDateTime, ProfessionRefreshFailed = true };
                         }
                     }
                     members.Add(member);
@@ -90,11 +114,23 @@ public sealed class GuildRosterService(
                     GuildName = observation.GuildName,
                     SourceGuildId = observation.GuildId ?? previous.SourceGuildId,
                     ObservedAtUtc = observation.ObservedAtUtc,
-                    CheckedAtUtc = now,
-                    LastSucceededAtUtc = now,
+                    CheckedAtUtc = clock.GetUtcNow().UtcDateTime,
+                    LastSucceededAtUtc = clock.GetUtcNow().UtcDateTime,
                     LastRefreshFailed = false,
                     Characters = members.ToArray(),
                 };
+                if (professionAttempts > 0)
+                    logger?.LogInformation(
+                        "Profession scan: {Attempts} attempted, {Unavailable} unavailable, {Failures} failed, {Partial} partial, {Older} older responses retained newer data; duration {DurationMs} ms; source timestamps {OldestSourceAtUtc} to {NewestSourceAtUtc}",
+                        professionAttempts,
+                        professionUnavailable,
+                        professionFailures,
+                        professionPartial,
+                        professionOlder,
+                        (current.CheckedAtUtc!.Value - now).TotalMilliseconds,
+                        members.SelectMany(member => member.Professions?.Skills ?? []).Select(skill => (DateTime?)skill.ObservedAtUtc).Min(),
+                        members.SelectMany(member => member.Professions?.Skills ?? []).Select(skill => (DateTime?)skill.ObservedAtUtc).Max()
+                    );
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -102,7 +138,7 @@ public sealed class GuildRosterService(
             }
             catch
             {
-                await store.TrySaveAsync(previous with { CheckedAtUtc = now, LastRefreshFailed = true }, cancellationToken);
+                await store.TrySaveAsync(previous with { CheckedAtUtc = clock.GetUtcNow().UtcDateTime, LastRefreshFailed = true }, cancellationToken);
                 throw;
             }
             var changes = RosterMilestones.Compare(previous, current, options, now, NotificationsEnabled);

@@ -163,6 +163,7 @@ internal sealed class RosterFixture : IDisposable
         public Exception? Failure { get; set; }
         public Exception? ProfessionFailure { get; set; }
         public Func<Task>? BeforeRead { get; set; }
+        public Action? BeforeProfessionRead { get; set; }
 
         public async Task<RosterObservation> GetRosterAsync(CancellationToken cancellationToken)
         {
@@ -179,6 +180,7 @@ internal sealed class RosterFixture : IDisposable
         {
             ProfessionReads++;
             cancellationToken.ThrowIfCancellationRequested();
+            BeforeProfessionRead?.Invoke();
             if (ProfessionFailure is not null)
                 throw ProfessionFailure;
             return Task.FromResult(Professions.GetValueOrDefault(character.Key));

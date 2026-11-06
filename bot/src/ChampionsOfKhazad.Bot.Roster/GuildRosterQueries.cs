@@ -55,14 +55,22 @@ public class GuildRosterQueries(GuildRosterOptions options, GuildRosterService s
                 .SelectMany(member => (member.Professions?.Skills ?? []).Where(Matches).Select(skill => (Member: member, Skill: skill)))
                 .ToArray();
             var tracks = matches.Select(item => item.Skill.TrackKey).Distinct(StringComparer.Ordinal).ToArray();
+            var unavailable = members.Where(member => member.Professions is null).ToArray();
+            var partial = members.Where(member => member.Professions is { Complete: false }).ToArray();
+            var failed = members.Where(member => member.ProfessionRefreshFailed).ToArray();
+            var unknown = matches.Where(item => item.Skill.Skill is null).Select(item => item.Member).DistinctBy(member => member.Key).ToArray();
             result = result with
             {
-                IncompleteProfessionCoverage = members.Any(member =>
-                    member.Professions is null
-                    || !member.Professions.Complete
-                    || member.ProfessionRefreshFailed
-                    || member.Professions.Skills.Any(skill => Matches(skill) && skill.Skill is null)
-                ),
+                ProfessionCoverage = new()
+                {
+                    NameFiltered = name is not null,
+                    TotalCharacters = members.Length,
+                    AffectedCharacters = unavailable.Concat(partial).Concat(failed).Concat(unknown).DistinctBy(member => member.Key).Count(),
+                    UnavailableCharacters = unavailable.Length,
+                    PartialCharacters = partial.Length,
+                    FailedRefreshCharacters = failed.Length,
+                    UnknownRankCharacters = unknown.Length,
+                },
             };
             if (tracks.Length > 1)
             {

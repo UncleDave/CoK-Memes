@@ -171,6 +171,62 @@ public class BlizzardGuildRosterSourceTests
             fixture.Requests,
             request => request.ConditionalETag == "\"document-v1\"" && request.IfModifiedSince == original.ObservedAtUtc
         );
+        var diagnostics = fixture.Logger.Entries.Where(entry => Equals(entry.Properties.GetValueOrDefault("ResourceKind"), "roster")).ToArray();
+        Assert.Equal(["fetched", "cache_hit", "not_modified"], diagnostics.Select(entry => entry.Properties["CacheOutcome"]).ToArray());
+        Assert.All(diagnostics, entry => Assert.Equal(original.ObservedAtUtc, entry.Properties["SourceAtUtc"]));
+    }
+
+    [Fact]
+    public async Task CacheDiagnosticsReportActualHeadersAndOldSourceTimestampWithoutLoggingPlayerPathsOrCredentials()
+    {
+        using var fixture = new Fixture { CacheSeconds = 120, AgeSeconds = 30 };
+        fixture.LastModified = fixture.Clock.Now.AddDays(-1);
+        var roster = await fixture.Source.GetRosterAsync(fixture.Token);
+        var character = Assert.Single(roster.Characters);
+        await fixture.Source.GetProfessionsAsync(character, fixture.Token);
+        var fetched = Assert.Single(fixture.Logger.Entries, entry => Equals(entry.Properties.GetValueOrDefault("ResourceKind"), "professions"));
+        Assert.Equal(120d, fetched.Properties["MaxAgeSeconds"]);
+        Assert.Equal(30d, fetched.Properties["AgeSeconds"]);
+        Assert.Equal(fixture.Clock.Now.AddSeconds(90), fetched.Properties["CacheExpiresUtc"]);
+        Assert.Equal(fixture.LastModified.Value.UtcDateTime, fetched.Properties["SourceAtUtc"]);
+        fixture.Clock.Now = fixture.Clock.Now.AddSeconds(60);
+        await fixture.Source.GetProfessionsAsync(character, fixture.Token);
+        Assert.Equal("cache_hit", fixture.Logger.Entries.Last().Properties["CacheOutcome"]);
+        Assert.All(
+            fixture.Logger.Entries,
+            entry =>
+            {
+                Assert.Null(entry.Exception);
+                Assert.DoesNotContain("private-", entry.Message);
+                Assert.DoesNotContain("borin-ironhide", entry.Message);
+                Assert.DoesNotContain("https://", entry.Message);
+            }
+        );
+    }
+
+    [Fact]
+    public async Task ProfessionFailureDiagnosticsDistinguishHttpFailureFromBackoffWithoutResponseDetails()
+    {
+        using var fixture = new Fixture { ProfessionStatus = HttpStatusCode.TooManyRequests };
+        var character = Assert.Single((await fixture.Source.GetRosterAsync(fixture.Token)).Characters);
+        await Assert.ThrowsAsync<BlizzardApiException>(() => fixture.Source.GetProfessionsAsync(character, fixture.Token));
+        var failure = fixture.Logger.Entries.Last();
+        Assert.Equal("professions", failure.Properties["ResourceKind"]);
+        Assert.Equal(429, failure.Properties["StatusCode"]);
+        Assert.Equal(fixture.Clock.Now.AddSeconds(120), failure.Properties["BlockedUntilUtc"]);
+        var requests = fixture.Requests.Count;
+        await Assert.ThrowsAsync<BlizzardApiException>(() => fixture.Source.GetProfessionsAsync(character, fixture.Token));
+        Assert.Equal(requests, fixture.Requests.Count);
+        Assert.False(fixture.Logger.Entries.Last().Properties.ContainsKey("StatusCode"));
+        Assert.Equal(fixture.Clock.Now.AddSeconds(120), fixture.Logger.Entries.Last().Properties["BlockedUntilUtc"]);
+        Assert.All(
+            fixture.Logger.Entries,
+            entry =>
+            {
+                Assert.Null(entry.Exception);
+                Assert.DoesNotContain("private-", entry.Message);
+            }
+        );
     }
 
     [Fact]
@@ -287,12 +343,15 @@ public class BlizzardGuildRosterSourceTests
         public HttpStatusCode OAuthStatus { get; set; } = HttpStatusCode.OK;
         public HttpStatusCode ClassStatus { get; set; } = HttpStatusCode.OK;
         public int CacheSeconds { get; set; }
+        public int AgeSeconds { get; set; }
+        public DateTimeOffset? LastModified { get; set; }
         public bool NotModified { get; set; }
         public bool NoStore { get; set; }
         public bool UnauthorizedOnce { get; set; }
         public int OAuthCalls { get; private set; }
         public List<Request> Requests { get; } = [];
         public BlizzardGuildRosterSource Source { get; }
+        public RosterDiagnosticLogger<BlizzardApiClient> Logger { get; } = new();
         private readonly BlizzardApiClient _api;
         public CancellationToken Token => TestContext.Current.CancellationToken;
 
@@ -300,7 +359,7 @@ public class BlizzardGuildRosterSourceTests
         {
             var options = new BlizzardRosterOptions { ClientId = "public-client", ClientSecret = "private-secret" };
             options.Validate();
-            _api = new BlizzardApiClient(new HttpClient(new Handler(Send)), options, Clock);
+            _api = new BlizzardApiClient(new HttpClient(new Handler(Send)), options, Clock, Logger);
             Source = new BlizzardGuildRosterSource(_api, options, Clock);
         }
 
@@ -345,8 +404,9 @@ public class BlizzardGuildRosterSourceTests
             var response = new HttpResponseMessage(status) { Content = new StringContent(body, Encoding.UTF8, "application/json") };
             response.Headers.CacheControl = new CacheControlHeaderValue { MaxAge = TimeSpan.FromSeconds(CacheSeconds), NoStore = NoStore };
             response.Headers.ETag = new EntityTagHeaderValue("\"document-v1\"");
+            response.Headers.Age = TimeSpan.FromSeconds(AgeSeconds);
             response.Headers.RetryAfter = new RetryConditionHeaderValue(TimeSpan.FromSeconds(120));
-            response.Content.Headers.LastModified = Clock.Now;
+            response.Content.Headers.LastModified = LastModified ?? Clock.Now;
             return response;
         }
 

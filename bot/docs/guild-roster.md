@@ -54,7 +54,7 @@ Defer the interaction before querying, following the existing command pattern.
 Equal levels share a rank (1, 1, 3); full names give deterministic ordering
 within ties, not evidence of who reached a level first. Bound each page to 10
 rows and allow an optional page number; ranks apply across the entire snapshot.
-Show the roster observation timestamp once. No data, unavailable storage, and an
+Show the roster check time separately from its source timestamp. No data, unavailable storage, and an
 out-of-range page have distinct responses; none should look like an empty guild.
 Do not claim the list is live or infer levelling speed from the current snapshot.
 
@@ -69,8 +69,18 @@ Proposed `/leaderboard profession:alchemy` ranks characters by their known Alche
 skill; omitting `profession` keeps the character-level leaderboard. Use the same
 pagination and shared-rank rules. Compare only the same profession/skill-line tier,
 not unrelated professions or tiers. Missing skill values are excluded from ranked
-rows, not treated as zero. Show incomplete profession coverage once when relevant;
-no known practitioners is not proof that the guild has none.
+rows, not treated as zero. When coverage is incomplete, show the affected-character
+count and specific counts of unavailable data, partial data, failed refreshes, and
+unknown matching ranks, against the queried character count. These categories may
+overlap; do not sum them to obtain the affected-character count. A complete empty
+profession list is known absence, not unavailable data. No known practitioners is
+not proof that the guild has none.
+
+Profession leaderboards show check times separately from source timestamps for the
+displayed page, with oldest/newest bounds when they differ. One old character must
+not make recently updated rows appear to have the same age. Do not equate a check
+with new gameplay data, replace missing profession check times with a roster check,
+or add recurring generic age warnings.
 
 Grub should answer questions such as "Who has Alchemy?" and "Who has Blacksmithing
 at 200 or above?" from structured profession data. A profession or skill rank does

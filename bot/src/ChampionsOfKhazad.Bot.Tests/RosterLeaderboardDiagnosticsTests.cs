@@ -5,8 +5,10 @@ namespace ChampionsOfKhazad.Bot.Tests;
 
 public class RosterLeaderboardDiagnosticsTests
 {
-    [Fact]
-    public void RepresentativeProfessionMessageKeepsRanksPaginationAndSpecificFailureDetailsWithoutGenericWarnings()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void RepresentativeProfessionMessageShowsOnlyLastCheckedDateUnlessTheRosterRefreshFailed(bool refreshFailed)
     {
         var now = new DateTime(2026, 11, 6, 12, 40, 0, DateTimeKind.Utc);
         var skill = Professions(102, id: "182", name: "Herbalism").Skills[0] with { ObservedAtUtc = now.AddMinutes(-2) };
@@ -18,7 +20,7 @@ public class RosterLeaderboardDiagnosticsTests
             TotalPages = 2,
             ObservedAtUtc = now.AddMinutes(-1),
             CheckedAtUtc = now,
-            LastRefreshFailed = true,
+            LastRefreshFailed = refreshFailed,
             ProfessionCoverage = new()
             {
                 TotalCharacters = 40,
@@ -33,12 +35,8 @@ public class RosterLeaderboardDiagnosticsTests
             **Crossroads Mega Chippy — Herbalism leaderboard**
             1. **Huks Example** — Warrior, Herbalism 102/300
             Page 1/2
-            Guild profession coverage: 3 of 40 characters affected (2 unavailable, 1 failed refresh).
-            Profession checks (this page): {Relative(now)}
-            Profession source timestamps (this page): {Relative(now.AddMinutes(-2))}
-            Roster check: {Relative(now)}
-            The latest refresh failed; showing the last collected data.
-            """.ReplaceLineEndings("\n"),
+            Last checked {CheckedDate(now)}
+            """.ReplaceLineEndings("\n") + (refreshFailed ? "\nThe latest refresh failed; showing the last collected data." : ""),
             string.Join('\n', RosterText.Leaderboard(page))
         );
     }
@@ -84,10 +82,8 @@ public class RosterLeaderboardDiagnosticsTests
             page.ProfessionCoverage
         );
         var text = string.Join('\n', RosterText.Leaderboard(page));
-        Assert.Contains(
-            "Guild profession coverage: 4 of 7 characters affected (1 unavailable, 1 partial, 2 failed refreshes, 1 unknown rank).",
-            text
-        );
+        Assert.DoesNotContain("profession coverage", text);
+        Assert.Contains("The latest profession check failed for 1 displayed character; showing retained data.", text);
         Assert.DoesNotContain("Profession data is incomplete.", text);
         Assert.DoesNotContain("Observed <t:", text);
         Assert.Contains("Alchemy 100/300", text);
@@ -99,7 +95,7 @@ public class RosterLeaderboardDiagnosticsTests
     }
 
     [Fact]
-    public async Task NameFilteredCoverageDoesNotClaimToDescribeTheWholeGuild()
+    public async Task NameFilteredCoverageRemainsAvailableInQueriesButIsNotAppendedToMessages()
     {
         using var fixture = new RosterFixture();
         fixture.SetMembers(Character(first: "Known", professions: Professions()), Character("2", first: "Missing"));
@@ -112,13 +108,14 @@ public class RosterLeaderboardDiagnosticsTests
         var text = string.Join('\n', RosterText.Leaderboard(missing));
         Assert.Equal("no_match", missing.Status);
         Assert.Contains("No matching characters with known ranks were found.", text);
-        Assert.Contains("Matching-character profession coverage: 1 of 1 character affected (1 unavailable).", text);
-        Assert.DoesNotContain("Profession source timestamps", text);
-        Assert.DoesNotContain("Roster source timestamp", text);
+        Assert.Equal(1, missing.ProfessionCoverage!.AffectedCharacters);
+        Assert.True(missing.ProfessionCoverage.NameFiltered);
+        Assert.Equal("No matching characters with known ranks were found.", RosterText.Leaderboard(missing with { IsMock = false }).Single());
+        Assert.DoesNotContain("Last checked", text);
     }
 
     [Fact]
-    public async Task SourceAgeAndCheckRangesArePageSpecificAndDoNotMakeAnUpdatedPlayerLookDayOld()
+    public async Task LastCheckedDateUsesTheOldestKnownCheckOnTheDisplayedPageNotSourceAgeOrMembershipCheck()
     {
         using var fixture = new RosterFixture();
         await fixture.Refresh();
@@ -153,53 +150,50 @@ public class RosterLeaderboardDiagnosticsTests
         var first = await fixture.Queries.QueryAsync(50, profession: "Alchemy", cancellationToken: fixture.Token);
         var second = await fixture.Queries.QueryAsync(50, profession: "Alchemy", page: 2, cancellationToken: fixture.Token);
         var text = string.Join('\n', RosterText.Leaderboard(first));
-        Assert.Contains($"Profession checks (this page): oldest {Relative(now.AddMinutes(-5))}; newest {Relative(now)}", text);
-        Assert.Contains($"Profession source timestamps (this page): oldest {Relative(now.AddDays(-1))}; newest {Relative(now.AddMinutes(-1))}", text);
-        Assert.DoesNotContain(Relative(now.AddDays(-2)), text);
-        Assert.DoesNotContain("Observed <t:", text);
+        Assert.Equal($"Last checked {CheckedDate(now.AddMinutes(-5))}", Assert.Single(text.Split('\n'), line => line.StartsWith("Last checked")));
+        Assert.Equal(1, text.Count(character => character == '<'));
         Assert.Contains("Player02 Ironhide", text);
         Assert.Contains("Alchemy 98/300", text);
         Assert.Contains("Page 1/2", text);
         Assert.DoesNotContain("profession coverage", text);
         var secondText = string.Join('\n', RosterText.Leaderboard(second));
-        Assert.Contains($"Profession source timestamps (this page): {Relative(now.AddDays(-2))}", secondText);
-        Assert.DoesNotContain("oldest", secondText);
+        Assert.Contains($"Last checked {CheckedDate(now)}", secondText);
+        Assert.Equal(1, secondText.Count(character => character == '<'));
     }
 
     [Fact]
-    public async Task FailedProfessionAttemptIsVisibleAlongsideRetainedSkillAndItsOriginalSourceTimestamp()
+    public async Task FailedProfessionAttemptKeepsItsWarningAndRetainedSkillWithoutSourceTimestampDiagnostics()
     {
         using var fixture = new RosterFixture();
         fixture.Source.HasSeparateProfessionRequests = true;
         fixture.Source.Professions["id:1"] = Professions();
         await fixture.Refresh();
-        var original = fixture.Store.States[fixture.Service.ScopeId].Characters[0].Professions!.Skills[0].ObservedAtUtc;
         fixture.Advance(601);
         fixture.Source.ProfessionFailure = new IOException("private-response-details");
         await fixture.Refresh();
         var page = await fixture.Queries.QueryAsync(50, profession: "Alchemy", cancellationToken: fixture.Token);
         var text = string.Join('\n', RosterText.Leaderboard(page));
         Assert.False(page.LastRefreshFailed);
-        Assert.Contains("1 failed refresh", text);
+        Assert.Contains("The latest profession check failed for 1 displayed character; showing retained data.", text);
         Assert.Contains("Alchemy 74/300", text);
-        Assert.Contains($"Profession checks (this page): {Relative(fixture.Clock.Now.UtcDateTime)}", text);
-        Assert.Contains($"Profession source timestamps (this page): {Relative(original)}", text);
+        Assert.Contains($"Last checked {CheckedDate(fixture.Clock.Now.UtcDateTime)}", text);
+        Assert.Equal(1, text.Count(character => character == '<'));
+        Assert.DoesNotContain("source timestamps", text);
         Assert.DoesNotContain("private-response-details", text);
     }
 
     [Fact]
-    public async Task LevelOutputSeparatesRosterCheckAndSourceTimestampAndPreservesFailureStatus()
+    public async Task LevelOutputShowsOnlyTheLastRosterCheckDateAndPreservesFailureStatus()
     {
         using var fixture = new RosterFixture();
         await fixture.Refresh();
-        var observed = fixture.Clock.Now.UtcDateTime;
         fixture.Advance();
         fixture.Source.Failure = new IOException("private-details");
         await Assert.ThrowsAsync<IOException>(fixture.Refresh);
         var page = await fixture.Queries.QueryAsync(50, cancellationToken: fixture.Token);
         var text = string.Join('\n', RosterText.Leaderboard(page));
-        Assert.Contains($"Roster check: {Relative(fixture.Clock.Now.UtcDateTime)}", text);
-        Assert.Contains($"Roster source timestamp: {Relative(observed)}", text);
+        Assert.Contains($"Last checked {CheckedDate(fixture.Clock.Now.UtcDateTime)}", text);
+        Assert.Equal(1, text.Count(character => character == '<'));
         Assert.Contains("The latest refresh failed; showing the last collected data.", text);
         Assert.Contains("level 19", text);
         Assert.DoesNotContain("private-details", text);
@@ -213,7 +207,7 @@ public class RosterLeaderboardDiagnosticsTests
         var state = fixture.Store.States[fixture.Service.ScopeId];
         fixture.Store.States[fixture.Service.ScopeId] = state with { Characters = [Character(professions: Professions())] };
         var page = await fixture.Queries.QueryAsync(50, profession: "Alchemy", cancellationToken: fixture.Token);
-        Assert.DoesNotContain("Profession checks", string.Join('\n', RosterText.Leaderboard(page)));
+        Assert.DoesNotContain("Last checked", string.Join('\n', RosterText.Leaderboard(page)));
     }
 
     [Fact]
@@ -274,5 +268,5 @@ public class RosterLeaderboardDiagnosticsTests
         Assert.Equal(20_000d, Assert.Single(logger.Entries).Properties["DurationMs"]);
     }
 
-    private static string Relative(DateTime value) => $"<t:{new DateTimeOffset(value, TimeSpan.Zero).ToUnixTimeSeconds()}:R>";
+    private static string CheckedDate(DateTime value) => $"<t:{new DateTimeOffset(value, TimeSpan.Zero).ToUnixTimeSeconds()}:f>";
 }

@@ -15,7 +15,7 @@ internal class RosterTools(GuildRosterQueries roster, IMessageContext context, I
             AIFunctionFactory.Create(
                 LeaderboardAsync,
                 "get_guild_leaderboard",
-                "Read the current guild's level leaderboard, or a profession leaderboard. Ten characters per page; shared ranks. Use this instead of lore for current levels/professions. Preserve mock status and observation age; data is not live. No Discord ownership, recipe knowledge, or achievement times can be inferred."
+                "Read the current guild's level leaderboard, or a profession leaderboard. Ten characters per page; shared ranks. Use this instead of lore for current levels/professions. Preserve mock status and actual refresh failures. For routine freshness copy, use only a last-checked date from the relevant check timestamps, not source observation age or coverage diagnostics; data is not live. No Discord ownership, recipe knowledge, or achievement times can be inferred."
             ),
             AIFunctionFactory.Create(
                 CharactersAsync,

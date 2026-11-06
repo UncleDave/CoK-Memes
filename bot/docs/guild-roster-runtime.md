@@ -117,24 +117,29 @@ identity support in the shared model is not used to hide missing live character 
 
 `/leaderboard [profession] [page]` is guild-registered while enabled. It defers before
 queued work and returns ten characters per page with shared ranks, full names,
-class, level/rank, and observation age. Profession filters accept names, IDs, or an
-unambiguous ID:tier. Unknown ranks are not zero-filled; incomplete profession
-coverage and failed refreshes remain visible. Coverage reports unique affected
+class, level/rank, and one `Last checked` date/time. Profession filters accept names,
+IDs, or an unambiguous ID:tier. Unknown ranks are not zero-filled. Structured
+coverage reports unique affected
 characters out of the whole guild (or name-filtered set), with separate counts for
 unavailable observations, partial observations, failed refreshes, and unknown ranks
 in the requested profession. Counts can overlap, and known complete empty lists
 are not counted as missing. This coverage is independent of pagination and minimum
-skill filters; it is not a claim that the displayed practitioners lack data.
+skill filters; it is not a claim that the displayed practitioners lack data. These
+counts remain available to Grub for diagnostic questions, not routine message copy.
 
-Level results label the roster check and source timestamp separately. Profession
-results show the displayed rows' check and source timestamp ranges, collapsing
-equal bounds to one timestamp. Check times include failed attempts and HTTP cache
-hits/revalidation, not just fresh network downloads; source timestamps retain the
-upstream Last-Modified or original receipt time described above. Profession check
-times are recorded when each attempt completes. Missing historical profession
-check times are omitted rather than replaced with membership check times. Empty
-profession results show no fabricated profession age. Grub receives the same
-coverage counts and per-character profession check times in structured results.
+Level messages use the roster check time for the single date footer. Profession
+messages use the oldest known profession check among the displayed rows. Discord's
+date/time format (`f`) renders this in the reader's locale, rather than a relative
+source age. Check times include failed attempts and HTTP cache hits/revalidation,
+not just fresh network downloads. Profession check times are recorded when each
+attempt completes; missing historical checks are not replaced with membership
+checks. Empty profession results show no fabricated check date. Routine messages
+omit coverage breakdowns, source timestamps, and oldest/newest ranges. Failed
+checks affecting displayed profession rows still get a short retained-data warning;
+the existing roster-refresh failure warning also remains. Grub receives coverage
+counts and per-character check/source timestamps for on-demand questions, but its
+routine copy follows the same last-checked-only policy. Source timestamps retain
+the upstream Last-Modified or original receipt time described above, internally.
 
 Empty, no-match, unavailable,
 out-of-range, and failure states stay distinct. Text is bounded/escaped and pings

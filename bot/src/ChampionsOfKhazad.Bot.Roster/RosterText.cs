@@ -48,49 +48,20 @@ public static partial class RosterText
             );
             lines.Add($"Page {page.Page}/{page.TotalPages}");
         }
-        if (page.ProfessionCoverage is { AffectedCharacters: > 0 } coverage)
-        {
-            var details = new List<string>();
-            if (coverage.UnavailableCharacters > 0)
-                details.Add($"{coverage.UnavailableCharacters} unavailable");
-            if (coverage.PartialCharacters > 0)
-                details.Add($"{coverage.PartialCharacters} partial");
-            if (coverage.FailedRefreshCharacters > 0)
-                details.Add($"{coverage.FailedRefreshCharacters} failed {(coverage.FailedRefreshCharacters == 1 ? "refresh" : "refreshes")}");
-            if (coverage.UnknownRankCharacters > 0)
-                details.Add($"{coverage.UnknownRankCharacters} unknown {(coverage.UnknownRankCharacters == 1 ? "rank" : "ranks")}");
-            var scope = coverage.NameFiltered ? "Matching-character" : "Guild";
-            lines.Add(
-                $"{scope} profession coverage: {coverage.AffectedCharacters} of {coverage.TotalCharacters} {(coverage.TotalCharacters == 1 ? "character" : "characters")} affected ({string.Join(", ", details)})."
-            );
-        }
         var professionRows = page.Rows.Where(row => row.Profession is not null).ToArray();
-        if (professionRows.Length > 0)
-        {
-            AddTimes(lines, "Profession checks (this page)", professionRows.Select(row => row.Character.ProfessionsCheckedAtUtc));
-            AddTimes(lines, "Profession source timestamps (this page)", professionRows.Select(row => (DateTime?)row.Profession!.ObservedAtUtc));
-            if (page.LastRefreshFailed)
-                AddTimes(lines, "Roster check", [page.CheckedAtUtc]);
-        }
-        else
-        {
-            AddTimes(lines, "Roster check", [page.CheckedAtUtc]);
-            if (page.Profession is null)
-                AddTimes(lines, "Roster source timestamp", [page.ObservedAtUtc]);
-        }
+        var checkedAt = page.Profession is null ? page.CheckedAtUtc : professionRows.Select(row => row.Character.ProfessionsCheckedAtUtc).Min();
+        if (checkedAt is { } timestamp)
+            lines.Add(
+                $"Last checked <t:{new DateTimeOffset(timestamp, TimeSpan.Zero).ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture)}:f>"
+            );
+        var failedProfessionChecks = professionRows.Count(row => row.Character.ProfessionRefreshFailed);
+        if (failedProfessionChecks > 0)
+            lines.Add(
+                $"The latest profession check failed for {failedProfessionChecks} displayed {(failedProfessionChecks == 1 ? "character" : "characters")}; showing retained data."
+            );
         if (page.LastRefreshFailed && page.ObservedAtUtc.HasValue)
             lines.Add("The latest refresh failed; showing the last collected data.");
         return Pack(lines).ToArray();
-    }
-
-    private static void AddTimes(List<string> lines, string label, IEnumerable<DateTime?> values)
-    {
-        var times = values.OfType<DateTime>().Order().ToArray();
-        if (times.Length == 0)
-            return;
-        string Relative(DateTime timestamp) =>
-            $"<t:{new DateTimeOffset(timestamp, TimeSpan.Zero).ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture)}:R>";
-        lines.Add(times[0] == times[^1] ? $"{label}: {Relative(times[0])}" : $"{label}: oldest {Relative(times[0])}; newest {Relative(times[^1])}");
     }
 
     public static IEnumerable<RosterNoticeBatch> NoticeBatches(IEnumerable<RosterNotice> notices)

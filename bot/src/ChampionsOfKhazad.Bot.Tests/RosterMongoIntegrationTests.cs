@@ -26,12 +26,25 @@ public class RosterMongoIntegrationTests
             var store = new MongoRosterStore(snapshots);
             var notices = new MongoRosterNoticeStore(collection);
             using var fixture = new RosterFixture();
+            var professions = RosterFixture.Professions() with
+            {
+                Skills =
+                [
+                    new()
+                    {
+                        Id = "185",
+                        Name = "Cooking",
+                        KnownRecipes = [new() { Id = "1902", Name = "Hot Lion Chops" }],
+                    },
+                ],
+            };
+            fixture.SetMembers(RosterFixture.Character(professions: professions));
             using var service = new GuildRosterService(fixture.Options, fixture.Source, store, notices, fixture.Clock);
             await service.RefreshAsync(token, force: true);
             var initial = (await store.GetAsync(service.ScopeId, token))!;
             Assert.Equal(19, Assert.Single(initial.Characters).Level);
             fixture.Advance();
-            fixture.SetMembers(RosterFixture.Character(level: 20));
+            fixture.SetMembers(RosterFixture.Character(level: 20, professions: professions));
             await service.RefreshAsync(token, force: true);
             var notice = Assert.Single(await notices.GetPendingAsync(service.ScopeId, token));
             await notices.AddPendingAsync(notice, token);
@@ -42,6 +55,10 @@ public class RosterMongoIntegrationTests
             var restarted = new MongoRosterStore(restartedDatabase.GetCollection<RosterState>("rosters"));
             var restartedNotices = new MongoRosterNoticeStore(restartedDatabase.GetCollection<RosterNotice>("notices"));
             Assert.Equal(20, Assert.Single((await restarted.GetAsync(service.ScopeId, token))!.Characters).Level);
+            var queries = new GuildRosterQueries(fixture.Options, service, restarted);
+            var crafters = await queries.FindRecipeCraftersAsync(fixture.Options.GuildId, "Hot Lion Chops", cancellationToken: token);
+            Assert.Equal("ok", crafters.Status);
+            Assert.Equal("Borin Ironhide", Assert.Single(crafters.Crafters).FullName);
             Assert.Single(await restartedNotices.GetPendingAsync(service.ScopeId, token));
             await restartedNotices.MarkSentAsync(notice.Id, DateTime.UtcNow, 123, token);
             Assert.Empty(await restartedNotices.GetPendingAsync(service.ScopeId, token));

@@ -602,6 +602,7 @@ public class CustomerDisciplineReplyTests
         Assert.Contains("get_guild_leaderboard", fixture.Chat.InitialTools);
         Assert.Contains("find_guild_characters", fixture.Chat.InitialTools);
         Assert.Contains("find_guild_profession_members", fixture.Chat.InitialTools);
+        Assert.Contains("find_guild_recipe_crafters", fixture.Chat.InitialTools);
         Assert.Contains("\"isMock\":true", Assert.Single(fixture.Chat.Results));
         Assert.Contains("Borin Ironhide", fixture.Chat.Results[0]);
         Assert.Equal(1, fixture.RosterStore.Reads);
@@ -660,13 +661,95 @@ public class CustomerDisciplineReplyTests
     }
 
     [Fact]
+    public async Task RecipeToolReturnsOnlyMatchingKnowledgeWithChecksFailuresAndCoverage()
+    {
+        using var fixture = new Fixture(rosterEnabled: true);
+        var checkedAt = new DateTime(2026, 11, 7, 4, 0, 0, DateTimeKind.Utc);
+        var sourceAt = checkedAt.AddHours(-2);
+        fixture.RosterStore.Characters =
+        [
+            new()
+            {
+                Id = "1",
+                FirstName = "Borin",
+                LastName = "Ironhide",
+                ClassName = "Warrior",
+                Level = 20,
+                ProfessionsCheckedAtUtc = checkedAt,
+                ProfessionRefreshFailed = true,
+                Professions = new()
+                {
+                    Complete = true,
+                    ObservedAtUtc = sourceAt,
+                    Skills =
+                    [
+                        new()
+                        {
+                            Id = "185",
+                            Name = "Cooking",
+                            ObservedAtUtc = sourceAt,
+                            KnownRecipes = [new() { Id = "1902", Name = "Hot Lion Chops" }, new() { Id = "1901", Name = "Big Bear Steak" }],
+                        },
+                    ],
+                },
+            },
+        ];
+        var tool = Assert.IsAssignableFrom<AIFunction>(
+            fixture.Tools.Create(fixture.Context, true).Single(tool => tool.Name == "find_guild_recipe_crafters")
+        );
+        Assert.Contains("recipe", tool.JsonSchema.GetProperty("required").EnumerateArray().Select(value => value.GetString()));
+        Assert.False(tool.JsonSchema.GetProperty("properties").TryGetProperty("guildId", out _));
+        var response = await tool.InvokeAsync(new AIFunctionArguments { ["recipe"] = "lion chops" }, TestContext.Current.CancellationToken);
+        using var document = JsonDocument.Parse(Assert.IsType<JsonElement>(response).GetString()!);
+        var root = document.RootElement;
+        Assert.Equal("ok", root.GetProperty("status").GetString());
+        Assert.True(root.GetProperty("isMock").GetBoolean());
+        Assert.Equal("1902", root.GetProperty("recipe").GetProperty("id").GetString());
+        Assert.Equal(1, root.GetProperty("coverage").GetProperty("failedRefreshCharacters").GetInt32());
+        var crafter = Assert.Single(root.GetProperty("crafters").EnumerateArray());
+        Assert.Equal("Borin Ironhide", crafter.GetProperty("fullName").GetString());
+        Assert.Equal(checkedAt, crafter.GetProperty("checkedAtUtc").GetDateTime());
+        Assert.Equal(sourceAt, crafter.GetProperty("observedAtUtc").GetDateTime());
+        Assert.True(crafter.GetProperty("refreshFailed").GetBoolean());
+        Assert.DoesNotContain("Big Bear Steak", root.GetRawText());
+        Assert.Equal(1, fixture.RosterStore.Reads);
+        Assert.Equal(0, fixture.Lore.Searches);
+
+        foreach (var name in new[] { "get_guild_leaderboard", "find_guild_characters", "find_guild_profession_members" })
+        {
+            var ordinary = Assert.IsAssignableFrom<AIFunction>(fixture.Tools.Create(fixture.Context, true).Single(tool => tool.Name == name));
+            var arguments = new AIFunctionArguments { ["profession"] = "Cooking", ["name"] = "Borin" };
+            var result = await ordinary.InvokeAsync(arguments, TestContext.Current.CancellationToken);
+            var text = Assert.IsType<JsonElement>(result).GetString()!;
+            Assert.DoesNotContain("knownRecipes", text);
+            Assert.DoesNotContain("Hot Lion Chops", text);
+        }
+    }
+
+    [Fact]
+    public async Task RecipeToolFailureDoesNotLeakDatabaseDetailsOrClaimNoCrafters()
+    {
+        using var fixture = new Fixture(rosterEnabled: true);
+        fixture.RosterStore.Fail = true;
+        var tool = Assert.IsAssignableFrom<AIFunction>(
+            fixture.Tools.Create(fixture.Context, true).Single(tool => tool.Name == "find_guild_recipe_crafters")
+        );
+        var response = await tool.InvokeAsync(new AIFunctionArguments { ["recipe"] = "Hot Lion Chops" }, TestContext.Current.CancellationToken);
+        var text = Assert.IsType<JsonElement>(response).GetString()!;
+        Assert.Contains("lookup failed", text);
+        Assert.DoesNotContain("Private", text);
+    }
+
+    [Fact]
     public async Task BarredCustomersAndFollowersCannotUseRosterTools()
     {
         using var fixture = new Fixture(rosterEnabled: true);
         Assert.DoesNotContain(fixture.Tools.Create(fixture.Context, false), tool => tool.Name == "get_guild_leaderboard");
+        Assert.DoesNotContain(fixture.Tools.Create(fixture.Context, false), tool => tool.Name == "find_guild_recipe_crafters");
         await fixture.AddStrikesAsync(3);
         await fixture.InvokeAsync("Show the leaderboard");
         Assert.DoesNotContain("get_guild_leaderboard", fixture.Chat.InitialTools);
+        Assert.DoesNotContain("find_guild_recipe_crafters", fixture.Chat.InitialTools);
         Assert.Equal(0, fixture.RosterStore.Reads);
     }
 
@@ -676,8 +759,10 @@ public class CustomerDisciplineReplyTests
         using var fixture = new Fixture(rosterEnabled: true);
         fixture.Context.GuildId = null;
         Assert.DoesNotContain(fixture.Tools.Create(fixture.Context, true), tool => tool.Name == "get_guild_leaderboard");
+        Assert.DoesNotContain(fixture.Tools.Create(fixture.Context, true), tool => tool.Name == "find_guild_recipe_crafters");
         fixture.Context.GuildId = 999;
         Assert.DoesNotContain(fixture.Tools.Create(fixture.Context, true), tool => tool.Name == "get_guild_leaderboard");
+        Assert.DoesNotContain(fixture.Tools.Create(fixture.Context, true), tool => tool.Name == "find_guild_recipe_crafters");
     }
 
     [Fact]
@@ -691,12 +776,14 @@ public class CustomerDisciplineReplyTests
         Assert.DoesNotContain("Private", fixture.Chat.Results[0]);
     }
 
-    [Fact]
-    public async Task AThirdStrikeStopsARosterLookupInTheSameConversation()
+    [Theory]
+    [InlineData("get_guild_leaderboard")]
+    [InlineData("find_guild_recipe_crafters")]
+    public async Task AThirdStrikeStopsARosterLookupInTheSameConversation(string tool)
     {
         using var fixture = new Fixture(rosterEnabled: true);
         await fixture.AddStrikesAsync(2);
-        fixture.Chat.Actions = ["issue_customer_strike", "get_guild_leaderboard"];
+        fixture.Chat.Actions = ["issue_customer_strike", tool];
         Assert.Contains("You're barred", await fixture.InvokeAsync());
         Assert.Equal(0, fixture.RosterStore.Reads);
     }
@@ -898,6 +985,7 @@ public class CustomerDisciplineReplyTests
                 {
                     "issue_customer_strike" => new() { ["reason"] = StrikeReason },
                     "search_lore" => new() { ["query"] = "guild" },
+                    "find_guild_recipe_crafters" => new() { ["recipe"] = "Hot Lion Chops" },
                     _ => [],
                 };
                 return new ChatResponse(new ChatMessage(ChatRole.Assistant, [new FunctionCallContent("call-" + results.Length, action, arguments)]))

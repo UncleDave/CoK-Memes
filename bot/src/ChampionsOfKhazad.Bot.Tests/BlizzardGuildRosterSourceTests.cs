@@ -22,6 +22,80 @@ public class BlizzardGuildRosterSourceTests
         """;
 
     [Fact]
+    public async Task CollectsKnownRecipesFromTieredAndUntieredProfessionsWithoutFollowingRecipeLinks()
+    {
+        using var fixture = new Fixture
+        {
+            // Recipe entries use the id/name/key shape observed in the live API on 7 November.
+            ProfessionJson = """
+                {"character":{"id":1001},"primaries":[{"profession":{"id":164,"name":"Blacksmithing"},
+                  "tiers":[{"tier":{"id":1},"known_recipes":[{"id":1901,"name":"Test Bracers",
+                    "key":{"href":"https://example.test/never-follow"}}]}]}],
+                 "secondaries":[{"profession":{"id":185,"name":"Cooking"},
+                  "known_recipes":[{"id":1902,"name":"Hot Lion Chops"}]}]}
+                """,
+        };
+        var member = Assert.Single((await fixture.Source.GetRosterAsync(fixture.Token)).Characters);
+        var calls = fixture.Requests.Count;
+        var professions = (await fixture.Source.GetProfessionsAsync(member, fixture.Token))!;
+        Assert.Equal(2, professions.Skills.Length);
+        Assert.Equal("1901", Assert.Single(professions.Skills[0].KnownRecipes!).Id);
+        Assert.Equal("Hot Lion Chops", Assert.Single(professions.Skills[1].KnownRecipes!).Name);
+        Assert.Null(professions.Skills[0].Skill);
+        Assert.Equal(calls + 1, fixture.Requests.Count);
+        Assert.DoesNotContain(fixture.Requests, request => request.Host == "example.test");
+    }
+
+    [Theory]
+    [InlineData("{}", null)]
+    [InlineData("{\"known_recipes\":[]}", 0)]
+    [InlineData("{\"known_recipes\":[{\"id\":1902,\"name\":\"Hot Lion Chops\"}]}", 1)]
+    public async Task MissingAndExplicitlyEmptyRecipeListsRemainDistinct(string values, int? count)
+    {
+        var entry = JsonNode.Parse(values)!;
+        entry["profession"] = JsonNode.Parse("""{"id":185,"name":"Cooking"}""");
+        using var fixture = new Fixture { ProfessionJson = new JsonObject { ["secondaries"] = new JsonArray(entry) }.ToJsonString() };
+        var member = Assert.Single((await fixture.Source.GetRosterAsync(fixture.Token)).Characters);
+        var skill = Assert.Single((await fixture.Source.GetProfessionsAsync(member, fixture.Token))!.Skills);
+        if (count is null)
+            Assert.Null(skill.KnownRecipes);
+        else
+            Assert.Equal(count, skill.KnownRecipes!.Length);
+    }
+
+    [Theory]
+    [InlineData("null")]
+    [InlineData("{}")]
+    [InlineData("[{\"id\":0,\"name\":\"Invalid\"}]")]
+    [InlineData("[{\"id\":1}]")]
+    [InlineData("[{\"id\":1,\"name\":\" \"}]")]
+    [InlineData("[{\"id\":1,\"name\":\"One\"},{\"id\":1,\"name\":\"Duplicate\"}]")]
+    public async Task MalformedRecipeListsFailOptionalRefreshWithoutLosingPriorRecipesOrLevels(string recipes)
+    {
+        using var fixture = new Fixture
+        {
+            ProfessionJson = """
+                {"primaries":[{"profession":{"id":164,"name":"Blacksmithing"},"skill_points":74,
+                  "known_recipes":[{"id":1,"name":"Test Bracers"}]}],"secondaries":[]}
+                """,
+        };
+        using var memory = new RosterFixture();
+        using var service = new GuildRosterService(memory.Options, fixture.Source, memory.Store, memory.Notices, fixture.Clock);
+        await service.RefreshAsync(fixture.Token, force: true);
+        fixture.Clock.Now = fixture.Clock.Now.AddSeconds(601);
+        var root = JsonNode.Parse(fixture.ProfessionJson)!;
+        root["primaries"]![0]!["known_recipes"] = JsonNode.Parse(recipes);
+        fixture.ProfessionJson = root.ToJsonString();
+        fixture.RosterJson = Roster.Replace("\"level\":19", "\"level\":20", StringComparison.Ordinal);
+        await service.RefreshAsync(fixture.Token, force: true);
+        var retained = Assert.Single(memory.Store.States[service.ScopeId].Characters);
+        Assert.True(retained.ProfessionRefreshFailed);
+        Assert.Equal("Test Bracers", Assert.Single(Assert.Single(retained.Professions!.Skills).KnownRecipes!).Name);
+        Assert.Equal(20, retained.Level);
+        Assert.Equal("level", Assert.Single(memory.Notices.Items.Values).TrackKey);
+    }
+
+    [Fact]
     public async Task LiveSourceUsesRealmlessRoutesOAuthSurnameAndStaticClassNames()
     {
         using var fixture = new Fixture();

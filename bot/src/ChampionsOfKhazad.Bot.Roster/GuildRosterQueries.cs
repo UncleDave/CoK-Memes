@@ -7,6 +7,115 @@ public class GuildRosterQueries(GuildRosterOptions options, GuildRosterService s
 
     public bool IsAvailableFor(ulong guildId) => options.Enabled && guildId == options.GuildId;
 
+    public async Task<RecipePage> FindRecipeCraftersAsync(ulong guildId, string recipe, int page = 1, CancellationToken cancellationToken = default)
+    {
+        if (!IsAvailableFor(guildId))
+            return new() { Status = "unavailable" };
+        recipe = recipe?.Trim() ?? "";
+        if (page < 1 || recipe.Length is 0 or > 200 || recipe.Any(char.IsControl))
+            return new() { Status = "invalid_query" };
+        var state = await store.GetAsync(service.ScopeId, cancellationToken);
+        if (state?.ObservedAtUtc is null)
+            return new()
+            {
+                Status = state?.LastRefreshFailed == true ? "refresh_failed" : "no_data",
+                IsMock = service.IsMock,
+                LastRefreshFailed = state?.LastRefreshFailed ?? false,
+            };
+
+        var unavailable = state.Characters.Where(member => member.Professions is null).ToArray();
+        var partial = state
+            .Characters.Where(member =>
+                member.Professions is { } professions && (!professions.Complete || professions.Skills.Any(skill => skill.KnownRecipes is null))
+            )
+            .ToArray();
+        var failed = state.Characters.Where(member => member.ProfessionRefreshFailed).ToArray();
+        var result = new RecipePage
+        {
+            IsMock = state.IsMock,
+            GuildName = state.GuildName,
+            LastRefreshFailed = state.LastRefreshFailed,
+            Page = page,
+            Coverage = new()
+            {
+                TotalCharacters = state.Characters.Length,
+                AffectedCharacters = unavailable.Concat(partial).Concat(failed).DistinctBy(member => member.Key).Count(),
+                UnavailableCharacters = unavailable.Length,
+                PartialCharacters = partial.Length,
+                FailedRefreshCharacters = failed.Length,
+            },
+        };
+        var known = state
+            .Characters.SelectMany(member =>
+                (member.Professions?.Skills ?? []).SelectMany(skill =>
+                    (skill.KnownRecipes ?? []).Select(knownRecipe => (Member: member, Skill: skill, Recipe: knownRecipe))
+                )
+            )
+            .ToArray();
+        var matches = known.Where(item => string.Equals(item.Recipe.Id, recipe, StringComparison.Ordinal)).ToArray();
+        if (matches.Length == 0)
+            matches = known.Where(item => string.Equals(item.Recipe.Name, recipe, StringComparison.OrdinalIgnoreCase)).ToArray();
+        // A supplied ID or full recipe name wins over a broader substring match.
+        if (matches.Length == 0)
+            matches = known.Where(item => item.Recipe.Name.Contains(recipe, StringComparison.OrdinalIgnoreCase)).ToArray();
+        var choices = matches
+            .Select(item => item.Recipe)
+            .DistinctBy(item => item.Id)
+            .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(item => item.Id, StringComparer.Ordinal)
+            .ToArray();
+        if (choices.Length == 0)
+            return result with { Status = state.Characters.Length == 0 ? "empty" : "no_match" };
+        if (choices.Length > 1)
+        {
+            var choicePages = (choices.Length + PageSize - 1) / PageSize;
+            return result with
+            {
+                Status = page > choicePages ? "page_out_of_range" : "ambiguous_recipe",
+                TotalCount = choices.Length,
+                TotalPages = choicePages,
+                RecipeChoices = page > choicePages ? [] : choices.Skip((page - 1) * PageSize).Take(PageSize).ToArray(),
+            };
+        }
+        var crafters = known
+            .Where(item => item.Recipe.Id == choices[0].Id)
+            .OrderBy(item => item.Member.FullName, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(item => item.Member.Key, StringComparer.Ordinal)
+            .ThenByDescending(item => item.Skill.ObservedAtUtc)
+            .ThenBy(item => item.Skill.TrackKey, StringComparer.Ordinal)
+            .DistinctBy(item => item.Member.Key)
+            .ToArray();
+        var totalPages = (crafters.Length + PageSize - 1) / PageSize;
+        return result with
+        {
+            Status = page > totalPages ? "page_out_of_range" : "ok",
+            Recipe = choices[0],
+            TotalCount = crafters.Length,
+            TotalPages = totalPages,
+            Crafters =
+                page > totalPages
+                    ? []
+                    : crafters
+                        .Skip((page - 1) * PageSize)
+                        .Take(PageSize)
+                        .Select(item => new RecipeCrafter
+                        {
+                            Id = item.Member.Id,
+                            FullName = item.Member.FullName,
+                            ClassName = item.Member.ClassName,
+                            Level = item.Member.Level,
+                            Profession = item.Skill.Name,
+                            ProfessionId = item.Skill.Id,
+                            Tier = item.Skill.Tier,
+                            Skill = item.Skill.Skill,
+                            ObservedAtUtc = item.Skill.ObservedAtUtc,
+                            CheckedAtUtc = item.Member.ProfessionsCheckedAtUtc,
+                            RefreshFailed = item.Member.ProfessionRefreshFailed,
+                        })
+                        .ToArray(),
+        };
+    }
+
     public async Task<RosterPage> QueryAsync(
         ulong guildId,
         int page = 1,

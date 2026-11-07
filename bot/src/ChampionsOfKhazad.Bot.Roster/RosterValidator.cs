@@ -51,15 +51,30 @@ public static class RosterValidator
                     throw new InvalidDataException("Invalid profession rank.");
                 var observed = skill.ObservedAtUtc == default ? timestamp : skill.ObservedAtUtc;
                 Timestamp(observed, now);
+                if (skill.KnownRecipes is { } recipes)
+                {
+                    if (recipes.Length > 5000)
+                        throw new InvalidDataException("Too many known recipes.");
+                    var recipeIds = new HashSet<string>(StringComparer.Ordinal);
+                    foreach (var recipe in recipes)
+                    {
+                        if (recipe is null)
+                            throw new InvalidDataException("Invalid known recipe.");
+                        Text(recipe.Id);
+                        Text(recipe.Name, 200);
+                        if (!recipeIds.Add(recipe.Id))
+                            throw new InvalidDataException("Duplicate known recipe.");
+                    }
+                }
                 return skill with { ObservedAtUtc = observed };
             })
             .ToArray();
         return observation with { ObservedAtUtc = timestamp, Skills = skills };
     }
 
-    private static void Text(string value)
+    private static void Text(string value, int maximumLength = 100)
     {
-        if (string.IsNullOrWhiteSpace(value) || value.Length > 100 || value != value.Trim() || value.Any(char.IsControl))
+        if (string.IsNullOrWhiteSpace(value) || value.Length > maximumLength || value != value.Trim() || value.Any(char.IsControl))
             throw new InvalidDataException("Invalid roster text field.");
     }
 

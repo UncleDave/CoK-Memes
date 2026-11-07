@@ -8,5 +8,8 @@ public record ProfessionSkill
     public int? Skill { get; init; }
     public int? MaxSkill { get; init; }
     public DateTime ObservedAtUtc { get; init; }
+
+    // Null means unavailable; an explicit empty array is a known empty recipe list.
+    public KnownRecipe[]? KnownRecipes { get; init; }
     public string TrackKey => $"profession:{Id.Length}:{Id}:{Tier}";
 }

@@ -1,5 +1,45 @@
 # Forever web API research
 
+## Post-launch check — 7 November 2026
+
+Authenticated EU app-token requests at **03:11 UTC** now return 200 for
+`/data/wow/guild/crossroads-mega-chippy` and `/roster`, with **65 roster entries**.
+The roster exposes numeric guild ranks, `playable_race`, and faction as well as
+the names/classes/levels used by the integration. Both guild documents advertise
+`public, max-age=10800`; frequent local checks do not bypass that cache. This
+supersedes the pre-launch unavailability observations below, not the remaining
+completeness/publication-timing checks.
+
+The community's public sample `daxan-windfury` now returns 200 for the profile and
+professions. A focused follow-up verified `known_recipes` under each profession's
+`tiers[]`, containing `id`, `name`, and `key` per recipe. Four lists contained
+27 entries in total across Skinning, Herbalism, Cooking, and Fishing. Example
+Cooking entries are recipe **1901 / Big Bear Steak** and **1902 / Hot Lion Chops**.
+Gathering professions also return entries such as Skinning/Herbalism, so a recipe
+entry does not always describe a crafted item. Recipe IDs are not item/spell IDs.
+Only IDs/names are needed for the new guild crafter lookup; do not follow the
+recipe links or fetch a catalogue merely to collect what the character knows.
+See [recipe collection and query semantics](guild-roster-runtime.md#recipe-lookup).
+
+Other focused requests returned 200 for sample equipment (16 equipped entries),
+specializations, achievements, ruleset index (four), Normal ruleset, and its
+auction-house index (15). These are research observations, not implemented
+features. In particular the achievement array's **16 entries are not 16 earned
+achievements**: `total_quantity` is 1. Only Novice Shaman (62006, account-wide,
+reach level 25 on a Shaman, reward one Legacy Point) is marked completed; the
+remaining entries contain incomplete spelunking/exploration progress. API
+tracking does not establish the presence of a visible in-game achievements UI.
+
+Static class/profession indexes still work (nine classes, 13 profession catalogue
+entries); the plain alias still resolves to `static-1.60.1_70399-forever-eu`.
+Realm and connected-realm indexes remain 404. The updated
+[community notes](https://mhuijskens.com/WoWForever/Api/), dated 5 November, report
+that public character profiles require level 10, while the guild roster includes
+lower-level characters. We have not independently established that threshold.
+The checks saved no credentials or raw response bodies and did not write Mongo
+or send Discord messages. Full guild membership completeness, cache latency,
+character coverage, and representative live Grub replies still need validation.
+
 ## Implementation decision after this checkpoint
 
 On 4 November the administrator chose to prepare the **live** integration for merge

@@ -35,7 +35,8 @@ Default assumptions:
   query parameters are discarded; our namespace/locale are applied explicitly.
 - Profession responses use `primaries`/`secondaries`, `profession.id/name`, optional
   `tiers[].tier.id`, and nullable `skill_points`/`max_skill_points`. A supplied
-  owner ID must match the requested character. Recipe data is ignored.
+  owner ID must match the requested character. Optional `known_recipes` arrays on
+  each profession/tier supply recipe IDs and names for guild crafter lookup.
 
 The two path templates are configurable so a launch-day routing correction does not
 require a domain rewrite. Templates are paths, not URLs or arbitrary query strings.
@@ -145,13 +146,51 @@ Empty, no-match, unavailable,
 out-of-range, and failure states stay distinct. Text is bounded/escaped and pings
 are disabled.
 
-Normal guild-chat Grub receives `get_guild_leaderboard`, `find_guild_characters`, and
-`find_guild_profession_members` over the same scoped queries. DMs, foreign guilds,
+Normal guild-chat Grub receives `get_guild_leaderboard`, `find_guild_characters`,
+`find_guild_profession_members`, and `find_guild_recipe_crafters` over the same scoped queries. DMs, foreign guilds,
 followers, and barred customers do not receive these tools. Existing customer
 execution guards still apply after a third strike. Roster-specific prompt guidance
 is composed only when the tools are actually present, independent of main's newer
 Grub voice prompt. Current levels/skills come from roster data, not lore or the web;
-tool results are quoted data and cannot establish recipes, ownership, or event times.
+tool results are quoted data. Profession ranks cannot establish recipe knowledge;
+only the recipe tool's explicit matches do. Neither establishes ownership or event times.
+
+### Recipe lookup
+
+Ask Grub, for example, "Who knows Hot Lion Chops?" or "Who can craft Big Bear Steak?"
+The tool searches recorded known recipe names (case-insensitive, full or partial)
+or recipe IDs, not item/spell IDs. An exact ID takes precedence over an exact name,
+which takes precedence over substring matches. Multiple recipe IDs return
+`ambiguous_recipe` with bounded choices; Grub asks which recipe before querying its
+ID. Choices and crafters are paginated ten per page. Crafters are unique characters
+ordered by full name, not skill rank; an unknown rank does not exclude an explicitly
+known recipe. Secondary professions are included.
+
+Collection reuses the existing profession requests and cache policy. Store only
+recipe IDs/names, not returned links or full recipe documents. Missing
+`known_recipes` means unknown; `[]` means a known empty list for that skill track.
+Malformed lists, duplicate IDs within a track, or more than 5,000 recipes per track
+fail the optional profession refresh and preserve prior data. Older observations
+cannot overwrite newer recipes. A newer valid response omitting the list makes
+that track unknown; it does not establish that recipes were unlearned. Departed
+characters stop appearing with the normal complete-membership replacement.
+
+Existing Mongo documents need no migration: absent recipe fields deserialize as
+unknown until the next successful profession refresh. Ordinary roster tools omit
+recipe arrays to keep their responses small. Recipe results include only the
+selected recipe/crafter page, per-crafter profession source/check timestamps and
+failure flags, the roster-refresh flag, and whole-guild coverage counts. Coverage
+counts unavailable professions, partial observations/missing recipe lists, and
+failed checks separately, with unique affected characters; known empty lists are
+not missing coverage. `no_match` is no recorded match, not proof that nobody knows
+the recipe. Keep coverage diagnostic detail out of routine replies, but preserve
+actual refresh failures. Use one last-checked date from the oldest known profession
+check among displayed crafters; never substitute a membership check.
+
+Known recipes do not prove materials, current availability, willingness to craft,
+or Discord ownership. Gathering skills can also have entries named as recipes;
+do not invent a crafted output. Item-to-recipe mapping, ingredient/cost lookup,
+static recipe catalogues, slash commands, and recipe announcements are not added.
 
 Gateway notifications are queued only after Discord is ready with a non-null
 `BotContext`. Messages/member departures received before that are not sent to

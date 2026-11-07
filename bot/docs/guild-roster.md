@@ -14,6 +14,12 @@ See the [in-game probe checklist](../../addons/docs/roster-probe.md).
 This records the requested direction and proposed first-version defaults,
 not a claim that every detail below has been approved.
 
+**7 November addition:** recipe collection and Grub crafter lookup are now accepted
+and implemented. Known recipe IDs/names come from the existing profession
+responses; no new polling loop, static catalogue, or recipe announcements are
+added. This supersedes the recipe-lookup deferral below. See
+[the recipe runtime contract](guild-roster-runtime.md#recipe-lookup).
+
 Review decisions: keep this small. Use database-backed pending/sent notifications,
 not transactional crash recovery or exactly-once delivery. Secondary professions
 can announce milestones. Do not build catch-up throttling/expiry controls unless
@@ -87,7 +93,8 @@ the same copy policy; diagnostic detail is for explicit questions.
 Grub should answer questions such as "Who has Alchemy?" and "Who has Blacksmithing
 at 200 or above?" from structured profession data. A profession or skill rank does
 not prove knowledge of a recipe, specialisation, availability, or willingness to
-craft. Recipe catalogues and "Who can craft this item?" are deferred.
+craft. Grub now uses explicit `known_recipes` for recipe-name/ID crafter lookup;
+static recipe catalogues and item-to-recipe mapping remain deferred.
 
 The [GetGuildTradeSkillInfo reference](https://warcraft.wiki.gg/wiki/API:GetGuildTradeSkillInfo)
 lists profession IDs, member names, and skill ranks, and marks the function as
@@ -108,6 +115,10 @@ Proposed Grub tools:
   known professions, observation timestamps, and explicit ambiguity/pagination.
 - `find_guild_profession_members`: bounded profession lookup with an optional
   minimum skill, returning matching characters, ranks, timestamps, and coverage.
+- `find_guild_recipe_crafters`: full/partial recipe-name or recipe-ID lookup over
+  explicit known recipes, with paginated ambiguity choices or matching crafters.
+  Missing recipe data is unknown, not an empty recipe list. Profession rank is
+  never a substitute for recipe knowledge.
 
 Tools use the current Discord guild's configured WoW roster, not a guild ID
 chosen by the model. They are available only in normal guild-chat Grub service,
@@ -372,6 +383,10 @@ retention and growth tracking are outside the first version.
 - [x] Expose the read-only Grub tools over the same queries. Test tool exposure,
   access guards, ambiguity, pagination, freshness, and failure semantics. Check
   representative live replies for accuracy and concise status copy.
+- [x] Add known recipe collection, persistence, and guild-scoped Grub crafter lookup
+  using the existing profession requests. Test optional/malformed/empty lists,
+  ambiguous recipes, pagination, unknown ranks, retained failures, stale data,
+  departures, legacy Mongo documents, and tool access boundaries.
 - [x] Add milestone detection and configured-channel delivery over live-source
   observations, exercised with synthetic test responses. Real API coverage remains
   unverified. Test skipped threshold crossings, silent first
@@ -408,7 +423,8 @@ behavior as each slice ships; do not mark planned work as implemented.
 
 Defer mains-only/player rankings, Discord ownership claims, XP-within-level,
 historical gains, first-to-cap races, scheduled leaderboard posts, desktop
-uploaders, and multi-source merging. Also defer recipes, crafting specialisations, per-member
+uploaders, and multi-source merging. Also defer static recipe catalogues,
+item-to-recipe mapping, crafting specialisations, per-member
 profession submissions, and addon-to-addon sharing. If member links are added
 later, use explicit structured assignments rather than inferring ownership from
 lore names or Discord nicknames.

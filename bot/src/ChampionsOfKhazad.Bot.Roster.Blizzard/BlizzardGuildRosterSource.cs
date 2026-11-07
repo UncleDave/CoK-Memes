@@ -160,6 +160,7 @@ public sealed class BlizzardGuildRosterSource(BlizzardApiClient api, BlizzardRos
                                 Skill = Rank(values, "skill_points"),
                                 MaxSkill = Rank(values, "max_skill_points"),
                                 ObservedAtUtc = document.ObservedAtUtc,
+                                KnownRecipes = Recipes(values),
                             }
                         );
                 }
@@ -225,6 +226,18 @@ public sealed class BlizzardGuildRosterSource(BlizzardApiClient api, BlizzardRos
 
     private static int? Rank(JsonElement value, string field) =>
         value.TryGetProperty(field, out var rank) && rank.ValueKind != JsonValueKind.Null ? rank.GetInt32() : null;
+
+    private static KnownRecipe[]? Recipes(JsonElement values)
+    {
+        if (!values.TryGetProperty("known_recipes", out var recipes))
+            return null;
+        if (recipes.ValueKind != JsonValueKind.Array || recipes.GetArrayLength() > 5000)
+            throw new InvalidDataException("Invalid bounded known recipe list.");
+        return recipes
+            .EnumerateArray()
+            .Select(recipe => new KnownRecipe { Id = IdValue(recipe.GetProperty("id")), Name = Text(recipe.GetProperty("name")) })
+            .ToArray();
+    }
 
     private static bool HasNext(JsonElement root) =>
         root.TryGetProperty("_links", out var links) && links.TryGetProperty("next", out var next) && next.ValueKind != JsonValueKind.Null

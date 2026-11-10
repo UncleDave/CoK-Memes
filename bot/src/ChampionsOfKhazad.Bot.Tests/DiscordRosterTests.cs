@@ -51,11 +51,14 @@ public class DiscordRosterTests
     }
 
     [Theory]
-    [InlineData(50UL)]
-    [InlineData(51UL)]
-    public async Task DestinationMustBeInConfiguredGuildAndAllMentionsAreDisabled(ulong channelGuild)
+    [InlineData(50UL, false)]
+    [InlineData(51UL, false)]
+    [InlineData(50UL, true)]
+    [InlineData(51UL, true)]
+    public async Task DestinationMustBeInConfiguredGuildAndAllMentionsAreDisabled(ulong channelGuild, bool celebration)
     {
         var sent = false;
+        var batch = new RosterNoticeBatch("Mock notice", [], celebration ? "Guild honours" : null, celebration ? 0xF1C40Fu : null);
         var channel = Stub<ITextChannel>(
             (method, args) =>
             {
@@ -64,6 +67,17 @@ public class DiscordRosterTests
                 Assert.Equal("SendMessageAsync", method.Name);
                 var mentionIndex = Array.FindIndex(method.GetParameters(), parameter => parameter.Name == "allowedMentions");
                 Assert.Same(AllowedMentions.None, args![mentionIndex]);
+                var textIndex = Array.FindIndex(method.GetParameters(), parameter => parameter.Name == "text");
+                Assert.Equal(celebration ? null : batch.Text, args[textIndex]);
+                var embedIndex = Array.FindIndex(method.GetParameters(), parameter => parameter.Name == "embed");
+                if (celebration)
+                {
+                    var embed = Assert.IsType<Embed>(args[embedIndex], exactMatch: false);
+                    Assert.Equal(batch.Title, embed.Title);
+                    Assert.Equal(batch.Text, embed.Description);
+                }
+                else
+                    Assert.Null(args[embedIndex]);
                 sent = true;
                 return Task.FromResult(
                     Stub<IUserMessage>((method, _) => method.Name == "get_Id" ? 123UL : throw new NotSupportedException(method.Name))
@@ -75,11 +89,9 @@ public class DiscordRosterTests
         );
         var sender = new DiscordRosterNotificationSender(new SharedDiscordRestClient(client));
         if (channelGuild == 50)
-            Assert.Equal(123UL, await sender.SendAsync(50, 100, "Mock notice", TestContext.Current.CancellationToken));
+            Assert.Equal(123UL, await sender.SendAsync(50, 100, batch, TestContext.Current.CancellationToken));
         else
-            await Assert.ThrowsAsync<InvalidOperationException>(() =>
-                sender.SendAsync(50, 100, "Mock notice", TestContext.Current.CancellationToken)
-            );
+            await Assert.ThrowsAsync<InvalidOperationException>(() => sender.SendAsync(50, 100, batch, TestContext.Current.CancellationToken));
         Assert.Equal(channelGuild == 50, sent);
     }
 }

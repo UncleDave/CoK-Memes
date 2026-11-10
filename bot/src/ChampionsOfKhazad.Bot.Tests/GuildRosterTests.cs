@@ -414,13 +414,13 @@ public class GuildRosterTests
         public bool Failure { get; set; }
         public List<string> Texts { get; } = [];
 
-        public Task<ulong> SendAsync(ulong guildId, ulong channelId, string text, CancellationToken cancellationToken)
+        public Task<ulong> SendAsync(ulong guildId, ulong channelId, RosterNoticeBatch batch, CancellationToken cancellationToken)
         {
             Assert.Equal(50UL, guildId);
             Assert.Equal(100UL, channelId);
             Assert.All(store.Items.Values, notice => Assert.Null(notice.SentAtUtc));
             store.Steps.Add("send");
-            Texts.Add(text);
+            Texts.Add(batch.Text);
             if (Failure)
                 throw new IOException("Discord unavailable");
             return Task.FromResult(123UL);

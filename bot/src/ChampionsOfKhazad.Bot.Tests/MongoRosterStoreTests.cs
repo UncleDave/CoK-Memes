@@ -50,6 +50,7 @@ public class MongoRosterStoreTests
         var rendered = Render(filter!);
         Assert.Equal("50:mock", rendered[Field<RosterNotice>(nameof(RosterNotice.ScopeId))].AsString);
         Assert.True(rendered[Field<RosterNotice>(nameof(RosterNotice.SentAtUtc))].IsBsonNull);
+        Assert.Equal((int)RosterCelebrationKind.Guild, rendered[Field<RosterNotice>(nameof(RosterNotice.Celebration))]["$ne"].AsInt32);
         Assert.Equal("id:1", rendered[Field<RosterNotice>(nameof(RosterNotice.CharacterKey))]["$nin"][0].AsString);
     }
 

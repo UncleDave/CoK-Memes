@@ -31,6 +31,7 @@ internal class MongoRosterNoticeStore(IMongoCollection<RosterNotice> collection)
         collection.DeleteManyAsync(
             Builders<RosterNotice>.Filter.Eq(notice => notice.ScopeId, scopeId)
                 & Builders<RosterNotice>.Filter.Eq(notice => notice.SentAtUtc, null)
+                & Builders<RosterNotice>.Filter.Ne(notice => notice.Celebration, RosterCelebrationKind.Guild)
                 & Builders<RosterNotice>.Filter.Nin(notice => notice.CharacterKey, activeCharacterKeys),
             cancellationToken
         );

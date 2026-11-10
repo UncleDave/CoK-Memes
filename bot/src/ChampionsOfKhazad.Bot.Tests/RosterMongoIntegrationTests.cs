@@ -43,6 +43,7 @@ public class RosterMongoIntegrationTests
             await service.RefreshAsync(token, force: true);
             var initial = (await store.GetAsync(service.ScopeId, token))!;
             Assert.Equal(19, Assert.Single(initial.Characters).Level);
+            Assert.NotNull(initial.Celebrations);
             fixture.Advance();
             fixture.SetMembers(RosterFixture.Character(level: 20, professions: professions));
             await service.RefreshAsync(token, force: true);
@@ -71,6 +72,25 @@ public class RosterMongoIntegrationTests
             await notices.RemoveDepartedPendingAsync(service.ScopeId, [], token);
             Assert.Equal(2, await collection.CountDocumentsAsync(FilterDefinition<RosterNotice>.Empty, cancellationToken: token));
             Assert.Single(await notices.GetPendingAsync("other-scope", token));
+
+            var current = (await restarted.GetAsync(service.ScopeId, token))!;
+            Assert.True(
+                await restarted.TrySaveAsync(current with { Celebrations = new() { Claimed = ["first:level:60", "count:level:60:5"] } }, token)
+            );
+            Assert.Equal(["first:level:60", "count:level:60:5"], (await store.GetAsync(service.ScopeId, token))!.Celebrations!.Claimed);
+            var guildNotice = notice with
+            {
+                Id = "guild-celebration",
+                CharacterKey = "",
+                CharacterName = "",
+                Celebration = RosterCelebrationKind.Guild,
+                Honours = ["5 guild characters at level 60"],
+            };
+            await notices.AddPendingAsync(guildNotice, token);
+            await restartedNotices.RemoveDepartedPendingAsync(service.ScopeId, [], token);
+            var retained = Assert.Single(await restartedNotices.GetPendingAsync(service.ScopeId, token));
+            Assert.Equal(RosterCelebrationKind.Guild, retained.Celebration);
+            Assert.Equal(guildNotice.Honours, retained.Honours);
         }
         finally
         {

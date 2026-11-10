@@ -205,11 +205,69 @@ Destinations: Development `1092927596938924054`, Production `1567646266689851402
 The sender validates that the destination is a text channel in the configured
 Discord guild and disables all mentions.
 
-Character thresholds are every ten levels plus optional `LevelCap`; profession
-thresholds default to 75/150/225/300 and include secondary professions. Crossing
+Character thresholds are every ten levels plus `LevelCap` (default 60); profession
+thresholds default to 75/150/225/300, always include 300, and include secondary professions. Crossing
 queues only the highest newly crossed threshold per track. Initial/new character
 and profession observations baseline silently. Unknowns/regressions do not reset
 high-water marks; a trained maximum changing alone does not trigger anything.
+
+### Celebrations
+
+The accepted [milestone design](guild-roster.md#milestone-notifications) adds:
+
+- A green celebration embed for each newly crossed level 60 or profession rank 300,
+  with a short authored Grub commendation. Ordinary milestones retain plain text.
+- Gold recognition for the first recorded level 60 in the guild, the first recorded
+  level 60 of each class, and the first recorded 300 in each profession/skill track.
+  Multiple qualifying arrivals in one refresh receive joint recognition, never an
+  ordering inferred from names or response order. The API does not establish actual
+  achievement times, hence “first recorded” rather than an historical race claim.
+- Shared celebrations when every class has a current level-60 character,
+  or every profession has a current character with a known rank of 300.
+- Shared milestones for 5, 10, and 20 current characters at 60, once each. These are
+  distinct characters, including alts, not Discord members; there are no per-class
+  or profession-count milestones. A jump over multiple counts announces only the
+  highest newly crossed count and consumes the lower thresholds.
+
+The complete class set is Druid, Hunter, Mage, **Paladin**, Priest, Rogue, Shaman,
+Warlock, and Warrior: Horde has Paladins in Forever. The complete profession set is
+Alchemy (171), Blacksmithing (164), Enchanting (333), Engineering (202), Herbalism
+(182), Leatherworking (165), Mining (186), Skinning (393), Tailoring (197), Cooking
+(185), Fishing (356), and First Aid (129). The static catalogue's test profession
+is not a completion requirement. These required sets are explicit; never infer
+“every” from whichever categories happen to be present in a roster. Unknown ranks
+do not count; a missing/failed section alone
+does not erase previously known profession observations. Firsts retain skill-track
+separation; completion requires a qualifying known track for each required ID.
+
+Firsts are attached to the personal notice, not posted again separately. Personal
+and shared honours from one refresh are packed into the same embed, with shared
+honours leading and gold firsts taking presentation priority. Purple identifies a
+shared milestone without firsts; green identifies ordinary cap celebrations. Split
+only when needed to fit Discord limits, with each persisted notice included once.
+Separate observations are not merged into a supposed joint first. Names, class and
+profession data are escaped; embeds and plain notices both disable all mentions.
+
+`RosterState.Celebrations` stores consumed first/completion/count keys alongside
+existing per-character high-water marks. Already achieved keys are silently seeded
+on initial collection and when upgrading an older document without this field;
+existing pending notices still deserialize and deliver as plain text. Migration
+uses the previous accepted roster and historical high-water marks before evaluating
+new crossings, so a genuine new crossing during upgrade can still celebrate. A
+legacy departed capped character has no stored class: conservatively consume the
+class firsts rather than fabricate a successor as the first.
+
+Newly seen/rejoining capped characters and first-known rank-300 skills baseline
+silently and consume applicable keys. A collective notice requires a genuine new
+cap crossing in that refresh; joiners/data discovery alone never trigger a
+retrospective burst. If a silently baselined arrival shares a previously unclaimed
+first category with a genuine crossing, suppress that first claim rather than
+invent an order. Keys remain consumed through regressions, departures and restarts;
+completion/count calculations use current membership, not accumulated departed
+characters. Disabled delivery advances the baseline without queuing catch-up posts.
+An explicit source change uses its existing separate roster scope and seeds anew.
+
+### Delivery
 
 Pending notices are saved before sending, then marked sent with Discord message ID
 and UTC time. Failed sends remain pending. One worker and unique keys prevent
@@ -217,6 +275,11 @@ ordinary duplicates; this remains best effort, not exactly-once. A crash between
 state and notice writes can miss a milestone, and a send accepted before a failed
 sent-status write can duplicate on retry. No distributed leases, multi-document
 transactions, history archive, or catch-up throttling have been added.
+
+Departure cleanup removes only unsent personal notices. Shared guild accomplishments
+are independent of an individual contributor and remain deliverable after departures.
+Synthetic regression tests cover celebration detection, migration, restarts, combined
+Discord payloads, mentions, and size limits. Live Discord presentation is not yet verified.
 
 ## Validation and launch debugging
 

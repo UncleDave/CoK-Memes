@@ -66,18 +66,41 @@ public static partial class RosterText
 
     public static IEnumerable<RosterNoticeBatch> NoticeBatches(IEnumerable<RosterNotice> notices)
     {
+        var items = notices.ToArray();
+        foreach (
+            var observation in items
+                .Where(notice => notice.Celebration != RosterCelebrationKind.None)
+                .GroupBy(notice => (notice.CreatedAtUtc, notice.IsMock))
+        )
+        foreach (
+            var batch in PackNotices(
+                observation.OrderBy(notice => notice.CharacterName, StringComparer.Ordinal).ThenBy(notice => notice.TrackKey, StringComparer.Ordinal),
+                celebration: true
+            )
+        )
+            yield return batch;
+        foreach (var batch in PackNotices(items.Where(notice => notice.Celebration == RosterCelebrationKind.None), celebration: false))
+            yield return batch;
+    }
+
+    private static IEnumerable<RosterNoticeBatch> PackNotices(IEnumerable<RosterNotice> notices, bool celebration)
+    {
         var batch = new List<RosterNotice>();
         var lines = new List<string>();
         var length = 0;
+        var limit = celebration ? 1700 : 1900;
         foreach (var notice in notices)
         {
-            var line =
-                (notice.IsMock ? "[Mock] " : "")
-                + $"**{Safe(notice.CharacterName)}** reached "
-                + (notice.ProfessionName is null ? $"level {notice.Threshold}!" : $"{notice.Threshold} {Safe(notice.ProfessionName)}!");
-            if (length + line.Length + 1 > 1900 && batch.Count > 0)
+            var line = celebration
+                ? CelebrationLine(notice)
+                : (notice.IsMock ? "[Mock] " : "")
+                    + $"**{Safe(notice.CharacterName)}** reached "
+                    + (notice.ProfessionName is null ? $"level {notice.Threshold}!" : $"{notice.Threshold} {Safe(notice.ProfessionName)}!");
+            if (line.Length > limit)
+                throw new InvalidDataException("Roster notice exceeds Discord's message limit.");
+            if (length + line.Length + 1 > limit && batch.Count > 0)
             {
-                yield return new(string.Join('\n', lines), batch.ToArray());
+                yield return NoticeBatch(lines, batch, celebration);
                 batch.Clear();
                 lines.Clear();
                 length = 0;
@@ -87,7 +110,47 @@ public static partial class RosterText
             length += line.Length + 1;
         }
         if (batch.Count > 0)
-            yield return new(string.Join('\n', lines), batch.ToArray());
+            yield return NoticeBatch(lines, batch, celebration);
+    }
+
+    private static string CelebrationLine(RosterNotice notice)
+    {
+        var honours = notice.Honours.Select(heading => $"🏆 **{Safe(heading)}**");
+        if (notice.Celebration == RosterCelebrationKind.Guild)
+            return string.Join('\n', honours);
+        var achievement = notice.ProfessionName is null ? $"level {notice.Threshold}" : $"{notice.Threshold} {Safe(notice.ProfessionName)}";
+        var characterClass = notice.ProfessionName is null && notice.ClassName is { } name ? $" · {Safe(name)}" : "";
+        return $"**{Safe(notice.CharacterName)}** — **{achievement}**{characterClass}"
+            + (notice.Honours.Length > 0 ? "\n" + string.Join('\n', honours) : "");
+    }
+
+    private static RosterNoticeBatch NoticeBatch(List<string> lines, List<RosterNotice> notices, bool celebration)
+    {
+        var text = string.Join('\n', lines);
+        if (!celebration)
+            return new(text, notices.ToArray());
+        var first = notices.Any(notice => notice.Celebration == RosterCelebrationKind.First);
+        var guild = notices.Any(notice => notice.Celebration == RosterCelebrationKind.Guild);
+        var levels = notices.Where(notice => notice.TrackKey == "level").ToArray();
+        var professions = notices.Any(notice => notice.ProfessionName is not null);
+        var title =
+            first ? "Guild firsts — Grub's honours ledger"
+            : guild ? "Guild milestone — Grub's honours ledger"
+            : levels.Length > 0 && professions ? "Strength and mastery earned"
+            : levels.Length > 0 ? $"Level {levels[0].Threshold} — strength earned"
+            : "Skill 300 — mastery earned";
+        var commendation =
+            guild ? "Strong hands. Strong guild. Stand together."
+            : professions && levels.Length == 0 ? "Skill earned through work. Put it to use."
+            : "Strength earned. Stand proud.";
+        return new(
+            text + $"\n\n*“{commendation}” — Grub*",
+            notices.ToArray(),
+            (notices[0].IsMock ? "[Mock] " : "") + title,
+            first ? 0xF1C40Fu
+                : guild ? 0x9B59B6u
+                : 0x2ECC71u
+        );
     }
 
     private static IEnumerable<string> Pack(IEnumerable<string> lines)

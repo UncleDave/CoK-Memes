@@ -125,8 +125,8 @@ There is no runtime mock mode or fixture fallback.
 | `GuildRoster:RefreshSeconds` | `60` | Roster check interval; minimum 10 seconds |
 | `GuildRoster:ProfessionRefreshSeconds` | `600` | Separate profession check interval; minimum 10 seconds |
 | `GuildRoster:MilestoneChannelId` | Development `1092927596938924054`; Production `1567646266689851402` | Milestone destination text channel ID in `Bot:GuildId` |
-| `GuildRoster:LevelCap` | unset | Optional additional character-level milestone |
-| `GuildRoster:ProfessionMilestones` | `[75,150,225,300]` | Profession rank milestones |
+| `GuildRoster:LevelCap` | `60` | Character cap milestone and level celebration target; null disables cap celebrations |
+| `GuildRoster:ProfessionMilestones` | `[75,150,225,300]` | Ordinary profession rank milestones; 300 is always included |
 | `Blizzard:Region` | `eu` | Regional API host and Forever namespaces |
 | `Blizzard:GuildName` | `Crossroads Mega Chippy` | Expected in-game guild name |
 | `Blizzard:GuildSlug` | `crossroads-mega-chippy` | Guild route identifier |

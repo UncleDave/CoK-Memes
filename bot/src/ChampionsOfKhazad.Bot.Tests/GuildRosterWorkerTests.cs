@@ -132,9 +132,9 @@ public class GuildRosterWorkerTests
     {
         public List<string> Messages { get; } = [];
 
-        public Task<ulong> SendAsync(ulong guildId, ulong channelId, string text, CancellationToken cancellationToken)
+        public Task<ulong> SendAsync(ulong guildId, ulong channelId, RosterNoticeBatch batch, CancellationToken cancellationToken)
         {
-            Messages.Add(text);
+            Messages.Add(batch.Text);
             return Task.FromResult(123UL);
         }
     }

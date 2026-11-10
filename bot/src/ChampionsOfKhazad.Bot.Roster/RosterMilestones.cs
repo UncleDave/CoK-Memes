@@ -5,7 +5,7 @@ namespace ChampionsOfKhazad.Bot.Roster;
 
 public static class RosterMilestones
 {
-    public static (RosterProgress[] Progress, RosterNotice[] Notices) Compare(
+    public static (RosterProgress[] Progress, RosterCelebrationState Celebrations, RosterNotice[] Notices) Compare(
         RosterState previous,
         RosterState current,
         GuildRosterOptions options,
@@ -26,7 +26,7 @@ public static class RosterMilestones
             );
             foreach (var skill in member.Professions?.Skills ?? [])
                 if (skill.Skill is { } rank)
-                    Check(skill.TrackKey, rank, skill.Name, options.ProfessionMilestones);
+                    Check(skill.TrackKey, rank, skill.Name, options.ProfessionMilestones.Append(300));
 
             void Check(string track, int value, string? profession, IEnumerable<int> thresholds)
             {
@@ -45,7 +45,12 @@ public static class RosterMilestones
                             CharacterName = member.FullName,
                             TrackKey = track,
                             ProfessionName = profession,
+                            ClassName = member.ClassName,
                             Threshold = threshold,
+                            Celebration =
+                                (profession is null && threshold == options.LevelCap) || (profession is not null && threshold == 300)
+                                    ? RosterCelebrationKind.Personal
+                                    : RosterCelebrationKind.None,
                             IsMock = current.IsMock,
                             CreatedAtUtc = now,
                         }
@@ -54,6 +59,7 @@ public static class RosterMilestones
                 progress[key] = new RosterProgress(member.Key, track, Math.Max(value, known?.HighWater ?? value));
             }
         }
-        return (progress.Values.ToArray(), notices.ToArray());
+        var celebrations = RosterCelebrations.Compare(previous, current, options, now, announcementsEnabled, notices.ToArray());
+        return (progress.Values.ToArray(), celebrations.State, celebrations.Notices);
     }
 }

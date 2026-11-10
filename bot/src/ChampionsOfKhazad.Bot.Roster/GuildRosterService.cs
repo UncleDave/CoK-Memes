@@ -142,7 +142,7 @@ public sealed class GuildRosterService(
                 throw;
             }
             var changes = RosterMilestones.Compare(previous, current, options, now, NotificationsEnabled);
-            current = current with { Progress = changes.Progress };
+            current = current with { Progress = changes.Progress, Celebrations = changes.Celebrations };
             if (!await store.TrySaveAsync(current, cancellationToken))
                 return;
             // Best effort by design: no transaction spans snapshot/progress and notice writes.
@@ -169,9 +169,13 @@ public sealed class GuildRosterService(
             var members = state.Characters.Select(member => member.Key).ToHashSet(StringComparer.Ordinal);
             await notices.RemoveDepartedPendingAsync(ScopeId, members.ToArray(), cancellationToken);
             var pending = await notices.GetPendingAsync(ScopeId, cancellationToken);
-            foreach (var batch in RosterText.NoticeBatches(pending.Where(item => members.Contains(item.CharacterKey))))
+            foreach (
+                var batch in RosterText.NoticeBatches(
+                    pending.Where(item => item.Celebration == RosterCelebrationKind.Guild || members.Contains(item.CharacterKey))
+                )
+            )
             {
-                var messageId = await sender.SendAsync(options.GuildId, options.MilestoneChannelId!.Value, batch.Text, cancellationToken);
+                var messageId = await sender.SendAsync(options.GuildId, options.MilestoneChannelId!.Value, batch, cancellationToken);
                 foreach (var notice in batch.Notices)
                     await notices.MarkSentAsync(notice.Id, clock.GetUtcNow().UtcDateTime, messageId, cancellationToken);
             }

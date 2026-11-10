@@ -8,7 +8,7 @@ public class GuildRosterOptions
     public int RefreshSeconds { get; set; } = 60;
     public int ProfessionRefreshSeconds { get; set; } = 600;
     public ulong? MilestoneChannelId { get; set; }
-    public int? LevelCap { get; set; }
+    public int? LevelCap { get; set; } = 60;
     public int[] ProfessionMilestones { get; set; } = [75, 150, 225, 300];
 
     public void Validate()

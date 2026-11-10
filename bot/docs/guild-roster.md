@@ -262,10 +262,17 @@ and [Raidbots' profile update guidance](https://support.raidbots.com/article/12-
 
 ## Milestone notifications
 
+**Accepted expansion (10 November):** keep ordinary notices brief; give level 60
+and profession rank 300 more ceremony and recognise shared guild progress without
+creating a race or multiplying overlapping announcements. The rules below include
+that expansion; [runtime details](guild-roster-runtime.md#milestones) describe
+persistence, rollout baselines, and delivery.
+
 - Character levels: every ten levels (10, 20, 30, etc.) and the verified game
-  level cap, even if it is not a multiple of ten. Keep thresholds configurable.
+  level cap, even if it is not a multiple of ten. `LevelCap` defaults to 60.
 - Professions: configurable rank thresholds, initially 75, 150, 225, and 300
-  where applicable to Forever's actual profession model. Treat these as numeric
+  where applicable to Forever's actual profession model; retain 300 as a celebration
+  threshold even if the ordinary threshold list changes. Treat these as numeric
   milestones, not proof of a trained tier, recipe, or specialisation. A reported
   maximum changing from 75 to 150 is not itself a skill-rank milestone. Secondary
   professions are included when their ranks are available.
@@ -277,6 +284,28 @@ and [Raidbots' profile update guidance](https://support.raidbots.com/article/12-
   `Élodie Firebrand reached 150 Alchemy!`. Combine observations for readability,
   splitting at Discord's message limits without silently truncating notices.
   No LLM call is needed to detect milestones or write each announcement.
+- Level 60 and 300 in a profession receive a distinctive celebration embed and
+  short Grub commendation, rather than the ordinary one-line notice.
+- Give extra recognition to the first recorded 60 in the guild, first recorded
+  60 of each class, and first recorded 300 in each profession/skill track. Multiple
+  arrivals in one observation get joint recognition, not a fabricated ordering.
+  Existing capped characters seed those categories silently; do not claim an
+  historical first that the available observations cannot establish.
+- Celebrate a complete set of current level-60 classes and a complete set of
+  professions with a current known rank-300 practitioner. All nine Forever classes
+  count, including Horde Paladins. All twelve primary/secondary professions count,
+  including Cooking, Fishing, and First Aid; the catalogue's test entry does not.
+  Use explicit required sets, not the categories currently present in the roster.
+- Celebrate 5, 10, and 20 current characters at 60, once each, counting alts as
+  distinct characters. No class-specific counts or profession-count milestones.
+  If several counts are crossed together, announce only the highest new count.
+- Combine overlapping personal, first, complete-set, and count honours from one
+  observation into one celebration, splitting only for message limits. Never post
+  the ordinary version of the same cap achievement as well.
+- Shared notices require an observed cap crossing; new capped joiners or discovery
+  of previously unknown skills alone baseline silently. Completed honours remain
+  consumed through departures, regressions, and restarts. Unsent personal notices
+  are cancelled on departure; independent shared accomplishments are retained.
 
 Compare successive accepted, known numeric observations for the same character
 and, for professions, the same skill line/tier. Trigger when the previous value
@@ -316,6 +345,8 @@ unless spam is actually observed. Keep the highest-crossed-threshold behaviour
 above, rather than replaying intermediate thresholds. Secondary professions are
 approved; the environment-specific destination channels above are configured. This requires small
 progression/delivery state, not a full historical snapshot archive or race system.
+Celebration keys are persisted with that state; the accepted expansion does not
+add historical timing.
 
 ## Copy/paste import — paused fallback
 
@@ -395,6 +426,12 @@ retention and growth tracking are outside the first version.
   persistence, and send-before-sent-status ordering. Verify departure cancellation
   and Discord message splitting. Test complete message copy and disabled mentions;
   do not require transactional crash recovery or exactly-once send tests.
+- [x] Implement the accepted 10 November cap celebrations, recorded firsts,
+  complete-class/profession sets, and 5/10/20 level-60 character counts. Add
+  regression coverage for overlapping/joint honours, silent legacy baselines,
+  membership lifecycle, persistence serialization, and Discord embed payloads.
+- [ ] Verify celebration appearance in a Development Discord channel; rerun real
+  Mongo integration tests when a disposable local server is available.
 
 Run the relevant backend build/tests/format checks and frontend build/tests/lint
 for implementation changes. Replace this draft's proposals with confirmed
@@ -418,7 +455,7 @@ behavior as each slice ships; do not mark planned work as implemented.
   `1567646266689851402`. The checked-in feature setting now enables the real source;
   there is no runtime mock selection.
   Threshold defaults remain ten-level steps
-  plus level cap, and profession ranks 75/150/225/300 where applicable. Secondary
+  plus level cap (default 60), and profession ranks 75/150/225/300 where applicable. Secondary
   professions are included; no pings. No catch-up spam controls unless needed.
 
 Defer mains-only/player rankings, Discord ownership claims, XP-within-level,

@@ -22,6 +22,7 @@ public class GuildRosterConfigurationTests
         Assert.Equal(channel, options.MilestoneChannelId);
         Assert.Equal(guild, options.GuildId);
         Assert.True(options.Enabled);
+        Assert.Equal(60, options.LevelCap);
         var blizzard = configuration.GetSection(BlizzardRosterOptions.Key).Get<BlizzardRosterOptions>()!;
         Assert.Equal("eu", blizzard.Region);
         Assert.Equal("Crossroads Mega Chippy", blizzard.GuildName);
@@ -43,7 +44,7 @@ public class GuildRosterConfigurationTests
 
     private sealed class UnexpectedSender : IRosterNotificationSender
     {
-        public Task<ulong> SendAsync(ulong guildId, ulong channelId, string text, CancellationToken cancellationToken) =>
+        public Task<ulong> SendAsync(ulong guildId, ulong channelId, RosterNoticeBatch batch, CancellationToken cancellationToken) =>
             throw new InvalidOperationException("Disabled roster configuration must not send a Discord message.");
     }
 }

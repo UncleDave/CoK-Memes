@@ -142,7 +142,12 @@ internal sealed class RosterFixture : IDisposable
         {
             foreach (
                 var id in Items
-                    .Values.Where(item => item.ScopeId == scopeId && item.SentAtUtc is null && !activeCharacterKeys.Contains(item.CharacterKey))
+                    .Values.Where(item =>
+                        item.ScopeId == scopeId
+                        && item.SentAtUtc is null
+                        && item.Celebration != RosterCelebrationKind.Guild
+                        && !activeCharacterKeys.Contains(item.CharacterKey)
+                    )
                     .Select(item => item.Id)
                     .ToArray()
             )

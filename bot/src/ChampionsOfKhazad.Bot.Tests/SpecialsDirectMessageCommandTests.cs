@@ -1,5 +1,5 @@
 using ChampionsOfKhazad.Bot.GenAi;
-using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace ChampionsOfKhazad.Bot.Tests;
@@ -183,7 +183,37 @@ public class SpecialsDirectMessageCommandTests
         Assert.Null(fixture.Session.Pending);
         Assert.Contains("discovering weekly events", fixture.Replies[^1]);
         Assert.DoesNotContain("SECRET", string.Join('\n', fixture.Replies));
+        Assert.DoesNotContain("SECRET", string.Join('\n', fixture.Logger.Messages));
         Assert.Equal(1, fixture.Session.Gate.CurrentCount);
+    }
+
+    [Theory]
+    [InlineData("TextTooLong", "301/240 characters")]
+    [InlineData("MultilineText", "multiple lines for Summary")]
+    [InlineData("MissingText", "empty Summary")]
+    public async Task DiscoveryFailureReportsBatchAndSafeFieldDetailsWithoutRetryingOrPublishing(string category, string expected)
+    {
+        var fixture = new Fixture();
+        fixture.Gateway.Sources = Enumerable
+            .Range(1, 250)
+            .Select(index => SpecialsDiscoveryTests.Source(index, 3, fixture.Clock.Now.AddDays(-2).AddSeconds(index), "SECRET weekly chat"))
+            .ToArray();
+        fixture.Writer.Failure = new SpecialsValidationException(category, SpecialsValidationField.Summary, 301, 240);
+        fixture.Writer.FailAtBatch = 2;
+        await fixture.Run("specials draft");
+        Assert.Contains("discovering weekly events (batch 2/3)", fixture.Replies[^1]);
+        Assert.Contains(expected, fixture.Replies[^1]);
+        Assert.Contains("Pending approval was cleared", fixture.Replies[^1]);
+        var log = Assert.Single(fixture.Logger.Messages);
+        Assert.Contains("batch 2/3", log);
+        Assert.Contains("Summary", log);
+        Assert.Contains("301", log);
+        Assert.Contains("240", log);
+        Assert.DoesNotContain("SECRET", string.Join('\n', fixture.Replies.Concat(fixture.Logger.Messages)));
+        Assert.Equal(2, fixture.Writer.Discovered.Count);
+        Assert.Equal(0, fixture.Writer.WriteCalls);
+        Assert.Empty(fixture.Gateway.Publications);
+        Assert.Null(fixture.Session.Pending);
     }
 
     [Fact]
@@ -233,17 +263,11 @@ public class SpecialsDirectMessageCommandTests
         public Writer Writer { get; } = new();
         public SpecialsSession Session { get; } = new();
         public List<string> Replies { get; } = [];
+        public CapturingLogger Logger { get; } = new();
         public SpecialsDirectMessageCommand Command { get; }
 
         public Fixture() =>
-            Command = new(
-                Gateway,
-                Writer,
-                Session,
-                Options.Create(new DirectMessageHandlerOptions { AdminUserId = 1 }),
-                Clock,
-                NullLogger<SpecialsDirectMessageCommand>.Instance
-            );
+            Command = new(Gateway, Writer, Session, Options.Create(new DirectMessageHandlerOptions { AdminUserId = 1 }), Clock, Logger);
 
         public Task Run(string content) =>
             Command.TryExecuteAsync(
@@ -256,6 +280,19 @@ public class SpecialsDirectMessageCommandTests
                 },
                 TestContext.Current.CancellationToken
             );
+    }
+
+    private sealed class CapturingLogger : ILogger<SpecialsDirectMessageCommand>
+    {
+        public List<string> Messages { get; } = [];
+
+        public IDisposable? BeginScope<TState>(TState state)
+            where TState : notnull => null;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter) =>
+            Messages.Add(formatter(state, exception));
     }
 
     private sealed class Clock : TimeProvider
@@ -328,6 +365,8 @@ public class SpecialsDirectMessageCommandTests
         public int WriteCalls { get; private set; }
         public bool NoEvents { get; set; }
         public bool Fail { get; set; }
+        public Exception? Failure { get; set; }
+        public int FailAtBatch { get; set; } = 1;
 
         public Task<IReadOnlyList<SpecialsEvent>> DiscoverAsync(
             IReadOnlyList<NotebookSource> sources,
@@ -338,6 +377,8 @@ public class SpecialsDirectMessageCommandTests
             if (Fail)
                 throw new InvalidOperationException("SECRET provider data");
             Discovered.Add(sources);
+            if (Failure is { } failure && Discovered.Count == FailAtBatch)
+                throw failure;
             return Task.FromResult<IReadOnlyList<SpecialsEvent>>(
                 NoEvents || sources.All(source => source.Url != Gateway.Url) ? [] : [new("Rename", [Gateway.Url])]
             );

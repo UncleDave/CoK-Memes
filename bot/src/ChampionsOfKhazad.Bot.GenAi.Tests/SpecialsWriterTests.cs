@@ -1,5 +1,6 @@
 using System.ClientModel.Primitives;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Microsoft.Extensions.AI;
 using OpenAI.Responses;
 
@@ -184,7 +185,7 @@ public class SpecialsWriterTests
     {
         var writer = new SpecialsWriter(new CapturingClient(MenuJson(name: new string('x', 71))));
         Assert.Equal(
-            "TextBounds",
+            "TextTooLong",
             (
                 await Assert.ThrowsAsync<SpecialsValidationException>(() => writer.WriteAsync([Context], Now, TestContext.Current.CancellationToken))
             ).Category
@@ -198,6 +199,203 @@ public class SpecialsWriterTests
                 )
             ).Category
         );
+    }
+
+    [Theory]
+    [InlineData("discovery")]
+    [InlineData("selection")]
+    [InlineData("menu")]
+    public async Task AllTextLimitsSurviveProviderTranslationInFieldDescriptions(string stage)
+    {
+        var client = new CapturingClient(stage == "menu" ? MenuJson() : EventsJson);
+        var writer = new SpecialsWriter(client);
+        if (stage == "discovery")
+            await writer.DiscoverAsync([Source], Now, TestContext.Current.CancellationToken);
+        else if (stage == "selection")
+            await writer.SelectAsync([Event], Now, TestContext.Current.CancellationToken);
+        else
+            await writer.WriteAsync([Context], Now, TestContext.Current.CancellationToken);
+        var options = client.Options!;
+        var requested = Assert.IsType<ChatResponseFormatJson>(options.ResponseFormat).Schema!.Value;
+#pragma warning disable OPENAI001
+        using var transport = JsonDocument.Parse(ModelReaderWriter.Write(options.ResponseFormat.AsOpenAIResponseTextFormat(options)).ToString());
+#pragma warning restore OPENAI001
+        var collection = stage == "menu" ? "dishes" : "events";
+        var localFields = requested.GetProperty("properties").GetProperty(collection).GetProperty("items").GetProperty("properties");
+        var providerFields = transport
+            .RootElement.GetProperty("schema")
+            .GetProperty("properties")
+            .GetProperty(collection)
+            .GetProperty("items")
+            .GetProperty("properties");
+        var boundedFields = localFields.EnumerateObject().Where(field => field.Value.TryGetProperty("maxLength", out _)).ToArray();
+        Assert.Equal(stage == "menu" ? 4 : 1, boundedFields.Length);
+        foreach (var field in boundedFields)
+        {
+            var limit = field.Value.GetProperty("maxLength").GetInt32();
+            var description = field.Value.GetProperty("description").GetString();
+            Assert.False(string.IsNullOrWhiteSpace(description));
+            Assert.Contains(limit.ToString(System.Globalization.CultureInfo.InvariantCulture), description);
+            var providerField = providerFields.GetProperty(field.Name);
+            Assert.False(providerField.TryGetProperty("maxLength", out _));
+            Assert.StartsWith(description, providerField.GetProperty("description").GetString());
+        }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task DiscoveryAndSelectionKeepSummaryBoundaryAndReportExactOverrunWithoutTruncating(bool selection)
+    {
+        foreach (var length in new[] { 240, 241 })
+        {
+            var summary = new string('x', length);
+            var client = new CapturingClient(JsonSerializer.Serialize(new { events = new[] { new { summary, sourceUrls = new[] { Url } } } }));
+            var writer = new SpecialsWriter(client);
+            var task = selection
+                ? writer.SelectAsync([Event], Now, TestContext.Current.CancellationToken)
+                : writer.DiscoverAsync([Source], Now, TestContext.Current.CancellationToken);
+            if (length == 240)
+                Assert.Equal(summary, Assert.Single(await task).Summary);
+            else
+            {
+                var error = await Assert.ThrowsAsync<SpecialsValidationException>(() => task);
+                Assert.Equal("TextTooLong", error.Category);
+                Assert.Equal(SpecialsValidationField.Summary, error.Field);
+                Assert.Equal(length, error.ActualLength);
+                Assert.Equal(240, error.Limit);
+                Assert.DoesNotContain(summary, error.Message);
+            }
+        }
+    }
+
+    [Theory]
+    [InlineData("name", 70, SpecialsValidationField.Name)]
+    [InlineData("description", 180, SpecialsValidationField.Description)]
+    [InlineData("price", 24, SpecialsValidationField.Price)]
+    [InlineData("eventSummary", 240, SpecialsValidationField.EventSummary)]
+    public async Task MenuTextFailuresIdentifyOnlyKnownFieldsAndNumericBounds(string field, int maximum, SpecialsValidationField expected)
+    {
+        var json = JsonNode.Parse(MenuJson())!;
+        json["dishes"]![0]![field] = new string('x', maximum + 1);
+        var writer = new SpecialsWriter(new CapturingClient(json.ToJsonString()));
+        var error = await Assert.ThrowsAsync<SpecialsValidationException>(() =>
+            writer.WriteAsync([Context], Now, TestContext.Current.CancellationToken)
+        );
+        Assert.Equal("TextTooLong", error.Category);
+        Assert.Equal(expected, error.Field);
+        Assert.Equal(maximum + 1, error.ActualLength);
+        Assert.Equal(maximum, error.Limit);
+    }
+
+    [Theory]
+    [InlineData("", "MissingText")]
+    [InlineData("   ", "MissingText")]
+    [InlineData("First line\nSecond line", "MultilineText")]
+    [InlineData("First line\rSecond line", "MultilineText")]
+    public async Task SummaryFailuresDistinguishBlankAndMultilineTextFromLengthOverruns(string summary, string category)
+    {
+        var client = new CapturingClient(JsonSerializer.Serialize(new { events = new[] { new { summary, sourceUrls = new[] { Url } } } }));
+        var error = await Assert.ThrowsAsync<SpecialsValidationException>(() =>
+            new SpecialsWriter(client).DiscoverAsync([Source], Now, TestContext.Current.CancellationToken)
+        );
+        Assert.Equal(category, error.Category);
+        Assert.Equal(SpecialsValidationField.Summary, error.Field);
+        Assert.Equal(summary.Length, error.ActualLength);
+        Assert.Equal(240, error.Limit);
+    }
+
+    [Theory]
+    [InlineData("discovery")]
+    [InlineData("selection")]
+    [InlineData("menu")]
+    public async Task OneTextRepairUsesTheSameEvidenceContractAndKeepsRejectedOutputOutOfSystemInstructions(string stage)
+    {
+        var rejected =
+            stage == "menu"
+                ? MenuJson(name: new string('x', 71))
+                : JsonSerializer.Serialize(
+                    new { events = new[] { new { summary = "SECRET generated summary " + new string('x', 241), sourceUrls = new[] { Url } } } }
+                );
+        var client = new CapturingClient(rejected, stage == "menu" ? MenuJson() : EventsJson);
+        var writer = new SpecialsWriter(client);
+        if (stage == "discovery")
+            Assert.Single(await writer.DiscoverAsync([Source], Now, TestContext.Current.CancellationToken));
+        else if (stage == "selection")
+            Assert.Single(await writer.SelectAsync([Event], Now, TestContext.Current.CancellationToken));
+        else
+            Assert.Single(await writer.WriteAsync([Context], Now, TestContext.Current.CancellationToken));
+        Assert.Equal(2, client.Requests.Count);
+        var repair = client.Requests[1];
+        Assert.DoesNotContain(rejected, repair[0].Text!);
+        Assert.DoesNotContain("SECRET", repair[0].Text!);
+        using var originalInput = JsonDocument.Parse(client.Requests[0][1].Text!);
+        using var repairInput = JsonDocument.Parse(repair[1].Text!);
+        Assert.True(JsonElement.DeepEquals(originalInput.RootElement, repairInput.RootElement.GetProperty("originalInput")));
+        Assert.Equal(rejected, repairInput.RootElement.GetProperty("rejectedDraft").GetString());
+        Assert.Equal("TextTooLong", repairInput.RootElement.GetProperty("validation").GetProperty("Category").GetString());
+        Assert.Equal(stage == "menu" ? "Name" : "Summary", repairInput.RootElement.GetProperty("validation").GetProperty("Field").GetString());
+        Assert.Empty(client.Options!.Tools!);
+    }
+
+    [Fact]
+    public async Task PersistentTextFailureStopsAfterOneRepair()
+    {
+        var client = new CapturingClient(MenuJson(name: new string('x', 71)));
+        await Assert.ThrowsAsync<SpecialsValidationException>(() =>
+            new SpecialsWriter(client).WriteAsync([Context], Now, TestContext.Current.CancellationToken)
+        );
+        Assert.Equal(2, client.Requests.Count);
+    }
+
+    [Theory]
+    [InlineData("citation")]
+    [InlineData("shape")]
+    [InlineData("incomplete")]
+    [InlineData("binding")]
+    public async Task NonTextFailuresDoNotTriggerARepair(string kind)
+    {
+        var response = kind switch
+        {
+            "citation" => MenuJson(url: OtherUrl),
+            "shape" => "{}",
+            "binding" => MenuJson(eventIndex: 99),
+            _ => MenuJson(),
+        };
+        var client = new CapturingClient(response) { FinishReason = kind == "incomplete" ? ChatFinishReason.Length : null };
+        await Assert.ThrowsAsync<SpecialsValidationException>(() =>
+            new SpecialsWriter(client).WriteAsync([Context], Now, TestContext.Current.CancellationToken)
+        );
+        Assert.Single(client.Requests);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task TextRepairCannotDropAnIncidentOrSwitchItsCitations(bool drop)
+    {
+        var rejected = JsonSerializer.Serialize(new { events = new[] { new { summary = new string('x', 241), sourceUrls = new[] { Url } } } });
+        var repaired = drop
+            ? "{\"events\":[]}"
+            : JsonSerializer.Serialize(new { events = new[] { new { summary = "Shortened summary", sourceUrls = new[] { OtherUrl } } } });
+        var client = new CapturingClient(rejected, repaired);
+        var sources = new[] { Source, Source with { Url = OtherUrl } };
+        var error = await Assert.ThrowsAsync<SpecialsValidationException>(() =>
+            new SpecialsWriter(client).DiscoverAsync(sources, Now, TestContext.Current.CancellationToken)
+        );
+        Assert.Equal("RepairBinding", error.Category);
+        Assert.Equal(2, client.Requests.Count);
+    }
+
+    [Fact]
+    public async Task TextRepairCannotRebindADishToAnotherOtherwiseValidEvent()
+    {
+        var client = new CapturingClient(MenuJson(name: new string('x', 71)), MenuJson(eventIndex: 1));
+        var error = await Assert.ThrowsAsync<SpecialsValidationException>(() =>
+            new SpecialsWriter(client).WriteAsync([Context, Context], Now, TestContext.Current.CancellationToken)
+        );
+        Assert.Equal("RepairBinding", error.Category);
+        Assert.Equal(2, client.Requests.Count);
     }
 
     [Fact]
@@ -214,8 +412,9 @@ public class SpecialsWriterTests
         Assert.Null(client.Messages);
     }
 
-    private sealed class CapturingClient(string response) : IChatClient
+    private sealed class CapturingClient(params string[] responses) : IChatClient
     {
+        public List<List<ChatMessage>> Requests { get; } = [];
         public List<ChatMessage>? Messages { get; private set; }
         public ChatOptions? Options { get; private set; }
         public ChatFinishReason? FinishReason { get; set; }
@@ -227,7 +426,9 @@ public class SpecialsWriterTests
         )
         {
             Messages = messages.ToList();
+            Requests.Add(Messages);
             Options = options;
+            var response = responses[Math.Min(Requests.Count - 1, responses.Length - 1)];
             return Task.FromResult(new ChatResponse(new ChatMessage(ChatRole.Assistant, response)) { FinishReason = FinishReason });
         }
 

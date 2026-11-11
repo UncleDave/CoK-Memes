@@ -63,7 +63,7 @@ shown when reads or later discovery are incomplete; do not imply exhaustive cove
 1. Group collected messages by channel and request-anchored 24-hour slice. Split into
    complete, chronological batches of at most 100 messages and 32,000 serialized
    characters, retaining the preceding two messages when they fit. Rotate through
-   channel/day groups. At most 40 discovery calls inspect these batches. Records too
+   channel/day groups. At most 40 discovery batches are assessed. Records too
    large for a batch are skipped whole and counted, never truncated; the private
    preview reports the exact number of collected messages not assessed.
 2. Each tool-free structured-output call proposes at most four sourced candidate
@@ -86,12 +86,26 @@ shown when reads or later discovery are incomplete; do not imply exhaustive cove
    from that event's context. Its private factual event summary shares those citations.
 
 All calls use named, strict JSON schemas and no tools. Final request data is capped at
-100,000 serialized characters; oversized context or invalid model output fails closed
-rather than silently cutting evidence or retrying. Local validation enforces fields,
+100,000 serialized characters; oversized context fails closed rather than silently
+cutting evidence. Local validation enforces fields,
 types, lengths, counts, exact citations and event binding; provider schema adaptation
-does not replace these checks. High reasoning effort uses provider-default output
-limits. Cost scales with chat volume, up to 40 discovery calls plus selection/reduction
-and one menu-writing call; this is deliberately an on-demand admin trial.
+does not replace these checks. The OpenAI adapter turns unsupported schema validation
+keywords such as `maxLength` into descriptive notes, not enforced constraints. Text-field
+descriptions therefore also explicitly instruct the model on single-line, nonblank and
+numeric length contracts. Local checks distinguish overlong output, missing text and
+line breaks; they never truncate an event summary.
+For those three text failures only, make one bounded repair request for the failed
+response, with the same source/schema contract and original input plus the rejected
+draft and fixed-field numeric diagnostic as untrusted data. Instruct it to preserve
+facts and uncertainty; mechanically require the same incident/dish count, citations
+per position and menu event bindings. Validate the entire repaired response again.
+A second rejection stops drafting; provider, incomplete-response,
+JSON/shape, citation, event-binding and other failures are never retried. Earlier
+successful batches are not restarted. Repair input shares the 100,000-character ceiling.
+High reasoning effort uses provider-default output
+limits. Cost scales with chat volume: up to 40 discovery batches plus selection/reduction
+and one menu-writing stage, each allowing at most one additional text-repair request;
+this is deliberately an on-demand admin trial.
 
 Model input, candidate summaries, identities and URLs remain untrusted data. Evidence,
 privacy and sensitive-topic constraints apply throughout. Dated shared guild context
@@ -125,8 +139,12 @@ send the same pending menu twice. Check destination/posting permissions again di
 before sending. Discord permission changes cannot be atomic with the external send.
 An error/cancellation after send initiation can have an ambiguous outcome; do not
 retry that approval. Inspect the destination first. Draft state and raw chat are not
-stored or logged. Diagnostics log only static stage, exception type and fixed validation
-category, never raw exceptions, prompts, chat or generated prose.
+stored or logged. Diagnostics log only static stage (plus numeric discovery batch/total),
+exception type, fixed validation category/field and numeric length/limit, never raw
+exceptions, prompts, chat or generated prose. Private failures identify the discovery
+batch and, for text validation, the field and length/limit or missing/single-line issue.
+Earlier successful batches and a text-repair attempt can account for time spent before
+a later rejection. There is no output truncation or publication of a rejected draft.
 
 ## Validation and live review
 

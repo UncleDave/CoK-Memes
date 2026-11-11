@@ -57,9 +57,11 @@ public sealed partial class SpecialsDirectMessageCommand(
                 var plan = SpecialsDiscoveryPlan.Create(batch.Sources, since, until);
                 var coverage = Coverage(batch, plan);
                 var candidates = new List<SpecialsEvent>();
-                stage = "discovering weekly events";
-                foreach (var sources in plan.Batches)
-                    candidates.AddRange(await writer.DiscoverAsync(sources, until, cancellationToken));
+                for (var index = 0; index < plan.Batches.Count; index++)
+                {
+                    stage = $"discovering weekly events (batch {index + 1}/{plan.Batches.Count})";
+                    candidates.AddRange(await writer.DiscoverAsync(plan.Batches[index], until, cancellationToken));
+                }
                 stage = "grouping and selecting events";
                 // Large candidate sets are reduced in bounded groups before the final whole-week comparison.
                 IReadOnlyList<SpecialsEvent> selected = candidates;
@@ -165,18 +167,22 @@ public sealed partial class SpecialsDirectMessageCommand(
         catch (Exception exception)
         {
             session.Pending = null;
-            var category = exception is SpecialsValidationException validation ? validation.Category : "UnexpectedFailure";
+            var validation = exception as SpecialsValidationException;
+            var category = validation?.Category ?? "UnexpectedFailure";
             logger.LogWarning(
-                "Specials failed while {Stage}; type {ExceptionType}; category {Category}; publication attempted {Publishing}",
+                "Specials failed while {Stage}; type {ExceptionType}; category {Category}; field {Field}; actual length {ActualLength}; limit {Limit}; publication attempted {Publishing}",
                 stage,
                 exception.GetType().Name,
                 category,
+                validation?.Field,
+                validation?.ActualLength,
+                validation?.Limit,
                 publishing
             );
             await reply(
                 publishing
                     ? "Publication could not be confirmed. Approval was consumed; check the destination channel before requesting another draft."
-                    : $"Could not prepare specials while {stage} ({category}). Pending approval was cleared; try `specials draft` again.",
+                    : $"Could not prepare specials while {stage}. {DescribeFailure(validation)}Pending approval was cleared; try `specials draft` again.",
                 cancellationToken
             );
             return true;
@@ -186,6 +192,18 @@ public sealed partial class SpecialsDirectMessageCommand(
             session.Gate.Release();
         }
     }
+
+    private static string DescribeFailure(SpecialsValidationException? exception) =>
+        exception switch
+        {
+            { Category: "TextTooLong", Field: { } field, ActualLength: { } length, Limit: { } limit } =>
+                $"The AI exceeded the {field} limit ({length}/{limit} characters). ",
+            { Category: "MultilineText", Field: { } field } => $"The AI returned multiple lines for {field}; one line is required. ",
+            { Category: "MissingText", Field: { } field } => $"The AI returned an empty {field}. ",
+            { Category: "IncompleteResponse" } => "The AI response was cut short at its output limit. ",
+            { } failure => $"The AI response failed validation ({failure.Category}). ",
+            _ => "",
+        };
 
     private async Task PreviewAsync(SpecialsPendingDraft pending, Func<string, CancellationToken, Task> reply, CancellationToken cancellationToken)
     {

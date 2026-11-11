@@ -13,7 +13,7 @@ public class DirectMessageHandler(
     NotebookDirectMessageCommand notebookCommand,
     CooldownTracker<ulong> cooldowns,
     LoreDirectMessageCommand loreCommand,
-    GazetteDirectMessageCommand gazetteCommand
+    SpecialsDirectMessageCommand specialsCommand
 ) : INotificationHandler<MessageReceived>
 {
     private const string SourceUrl = $"{Constants.RepositoryUrl}/tree/main/bot";
@@ -38,8 +38,8 @@ public class DirectMessageHandler(
         + "lore undo <name> (or undo) — reverse the latest edit\n"
         + "lore confirm <token> / lore cancel — approve or cancel a destructive proposal\n"
         + "lore reset — clear the short-lived editor conversation\n\n"
-        + $"gazette draft/show — privately draft or review {GenAi.GazetteBranding.Title}\n"
-        + "gazette approve <token> / gazette discard — publish to #ai-tavern or discard\n\n"
+        + "specials draft/show — privately draft or review the weekly specials menu\n"
+        + "specials approve <token> / specials discard — publish the menu or discard\n\n"
         + "Duration: whole minutes, hours, or days (e.g. 30m, 2h, 1d), up to 30 days; expires to baseline. "
         + "Without a duration, the personality stays active until changed. Example: personality furious 2h.\n\n"
         + $"In guild chat: @{GenAi.Constants.LorekeeperName} you've had a stroke. — cut that channel's conversation context here (admin only; confirmed with 🧠).";
@@ -68,21 +68,24 @@ public class DirectMessageHandler(
             else
             {
                 if (
-                    await gazetteCommand.TryExecuteAsync(
+                    message
+                        .Content.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)
+                        .FirstOrDefault()
+                        ?.Equals("gazette", StringComparison.OrdinalIgnoreCase) == true
+                )
+                {
+                    await message.Channel.SendMessageInChunksAsync(
+                        "The Gazette experiment has ended. Use `specials` for weekly menu commands.",
+                        cancellationToken
+                    );
+                    return;
+                }
+                if (
+                    await specialsCommand.TryExecuteAsync(
                         message.Author.Id,
                         message.Content,
                         (response, token) => message.Channel.SendMessageInChunksAsync(response, token),
-                        cancellationToken,
-                        sendPage: async (page, token) =>
-                        {
-                            using var stream = new MemoryStream(page.Png, writable: false);
-                            await message.Channel.SendFileAsync(
-                                stream,
-                                page.FileName,
-                                allowedMentions: AllowedMentions.None,
-                                options: new RequestOptions { CancelToken = token }
-                            );
-                        }
+                        cancellationToken
                     )
                 )
                     return;

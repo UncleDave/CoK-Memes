@@ -3,7 +3,7 @@ namespace ChampionsOfKhazad.Bot.Tests;
 public class DiscordMessageAccessPolicyTests
 {
     [Fact]
-    public void GazetteCanReadAudienceSafeSourcesWhenNoRequestingGuildMemberIsCached()
+    public void PublicationCanReadAudienceSafeSourcesWhenNoRequestingGuildMemberIsCached()
     {
         var channels = new[]
         {
@@ -11,13 +11,13 @@ public class DiscordMessageAccessPolicyTests
             new DiscordMessageAccessPolicy.ChannelCandidate(2, false, false, false, true),
             new DiscordMessageAccessPolicy.ChannelCandidate(3, true, true, false, false),
         };
-        Assert.Equal(1UL, Assert.Single(DiscordMessageAccessPolicy.GetGazetteSourceChannelIds(channels, true)));
+        Assert.Equal(1UL, Assert.Single(DiscordMessageAccessPolicy.GetPublicationSourceChannelIds(channels, true)));
     }
 
     [Theory]
     [InlineData(false, new ulong[] { 1, 2, 4 })]
     [InlineData(true, new ulong[] { 2, 4 })]
-    public void GazetteUsesPublicationAudienceAndBotReadabilityWithoutRequesterCacheOrPermissions(bool everyone, ulong[] expected)
+    public void PublicationUsesAudienceAndBotReadabilityWithoutRequesterCacheOrPermissions(bool everyone, ulong[] expected)
     {
         var channels = new[]
         {
@@ -27,7 +27,7 @@ public class DiscordMessageAccessPolicyTests
             new DiscordMessageAccessPolicy.ChannelCandidate(4, true, true, false, true),
             new DiscordMessageAccessPolicy.ChannelCandidate(5, true, true, true, false),
         };
-        Assert.Equal(expected, DiscordMessageAccessPolicy.GetGazetteSourceChannelIds(channels, everyone).Order());
+        Assert.Equal(expected, DiscordMessageAccessPolicy.GetPublicationSourceChannelIds(channels, everyone).Order());
     }
 
     [Fact]

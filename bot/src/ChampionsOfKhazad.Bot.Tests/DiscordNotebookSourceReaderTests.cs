@@ -11,57 +11,59 @@ namespace ChampionsOfKhazad.Bot.Tests;
 public class DiscordNotebookSourceReaderTests
 {
     [Fact]
-    public async Task RecentBatchReadsLatestHistoryWithoutAnAfterCursorAndUsesTheSameEvidenceRules()
-    {
-        var fixture = new ReaderFixture();
-        fixture.Add(41, "Human message");
-        fixture.Add(42, "Bot message", bot: true);
-        using var cancellation = new CancellationTokenSource();
-        var batch = await fixture.CreateReader().ReadRecentBatchAsync(3, 200, cancellation.Token);
-        Assert.NotNull(batch);
-        Assert.Equal(100, fixture.Limit);
-        Assert.Equal(Direction.Before, fixture.Direction);
-        Assert.Equal(0UL, fixture.AfterMessageId);
-        Assert.Equal("Human message", Assert.Single(batch.Messages).Source.Content);
-        Assert.All(fixture.Tokens, token => Assert.Equal(cancellation.Token, token));
-    }
-
-    [Fact]
-    public async Task WindowReadsUseABeforeSnowflakeAndFilterExactTimestampsWithTheSameEvidenceRules()
+    public async Task WeeklyHistoryUsesRawOldestCursorEvenWhenAllHundredMessagesAreBots()
     {
         var fixture = new ReaderFixture();
         var until = ReaderFixture.Timestamp;
-        var since = until.AddDays(-1);
-        fixture.Add(SnowflakeUtils.ToSnowflake(since.AddHours(1)), "Within the window", timestamp: since.AddHours(1));
-        fixture.Add(SnowflakeUtils.ToSnowflake(until), "At upper boundary", timestamp: until);
-        fixture.Add(SnowflakeUtils.ToSnowflake(since.AddSeconds(-1)), "Before window", timestamp: since.AddSeconds(-1));
-        fixture.Add(SnowflakeUtils.ToSnowflake(until.AddMilliseconds(1)), "After cursor", timestamp: until);
-        fixture.Add(SnowflakeUtils.ToSnowflake(since.AddHours(2)), "Bot", bot: true, timestamp: since.AddHours(2));
-        using var cancellation = new CancellationTokenSource();
-        var batch = await fixture.CreateReader().ReadWindowBatchAsync(3, since, until, 200, cancellation.Token);
-        Assert.NotNull(batch);
-        Assert.Equal(SnowflakeUtils.ToSnowflake(until.AddMilliseconds(1)), fixture.AfterMessageId);
+        for (var index = 0; index < 100; index++)
+        {
+            var when = until.AddSeconds(-index);
+            fixture.Add(SnowflakeUtils.ToSnowflake(when), "Bot", bot: true, timestamp: when);
+        }
+        var page = await fixture.CreateReader().ReadHistoryPageAsync(3, until.AddDays(-7), until, null, TestContext.Current.CancellationToken);
+        Assert.NotNull(page);
+        Assert.False(page.Complete);
+        Assert.Equal(100, page.RawMessages);
+        Assert.Equal(100, page.ExcludedMessages);
+        Assert.Empty(page.Sources);
+        Assert.Equal(SnowflakeUtils.ToSnowflake(until.AddSeconds(-99)), page.Before);
         Assert.Equal(Direction.Before, fixture.Direction);
-        Assert.Equal(100, fixture.Limit);
-        Assert.Equal(new[] { "Within the window", "At upper boundary" }, batch.Messages.Select(message => message.Source.Content));
-        Assert.All(fixture.Tokens, token => Assert.Equal(cancellation.Token, token));
+        Assert.Equal(SnowflakeUtils.ToSnowflake(until.AddMilliseconds(1)), fixture.AfterMessageId);
+    }
+
+    [Fact]
+    public async Task WeeklyHistoryFiltersExactBoundariesAndStopsAtTheLowerBoundary()
+    {
+        var fixture = new ReaderFixture();
+        var until = ReaderFixture.Timestamp;
+        var since = until.AddDays(-7);
+        fixture.Add(SnowflakeUtils.ToSnowflake(until), "Upper", timestamp: until);
+        fixture.Add(SnowflakeUtils.ToSnowflake(since), "Lower", timestamp: since);
+        fixture.Add(SnowflakeUtils.ToSnowflake(since.AddSeconds(-1)), "Too old", timestamp: since.AddSeconds(-1));
+        var reader = fixture.CreateReader();
+        var page = await reader.ReadHistoryPageAsync(3, since, until, null, TestContext.Current.CancellationToken);
+        Assert.NotNull(page);
+        Assert.True(page.Complete);
+        Assert.Equal(new[] { "Lower", "Upper" }, page.Sources.Select(source => source.Content));
+        await reader.ReadHistoryPageAsync(3, since, until, 123, TestContext.Current.CancellationToken);
+        Assert.Equal(123UL, fixture.AfterMessageId);
     }
 
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task WindowReadsFailClosedIfAccessChangesDuringNetworkOrMetadata(bool duringMetadata)
+    public async Task WeeklyHistoryRechecksAccessAfterNetworkAndMetadata(bool metadata)
     {
         var fixture = new ReaderFixture();
-        fixture.Add(42, "Observation <@2>", mentions: [2]);
-        if (duringMetadata)
+        fixture.Add(42, "Human <@2>", mentions: [2]);
+        if (metadata)
             fixture.MetadataRead = fixture.Access.Clear;
         else
             fixture.MessagesRead = fixture.Access.Clear;
         Assert.Null(
             await fixture
                 .CreateReader()
-                .ReadWindowBatchAsync(3, ReaderFixture.Timestamp.AddDays(-1), ReaderFixture.Timestamp, 100, TestContext.Current.CancellationToken)
+                .ReadHistoryPageAsync(3, ReaderFixture.Timestamp.AddDays(-7), ReaderFixture.Timestamp, null, TestContext.Current.CancellationToken)
         );
     }
 

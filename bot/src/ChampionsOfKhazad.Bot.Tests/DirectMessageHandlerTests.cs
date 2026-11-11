@@ -11,68 +11,37 @@ namespace ChampionsOfKhazad.Bot.Tests;
 public class DirectMessageHandlerTests
 {
     [Theory]
+    [InlineData("gazette draft")]
+    [InlineData("gazette approve old-token")]
+    [InlineData(" GAZETTE show ")]
+    public async Task RetiredGazetteCommandsDoNotReachTheLoreEditorOrGeneration(string content)
+    {
+        var replies = new List<string>();
+        var handler = CreateHandler(null!, null!);
+        await handler.Handle(new MessageReceived(CreateMessage(true, true, false, content, replies)), TestContext.Current.CancellationToken);
+        Assert.Contains("Gazette experiment has ended", Assert.Single(replies));
+        Assert.Contains("`specials`", replies[0]);
+    }
+
+    [Theory]
     [InlineData(true, true, false, true)]
     [InlineData(false, true, false, false)]
     [InlineData(true, false, false, false)]
     [InlineData(true, true, true, false)]
-    public async Task GazetteOnlyRunsForHumanAdminDms(bool admin, bool dm, bool bot, bool expected)
+    public async Task SpecialsOnlyRunForHumanAdminDms(bool admin, bool dm, bool bot, bool expected)
     {
-        var gateway = new GazetteGateway();
-        var command = new GazetteDirectMessageCommand(
+        var gateway = new SpecialsDirectMessageCommandTests.Gateway { Destination = null };
+        var command = new SpecialsDirectMessageCommand(
             gateway,
             null!,
             new(),
             Options.Create(new DirectMessageHandlerOptions { AdminUserId = 1 }),
             TimeProvider.System,
-            NullLogger<GazetteDirectMessageCommand>.Instance,
-            new GazetteIssueService(new MemoryGazetteIssueStore(), TimeProvider.System),
-            new StubGazettePageRenderer(),
-            new StubGazetteIllustrator(),
-            Options.Create(new GazetteOptions())
+            NullLogger<SpecialsDirectMessageCommand>.Instance
         );
-        var handler = CreateHandler(null!, null!, gazetteCommand: command);
-        await handler.Handle(new MessageReceived(CreateMessage(admin, dm, bot, "gazette draft", [])), TestContext.Current.CancellationToken);
-        Assert.Equal(expected, gateway.Called);
-    }
-
-    private sealed class GazetteGateway : IGazetteGateway
-    {
-        public string DestinationError => "The Gazette destination is unavailable.";
-
-        public bool Called { get; private set; }
-
-        public GazetteDestination? GetDestination()
-        {
-            Called = true;
-            return null;
-        }
-
-        public string? GetPublicationError(ulong destinationId) => throw new NotSupportedException();
-
-        public Task<GazetteChatBatch> ReadRecentAsync(
-            ulong destinationId,
-            DateTimeOffset since,
-            DateTimeOffset until,
-            CancellationToken cancellationToken
-        ) => throw new NotSupportedException();
-
-        public Task<bool> VerifyAsync(ulong destinationId, IReadOnlyList<NotebookSource> sources, CancellationToken cancellationToken) =>
-            throw new NotSupportedException();
-
-        public Task<IReadOnlyList<GazettePublishedEdition>> ReadPreviousEditionsAsync(
-            ulong destinationId,
-            DateTimeOffset since,
-            DateTimeOffset until,
-            CancellationToken cancellationToken
-        ) => throw new NotSupportedException();
-
-        public Task<ulong> PublishAsync(
-            ulong destinationId,
-            string edition,
-            GazettePrintEdition printEdition,
-            string publicationId,
-            CancellationToken cancellationToken
-        ) => throw new NotSupportedException();
+        var handler = CreateHandler(null!, null!, specialsCommand: command);
+        await handler.Handle(new MessageReceived(CreateMessage(admin, dm, bot, "specials draft", [])), TestContext.Current.CancellationToken);
+        Assert.Equal(expected, gateway.DestinationCalled);
     }
 
     [Theory]
@@ -127,11 +96,11 @@ public class DirectMessageHandlerTests
         Assert.Contains("personality furious 2h", help);
         Assert.Contains("@Grub you've had a stroke.", help);
         Assert.DoesNotContain("the Fryer", help);
-        Assert.Contains("The Crossroads Gazette", help);
-        Assert.DoesNotContain("The Khazad Gazette", help);
+        Assert.DoesNotContain("gazette", help, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("notebook show/discard", help);
         Assert.Contains("lore undo", help);
-        Assert.Contains("gazette approve", help);
+        Assert.Contains("specials draft/show", help);
+        Assert.Contains("specials approve", help);
     }
 
     [Theory]
@@ -282,8 +251,8 @@ public class DirectMessageHandlerTests
         WordGetter getter,
         NotebookDirectMessageCommand? notebookCommand = null,
         LoreDirectMessageCommand? loreCommand = null,
-        GazetteDirectMessageCommand? gazetteCommand = null,
-        CustomerDirectMessageCommand? customerCommand = null
+        CustomerDirectMessageCommand? customerCommand = null,
+        SpecialsDirectMessageCommand? specialsCommand = null
     ) =>
         new(
             Options.Create(new DirectMessageHandlerOptions { AdminUserId = 1 }),
@@ -295,18 +264,14 @@ public class DirectMessageHandlerTests
             notebookCommand!,
             new CooldownTracker<ulong>(TimeProvider.System),
             loreCommand!,
-            gazetteCommand
-                ?? new GazetteDirectMessageCommand(
+            specialsCommand
+                ?? new SpecialsDirectMessageCommand(
                     null!,
                     null!,
                     new(),
                     Options.Create(new DirectMessageHandlerOptions { AdminUserId = 1 }),
                     TimeProvider.System,
-                    NullLogger<GazetteDirectMessageCommand>.Instance,
-                    new GazetteIssueService(new MemoryGazetteIssueStore(), TimeProvider.System),
-                    new StubGazettePageRenderer(),
-                    new StubGazetteIllustrator(),
-                    Options.Create(new GazetteOptions())
+                    NullLogger<SpecialsDirectMessageCommand>.Instance
                 )
         );
 

@@ -104,7 +104,7 @@ Existing `personality` DM commands, expiry, and persistence are unchanged. Earli
 bot messages must not pull Grub back into Hammerstone's identity or another tone.
 The five spontaneous conversation follower personalities retain their alternate
 comic voices and receive the shared guild context; they are not all rewritten as
-Grub. The Crossroads Gazette keeps its own affectionate local-newspaper voice.
+Grub. The weekly specials board uses Grub's chip-shop framing.
 
 ### Visual direction
 
@@ -239,12 +239,12 @@ after that review; registration cleanup skips the command when it is enabled.
    Keep the same application and server IDs; no token replacement is required for
    a cosmetic rebrand. Review any visible webhook/Auth0 application branding manually.
 3. Confirm mentions, admin help, the portal title/header/access-denied copy, and a
-   private Gazette draft. Do not publish a trial draft without normal approval.
+   private specials draft. Do not publish a trial draft without normal approval.
 4. Review live permanent lore for current guild/member facts. Do not bulk-rewrite
    historical entries or purge the notebook, generated images, or death records.
 5. Check that `/raids` is absent after bot startup, while `/summarise` and `/suggest`
    remain available.
 
 Domains, image URLs, Auth0 tenant, project/namespace names, Docker images, Azure
-resources, databases, and the repository name remain unchanged. Gazette issue
-numbers and publication history continue under the existing persistent state ID.
+resources, databases, and the repository name remain unchanged. Historical Gazette
+collections remain untouched after retirement; specials do not use them.

@@ -1,0 +1,246 @@
+using System.Globalization;
+using System.Text;
+using System.Text.Json;
+using System.Text.RegularExpressions;
+using ChampionsOfKhazad.Bot.GenAi;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+
+namespace ChampionsOfKhazad.Bot;
+
+public sealed partial class SpecialsDirectMessageCommand(
+    ISpecialsGateway gateway,
+    ISpecialsWriter writer,
+    SpecialsSession session,
+    IOptions<DirectMessageHandlerOptions> adminOptions,
+    TimeProvider clock,
+    ILogger<SpecialsDirectMessageCommand> logger
+)
+{
+    private const string NoDraft = "No live specials draft. Request `specials draft` first.";
+    private const string Help =
+        "Specials commands: `specials draft` — privately draft this week's menu; `specials show` — review it; "
+        + "`specials approve <token>` — publish to the configured bot channel; `specials discard` — clear it. Approval expires after 30 minutes or a restart.";
+
+    public async Task<bool> TryExecuteAsync(
+        ulong actorId,
+        string content,
+        Func<string, CancellationToken, Task> reply,
+        CancellationToken cancellationToken
+    )
+    {
+        var parts = content.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+        if (actorId != adminOptions.Value.AdminUserId || parts.Length == 0 || !parts[0].Equals("specials", StringComparison.OrdinalIgnoreCase))
+            return false;
+        await session.Gate.WaitAsync(cancellationToken);
+        var stage = "handling the command";
+        var publishing = false;
+        try
+        {
+            if (session.Pending is { } old && clock.GetUtcNow() >= old.ExpiresAtUtc)
+                session.Pending = null;
+            if (parts.Length == 2 && parts[1].Equals("draft", StringComparison.OrdinalIgnoreCase))
+            {
+                session.Pending = null;
+                stage = "resolving the publication audience";
+                var destination = gateway.GetDestination();
+                if (destination is null)
+                {
+                    await reply($"Cannot prepare specials: {gateway.DestinationError}", cancellationToken);
+                    return true;
+                }
+                var until = clock.GetUtcNow();
+                var since = until.AddDays(-7);
+                await reply("Reading this week's chat and looking for menu ingredients. This may take a few minutes.", cancellationToken);
+                stage = "reading weekly chat";
+                var batch = await gateway.ReadWeekAsync(destination.Id, since, until, cancellationToken);
+                var plan = SpecialsDiscoveryPlan.Create(batch.Sources, since, until);
+                var coverage = Coverage(batch, plan);
+                var candidates = new List<SpecialsEvent>();
+                stage = "discovering weekly events";
+                foreach (var sources in plan.Batches)
+                    candidates.AddRange(await writer.DiscoverAsync(sources, until, cancellationToken));
+                stage = "grouping and selecting events";
+                // Large candidate sets are reduced in bounded groups before the final whole-week comparison.
+                IReadOnlyList<SpecialsEvent> selected = candidates;
+                while (JsonSerializer.Serialize(new { candidates = selected }).Length > 90000)
+                {
+                    var reduced = new List<SpecialsEvent>();
+                    foreach (var group in selected.Chunk(20))
+                        reduced.AddRange(await writer.SelectAsync(group, until, cancellationToken));
+                    if (reduced.Count >= selected.Count)
+                        throw new SpecialsValidationException("SelectionBounds");
+                    selected = reduced;
+                }
+                selected = await writer.SelectAsync(selected, until, cancellationToken);
+                stage = "retrieving event context and server names";
+                var contexts = SpecialsDiscoveryPlan.AddContext(selected, batch.Sources);
+                var rawContext = contexts.SelectMany(item => item.Sources).DistinctBy(source => source.Url).ToArray();
+                var resolved = rawContext.Length == 0 ? [] : await gateway.ResolveNamesAsync(rawContext, cancellationToken);
+                var names = resolved.ToDictionary(source => source.Url, StringComparer.Ordinal);
+                contexts = contexts.Select(item => item with { Sources = item.Sources.Select(source => names[source.Url]).ToArray() }).ToArray();
+                stage = "writing the specials menu";
+                var dishes = await writer.WriteAsync(contexts, until, cancellationToken);
+                if (dishes.Count == 0)
+                {
+                    await reply($"No suitable moments found for a menu.\n{coverage}", cancellationToken);
+                    return true;
+                }
+                stage = "formatting the private preview";
+                var menu = Render(dishes, since, until);
+                var urls = dishes.SelectMany(dish => dish.SourceUrls).ToHashSet(StringComparer.Ordinal);
+                var evidence = resolved.Where(source => urls.Contains(source.Url)).ToArray();
+                stage = "checking draft evidence";
+                if (urls.Count != evidence.Length || !await gateway.VerifyAsync(destination.Id, evidence, cancellationToken))
+                {
+                    await reply("The selected evidence changed or became unavailable. Request `specials draft` again.", cancellationToken);
+                    return true;
+                }
+                var pending = new SpecialsPendingDraft(
+                    Guid.NewGuid().ToString("N")[..12],
+                    destination,
+                    menu,
+                    RenderEvidence(dishes),
+                    coverage,
+                    evidence,
+                    clock.GetUtcNow().AddMinutes(30)
+                );
+                stage = "sending the private preview";
+                await PreviewAsync(pending, reply, cancellationToken);
+                cancellationToken.ThrowIfCancellationRequested();
+                session.Pending = pending;
+            }
+            else if (parts.Length == 2 && parts[1].Equals("show", StringComparison.OrdinalIgnoreCase))
+            {
+                if (session.Pending is { } pending)
+                    await PreviewAsync(pending, reply, cancellationToken);
+                else
+                    await reply(NoDraft, cancellationToken);
+            }
+            else if (parts.Length == 2 && parts[1].Equals("discard", StringComparison.OrdinalIgnoreCase))
+            {
+                session.Pending = null;
+                await reply("Specials draft discarded.", cancellationToken);
+            }
+            else if (parts.Length == 3 && parts[1].Equals("approve", StringComparison.OrdinalIgnoreCase))
+            {
+                var pending = session.Pending;
+                if (pending is null)
+                    await reply(NoDraft, cancellationToken);
+                else if (parts[2] != pending.Token)
+                    await reply("Use the exact `specials approve <token>` from your preview.", cancellationToken);
+                else
+                {
+                    session.Pending = null;
+                    stage = "checking publication evidence";
+                    if (
+                        gateway.GetDestination()?.Id != pending.Destination.Id
+                        || !await gateway.VerifyAsync(pending.Destination.Id, pending.Sources, cancellationToken)
+                        || clock.GetUtcNow() >= pending.ExpiresAtUtc
+                    )
+                        await reply(
+                            "The destination or evidence changed, became unavailable, or approval expired. Request `specials draft` again.",
+                            cancellationToken
+                        );
+                    else if (gateway.GetPublicationError(pending.Destination.Id) is { } error)
+                        await reply($"Cannot publish specials: {error} Request a fresh draft after fixing posting permissions.", cancellationToken);
+                    else
+                    {
+                        stage = "sending the menu";
+                        publishing = true;
+                        var id = await gateway.PublishAsync(pending.Destination.Id, pending.Menu, cancellationToken);
+                        await reply($"Specials published to #{pending.Destination.Name} (message {id}).", cancellationToken);
+                    }
+                }
+            }
+            else
+                await reply(Help, cancellationToken);
+            return true;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            session.Pending = null;
+            throw;
+        }
+        catch (Exception exception)
+        {
+            session.Pending = null;
+            var category = exception is SpecialsValidationException validation ? validation.Category : "UnexpectedFailure";
+            logger.LogWarning(
+                "Specials failed while {Stage}; type {ExceptionType}; category {Category}; publication attempted {Publishing}",
+                stage,
+                exception.GetType().Name,
+                category,
+                publishing
+            );
+            await reply(
+                publishing
+                    ? "Publication could not be confirmed. Approval was consumed; check the destination channel before requesting another draft."
+                    : $"Could not prepare specials while {stage} ({category}). Pending approval was cleared; try `specials draft` again.",
+                cancellationToken
+            );
+            return true;
+        }
+        finally
+        {
+            session.Gate.Release();
+        }
+    }
+
+    private async Task PreviewAsync(SpecialsPendingDraft pending, Func<string, CancellationToken, Task> reply, CancellationToken cancellationToken)
+    {
+        await reply($"PRIVATE SPECIALS DRAFT — #{pending.Destination.Name}\n\n{pending.Menu}", cancellationToken);
+        await reply(
+            $"**Selected moments & sources**\n{pending.Evidence}\n\n{pending.Coverage}\n\n"
+                + $"Review the menu and sources. Reply `specials approve {pending.Token}` within {Math.Max(0, (int)Math.Ceiling((pending.ExpiresAtUtc - clock.GetUtcNow()).TotalMinutes))} minutes to publish, or `specials discard`.",
+            cancellationToken
+        );
+    }
+
+    private static string Coverage(SpecialsChatBatch batch, SpecialsDiscoveryPlan plan) =>
+        $"Coverage: {batch.Sources.Count} usable human messages; {batch.CompleteChannels}/{batch.EligibleChannels} eligible channels fully read; "
+        + $"{batch.FailedChannels} failed, {batch.LimitedChannels} limited; {batch.HistoryReads} history reads; {batch.ExcludedMessages} records excluded. "
+        + $"Discovery: {plan.Batches.Count} batches; {plan.UnassessedMessages} messages not assessed."
+        + (
+            batch.FailedChannels + batch.LimitedChannels + plan.UnassessedMessages > 0
+                ? " Weekly coverage is incomplete; important events may be missing."
+                : ""
+        );
+
+    internal static string Render(IReadOnlyList<SpecialsDish> dishes, DateTimeOffset since, DateTimeOffset until)
+    {
+        if (dishes.Count is < 1 or > 5 || dishes.Select(dish => dish.EventIndex).Distinct().Count() != dishes.Count)
+            throw new SpecialsValidationException("MenuCount");
+        var text = new StringBuilder($"**Crossroads Mega Chippy — Specials of the week**\n*{FormatDates(since, until)}*\n");
+        foreach (var dish in dishes)
+            text.Append($"\n**{Escape(dish.Name)} — {Escape(dish.Price)}**\n{Escape(dish.Description)}\n");
+        if (text.Length > 2000)
+            throw new SpecialsValidationException("MenuLength");
+        return text.ToString().TrimEnd();
+    }
+
+    private static string RenderEvidence(IReadOnlyList<SpecialsDish> dishes) =>
+        string.Join(
+            "\n\n",
+            dishes.Select(
+                (dish, index) =>
+                    $"{index + 1}. **{Escape(dish.Name)}** — {Escape(dish.EventSummary)}\n"
+                    + string.Join(" · ", dish.SourceUrls.Select((url, number) => $"[source {number + 1}]({url})"))
+            )
+        );
+
+    private static string Escape(string text) => MarkdownRegex().Replace(text, "\\$1");
+
+    internal static string FormatDates(DateTimeOffset since, DateTimeOffset until)
+    {
+        var zone = TimeZoneInfo.FindSystemTimeZoneById("Europe/Copenhagen");
+        var start = TimeZoneInfo.ConvertTime(since, zone);
+        var end = TimeZoneInfo.ConvertTime(until, zone);
+        return start.Year == end.Year && start.Month == end.Month
+            ? $"{start.Day}–{end.ToString("d MMMM yyyy", CultureInfo.InvariantCulture)}"
+            : $"{start.ToString("d MMMM yyyy", CultureInfo.InvariantCulture)}–{end.ToString("d MMMM yyyy", CultureInfo.InvariantCulture)}";
+    }
+
+    [GeneratedRegex(@"([\\`*_~|<>\[\]])")]
+    private static partial Regex MarkdownRegex();
+}

@@ -39,7 +39,6 @@ public class BotService : IHostedService
         _client.Disconnected += DisconnectedAsync;
         _client.MessageReceived += MessageReceivedAsync;
         _client.SlashCommandExecuted += SlashCommandExecutedAsync;
-        _client.ButtonExecuted += ButtonExecutedAsync;
         _client.UserLeft += UserLeftAsync;
     }
 
@@ -129,22 +128,6 @@ public class BotService : IHostedService
     {
         TryEnqueueWhenReady(new UserLeft(user));
         return Task.CompletedTask;
-    }
-
-    private async Task ButtonExecutedAsync(SocketMessageComponent interaction)
-    {
-        if (!GazetteReadButton.TryParse(interaction.Data.CustomId, out _))
-            return;
-        if (!await EnsureReadyAsync(interaction))
-            return;
-        // Acknowledge privately within Discord's deadline; database work belongs in the notification queue.
-        await GazetteReadButton.AcknowledgeAsync(interaction);
-        if (!TryEnqueueWhenReady(new GazetteReadRequested(interaction)))
-            await interaction.FollowupAsync(
-                "I'm unavailable just now. Please try again shortly.",
-                ephemeral: true,
-                allowedMentions: AllowedMentions.None
-            );
     }
 
     internal bool TryEnqueueWhenReady(INotification notification) =>

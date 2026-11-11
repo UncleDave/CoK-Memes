@@ -41,7 +41,7 @@ host.Services.AddSerilog();
 
 host.Services.AddOptionsWithEagerValidation<BotOptions>(host.Configuration.GetSection(BotOptions.Key));
 host.Services.AddOptionsWithEagerValidation<DiscordMessageToolsOptions>(host.Configuration.GetSection(DiscordMessageToolsOptions.Key));
-host.Services.AddOptionsWithEagerValidation<GazetteOptions>(host.Configuration.GetSection(GazetteOptions.Key));
+host.Services.AddOptionsWithEagerValidation<SpecialsOptions>(host.Configuration.GetSection(SpecialsOptions.Key));
 host.Services.AddSingleton(typeof(CooldownTracker<>));
 
 var rosterOptions = host.Configuration.GetSection(GuildRosterOptions.Key).Get<GuildRosterOptions>() ?? new();
@@ -149,11 +149,10 @@ host.Services.AddHostedService<BotService>()
     .AddScoped<CustomerDirectMessageCommand>()
     .AddScoped<NotebookDirectMessageCommand>()
     .AddScoped<LoreDirectMessageCommand>()
-    .AddScoped<GazetteDirectMessageCommand>()
-    .AddScoped<IGazetteGateway, DiscordGazetteGateway>()
-    .AddScoped<IGazetteReaderAccess, DiscordGazetteReaderAccess>()
-    .AddSingleton<IGazettePageRenderer, GazettePageRenderer>()
-    .AddSingleton<GazetteSession>()
+    .AddScoped<DiscordPublicationAudience>()
+    .AddScoped<SpecialsDirectMessageCommand>()
+    .AddScoped<ISpecialsGateway, DiscordSpecialsGateway>()
+    .AddSingleton<SpecialsSession>()
     .AddSingleton<LoreEditorSession>()
     .AddScoped<INotebookReviewer, DiscordNotebookReviewer>()
     .AddScoped<INotebookSourceReader, DiscordMessageService>()

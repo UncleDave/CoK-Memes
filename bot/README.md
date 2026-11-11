@@ -81,15 +81,11 @@ Configure the remaining values before starting either host:
 Review the bot's existing `appsettings*.json` files for guild-specific channel/user IDs
 and feature settings; replace them with values for your development guild.
 
-The on-demand Gazette uses the existing admin DM identity, AI configuration and
-normal-member role. Its default publication channel is `#ai-tavern`; the bot also
-needs Embed Links and Attach Files there to publish, but not to prepare a private draft. Optional
-`Gazette:DestinationChannelId` and
-`Gazette:SourceChannelIds` pin the destination and narrow sampling. See
-[Gazette configuration and DM commands](docs/gazette.md) before a live trial.
-The bot's Linux image installs DejaVu fonts for rendered newspaper pages. Issue numbers
-and published-text snapshots use the existing Mongo configuration. Gazette images have
-no daily quota; repeated drafts of unchanged lead evidence can reuse recent artwork.
+Weekly specials use the existing admin DM identity, AI configuration and normal-member
+role. Configure `Specials:DestinationChannelId` (or `DestinationChannelName`, default
+`ai-tavern`) and optional `Specials:SourceChannelIds`. The bot needs source read/history
+access and destination View Channel/Send Messages for publication. DM `specials draft`
+for a private trial; see [specials commands and review](docs/specials.md).
 
 ### Discord setup
 

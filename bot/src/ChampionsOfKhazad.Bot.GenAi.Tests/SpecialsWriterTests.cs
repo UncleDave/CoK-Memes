@@ -34,7 +34,7 @@ public class SpecialsWriterTests
                         eventIndex,
                         name = name ?? "New Sign Supper",
                         description = "Same batter. New packaging.",
-                        price = "8g",
+                        price = "8 silver",
                         eventSummary = "An announcement was made.",
                         sourceUrls = new[] { url ?? Url },
                     },
@@ -110,6 +110,64 @@ public class SpecialsWriterTests
             .GetProperty("properties");
         Assert.Equal(0, fields.GetProperty("eventIndex").GetProperty("enum")[0].GetInt32());
         Assert.Equal(180, fields.GetProperty("description").GetProperty("maxLength").GetInt32());
+    }
+
+    [Fact]
+    public async Task AffordablePriceEnumSurvivesProviderTranslationAndEveryAllowedPriceIsAccepted()
+    {
+        var client = new CapturingClient(MenuJson());
+        await new SpecialsWriter(client).WriteAsync([Context], Now, TestContext.Current.CancellationToken);
+        var options = client.Options!;
+        var fields = Assert
+            .IsType<ChatResponseFormatJson>(options.ResponseFormat)
+            .Schema!.Value.GetProperty("properties")
+            .GetProperty("dishes")
+            .GetProperty("items")
+            .GetProperty("properties");
+        var prices = fields.GetProperty("price").GetProperty("enum").EnumerateArray().Select(value => value.GetString()!).ToArray();
+        Assert.Equal(new[] { "2 silver", "3 silver", "4 silver", "5 silver", "6 silver", "8 silver", "10 silver" }, prices);
+#pragma warning disable OPENAI001
+        using var transport = JsonDocument.Parse(ModelReaderWriter.Write(options.ResponseFormat.AsOpenAIResponseTextFormat(options)).ToString());
+#pragma warning restore OPENAI001
+        var actualPrices = transport
+            .RootElement.GetProperty("schema")
+            .GetProperty("properties")
+            .GetProperty("dishes")
+            .GetProperty("items")
+            .GetProperty("properties")
+            .GetProperty("price")
+            .GetProperty("enum");
+        Assert.Equal(prices, actualPrices.EnumerateArray().Select(value => value.GetString()));
+        foreach (var price in prices)
+        {
+            var json = JsonNode.Parse(MenuJson())!;
+            json["dishes"]![0]!["price"] = price;
+            var result = await new SpecialsWriter(new CapturingClient(json.ToJsonString())).WriteAsync(
+                [Context],
+                Now,
+                TestContext.Current.CancellationToken
+            );
+            Assert.Equal(price, Assert.Single(result).Price);
+        }
+    }
+
+    [Theory]
+    [InlineData("700 gold, 4 silver")]
+    [InlineData("15,000 gold")]
+    [InlineData("5000g 6s")]
+    [InlineData("11 silver")]
+    [InlineData("free")]
+    public async Task InflatedOrUnlistedPricesAreRejectedEvenIfAClientIgnoresTheEnum(string price)
+    {
+        var json = JsonNode.Parse(MenuJson())!;
+        json["dishes"]![0]!["price"] = price;
+        var client = new CapturingClient(json.ToJsonString());
+        var error = await Assert.ThrowsAsync<SpecialsValidationException>(() =>
+            new SpecialsWriter(client).WriteAsync([Context], Now, TestContext.Current.CancellationToken)
+        );
+        Assert.Equal("InvalidPrice", error.Category);
+        Assert.Equal(SpecialsValidationField.Price, error.Field);
+        Assert.Single(client.Requests);
     }
 
     [Theory]

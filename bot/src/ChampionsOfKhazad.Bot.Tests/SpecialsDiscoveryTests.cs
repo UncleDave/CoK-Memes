@@ -130,6 +130,79 @@ public class SpecialsDiscoveryTests
     }
 
     [Fact]
+    public void QuietChannelDayRunsArePackedSoAllThirteenHundredWeeklyMessagesReachDiscovery()
+    {
+        var sources = Enumerable
+            .Range(0, 1306)
+            .Select(index =>
+                Source(
+                    index + 1000,
+                    index % 35 + 1,
+                    Now.AddDays(-7 + index / 35 % 7).AddHours(1).AddSeconds(index),
+                    "Ordinary chatter. This complete message must reach discovery."
+                )
+            )
+            .ToArray();
+        sources[^2] = sources[^2] with { Content = "The guild has been renamed." };
+        sources[^1] = sources[^1] with { Content = "The banner competition is open." };
+        var plan = SpecialsDiscoveryPlan.Create(sources, Now.AddDays(-7), Now);
+        Assert.Equal(0, plan.UnassessedMessages);
+        Assert.InRange(plan.Batches.Count, 1, 20);
+        var assessed = plan.Batches.SelectMany(batch => batch).ToArray();
+        Assert.Equal(sources.Length, assessed.DistinctBy(source => source.Url).Count());
+        Assert.Contains(sources[^2], assessed);
+        Assert.Contains(sources[^1], assessed);
+        Assert.Equal(35, assessed.Select(source => source.Url.Split('/')[5]).Distinct().Count());
+        Assert.Equal(7, assessed.Select(source => source.TimestampUtc.Date).Distinct().Count());
+        Assert.All(
+            plan.Batches,
+            batch =>
+            {
+                Assert.InRange(batch.Count, 1, 100);
+                Assert.True(JsonSerializer.Serialize(new { sources = batch }).Length <= SpecialsDiscoveryPlan.MaximumBatchCharacters);
+            }
+        );
+        var reversed = SpecialsDiscoveryPlan.Create(sources.Reverse().ToArray(), Now.AddDays(-7), Now);
+        Assert.Equal(assessed.Select(source => source.Url), reversed.Batches.SelectMany(batch => batch).Select(source => source.Url));
+    }
+
+    [Fact]
+    public void PackingKeepsCompleteChronologicalRunsTogetherInsteadOfInterleavingIsolatedLines()
+    {
+        var first = Enumerable.Range(1, 4).Select(index => Source(index, 1, Now.AddDays(-2).AddSeconds(index), $"Exchange A part {index}")).ToArray();
+        var second = Enumerable
+            .Range(1, 4)
+            .Select(index => Source(index + 10, 2, Now.AddDays(-2).AddSeconds(index), $"Exchange B part {index}"))
+            .ToArray();
+        var batch = Assert.Single(SpecialsDiscoveryPlan.Create(first.Concat(second).Reverse().ToArray(), Now.AddDays(-7), Now).Batches);
+        Assert.Equal(first.Concat(second), batch);
+    }
+
+    [Fact]
+    public void PackingMixedUnicodeRunsUsesActualSerializedSizesWithoutCuttingEvidence()
+    {
+        var sources = Enumerable
+            .Range(0, 80)
+            .Select(index =>
+                Source(index + 1, index / 2 + 1, Now.AddDays(-2).AddSeconds(index), index % 3 == 0 ? new string('界', 1000) : new string('x', 500))
+            )
+            .ToArray();
+        var plan = SpecialsDiscoveryPlan.Create(sources, Now.AddDays(-7), Now);
+        Assert.Equal(0, plan.UnassessedMessages);
+        Assert.True(plan.Batches.Count > 1);
+        Assert.All(
+            plan.Batches,
+            batch =>
+            {
+                Assert.InRange(batch.Count, 1, 100);
+                Assert.True(JsonSerializer.Serialize(new { sources = batch }).Length <= SpecialsDiscoveryPlan.MaximumBatchCharacters);
+                Assert.All(batch, source => Assert.Contains(source, sources));
+            }
+        );
+        Assert.Contains(plan.Batches, batch => batch.Select(source => source.Url.Split('/')[5]).Distinct().Count() > 1);
+    }
+
+    [Fact]
     public void ContextIncludesNeighbouringCorrectionsAndCrossChannelAnchorsButNotUnrelatedDistantChat()
     {
         var announcement = Source(10, 1, Now.AddDays(-3), "Competition announced.");

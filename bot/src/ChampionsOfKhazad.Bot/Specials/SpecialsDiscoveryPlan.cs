@@ -10,7 +10,8 @@ internal sealed record SpecialsDiscoveryPlan(IReadOnlyList<IReadOnlyList<Noteboo
 
     internal static SpecialsDiscoveryPlan Create(IReadOnlyList<NotebookSource> sources, DateTimeOffset since, DateTimeOffset until)
     {
-        // Rotate channel/day batches so one busy channel cannot consume the entire discovery budget.
+        // Rotate channel/day runs, then pack them into requests. A quiet channel/day must
+        // not consume a whole model call and crowd later groups out of the weekly budget.
         var groups = sources
             .Where(source => source.TimestampUtc >= since.UtcDateTime && source.TimestampUtc <= until.UtcDateTime)
             .DistinctBy(source => source.Url)
@@ -21,20 +22,44 @@ internal sealed record SpecialsDiscoveryPlan(IReadOnlyList<IReadOnlyList<Noteboo
             .ThenBy(group => group.Key.Channel, StringComparer.Ordinal)
             .Select(group => new Queue<IReadOnlyList<NotebookSource>>(Split(group.OrderBy(source => source.TimestampUtc))))
             .ToArray();
-        var batches = new List<IReadOnlyList<NotebookSource>>();
-        while (batches.Count < MaximumBatches && groups.Any(group => group.Count > 0))
-        {
-            foreach (var group in groups)
-            {
-                if (batches.Count == MaximumBatches)
-                    break;
-                if (group.TryDequeue(out var batch))
-                    batches.Add(batch);
-            }
-        }
+        var batches = Pack(Rotate(groups)).Take(MaximumBatches).ToArray();
         var assessed = batches.SelectMany(batch => batch).Select(source => source.Url).ToHashSet(StringComparer.Ordinal);
         return new(batches, sources.Select(source => source.Url).Distinct(StringComparer.Ordinal).Count(url => !assessed.Contains(url)));
     }
+
+    private static IEnumerable<IReadOnlyList<NotebookSource>> Rotate(Queue<IReadOnlyList<NotebookSource>>[] groups)
+    {
+        while (groups.Any(group => group.Count > 0))
+        {
+            foreach (var group in groups)
+            {
+                if (group.TryDequeue(out var batch))
+                    yield return batch;
+            }
+        }
+    }
+
+    private static IEnumerable<IReadOnlyList<NotebookSource>> Pack(IEnumerable<IReadOnlyList<NotebookSource>> runs)
+    {
+        var batch = new List<NotebookSource>();
+        var size = 100;
+        foreach (var run in runs)
+        {
+            var length = run.Sum(SourceSize);
+            if (batch.Count > 0 && (batch.Count + run.Count > 100 || size + length > MaximumBatchCharacters))
+            {
+                yield return batch.ToArray();
+                batch.Clear();
+                size = 100;
+            }
+            batch.AddRange(run);
+            size += length;
+        }
+        if (batch.Count > 0)
+            yield return batch.ToArray();
+    }
+
+    private static int SourceSize(NotebookSource source) => JsonSerializer.Serialize(source).Length + 1;
 
     private static IEnumerable<IReadOnlyList<NotebookSource>> Split(IEnumerable<NotebookSource> sources)
     {
@@ -42,17 +67,17 @@ internal sealed record SpecialsDiscoveryPlan(IReadOnlyList<IReadOnlyList<Noteboo
         var size = 100;
         foreach (var source in sources)
         {
-            var length = JsonSerializer.Serialize(source).Length + 1;
+            var length = SourceSize(source);
             if (batch.Count > 0 && (size + length > MaximumBatchCharacters || batch.Count == 100))
             {
                 yield return batch.ToArray();
                 // Keep preceding context where it fits, without preventing forward progress.
                 batch = batch.TakeLast(2).ToList();
-                size = 100 + batch.Sum(item => JsonSerializer.Serialize(item).Length + 1);
+                size = 100 + batch.Sum(SourceSize);
                 while (batch.Count > 0 && size + length > MaximumBatchCharacters)
                 {
                     batch.RemoveAt(0);
-                    size = 100 + batch.Sum(item => JsonSerializer.Serialize(item).Length + 1);
+                    size = 100 + batch.Sum(SourceSize);
                 }
             }
             if (length + 100 > MaximumBatchCharacters)

@@ -7,8 +7,14 @@ Mega Chippy. It is not a newspaper, chat recap or permanent lore. Guild-wide cha
 consequential announcements, competitions, shared activities and achievements should
 outrank disposable chatter, even when they appear in fewer messages. Smaller memorable
 exchanges remain eligible. Aim for three to five distinct dishes, but use fewer or
-none rather than filler. Food, preparation and absurd prices are invented; real member
+none rather than filler. Food and preparation are invented; real member
 actions, participation, purchases and event outcomes are not.
+
+Prices are ordinary cosmetic chip-shop prices, not jokes derived from source numbers.
+The writer must choose exactly one of `2 silver`, `3 silver`, `4 silver`, `5 silver`,
+`6 silver`, `8 silver` or `10 silver`. The request schema constrains this enum and local
+validation rejects anything else, including gold-denominated or inflated prices. These
+are fictional menu amounts, not a claim about game vendor prices or a player economy.
 
 Only the configured `EventHandlers:DirectMessage:AdminUserId`, in a human DM, can use:
 
@@ -63,14 +69,26 @@ shown when reads or later discovery are incomplete; do not imply exhaustive cove
 1. Group collected messages by channel and request-anchored 24-hour slice. Split into
    complete, chronological batches of at most 100 messages and 32,000 serialized
    characters, retaining the preceding two messages when they fit. Rotate through
-   channel/day groups. At most 40 discovery batches are assessed. Records too
+   channel/day runs, then pack complete small runs together within the same 100-message /
+   32,000-character request bounds **before** applying the 40-request discovery budget.
+   A quiet channel/day therefore does not spend a whole model call by itself. Keep
+   each run's chronological context together; mixed channel/day runs are not evidence
+   of a shared event. At most 40 discovery batches are assessed. Records too
    large for a batch are skipped whole and counted, never truncated; the private
    preview reports the exact number of collected messages not assessed.
 2. Each tool-free structured-output call proposes at most four sourced candidate
-   moments. Major announcements do not need to be noisy or inherently funny. No
+   moments after surveying every included run. Major announcements do not need to be noisy or inherently funny. No
    topic/keyword allowlist singles out a rename or banner competition.
 3. A separate selection call compares the whole candidate set, grouping announcements,
-   discussion and developments belonging to the same event across batches/channels.
+   discussion, symptoms and developments belonging to the same shared episode across
+   batches/channels. Choose one strong representative angle per episode, not several
+   dishes for routine updates or inconveniences. A different participant, number or
+   timestamp is not automatically a distinct incident. Unrelated events on a common
+   topic remain separate, and adjacent unrelated claims must not be bundled together.
+   First consider guild-wide decisions/changes and collective projects or activities;
+   ordinary participation or minor progress needs a distinctive turn to qualify.
+   Prefer fewer strong moments over filling slots. Seek variety when strong evidence
+   supports it, not through invented importance or splitting one episode.
    It chooses at most five events with one to three evidence anchors each. Candidate
    inputs over 90,000 serialized characters are first reduced in groups of 20, then
    compared again; this is bounded hierarchical selection, not a complete event archive.
@@ -151,6 +169,7 @@ a later rejection. There is no output truncation or publication of a rejected dr
 Regression tests cover backward pagination/cursors, all-bot pages, exact time boundaries,
 round-robin channels beyond twelve, global/per-channel budgets, access loss, discarded
 partial reads, whole-message discovery, Unicode/serialized bounds, context corrections,
+packing many quiet channel/day runs without unassessed evidence, affordable price enums,
 request/schema/data boundaries, citation/event binding, private preview gating, admin
 DM routing, expiry/replacement/discard, exact publication, concurrent approval and
 ambiguous sends. No static prompt substring test establishes event ranking or humour.
@@ -164,3 +183,9 @@ recognisable dishes. They are held-out live-review examples, not runtime search 
 or hand-fed candidates. Deterministic tests prove evidence reaches discovery, not that
 the model will recognise its significance. Live Discord delivery, permissions, event
 selection and menu quality still require an admin trial after deployment.
+
+The November 11 live preview read 1,306 messages from all 35 eligible channels but used
+40 sparse discovery batches and left 472 messages unassessed. Use that distribution
+as a coverage regression, not a set of hardcoded story choices. Its dishes also
+overweighted routine progress and several aspects of a launch; judge the next live
+selection against the whole candidate set, with one coherent angle per shared episode.

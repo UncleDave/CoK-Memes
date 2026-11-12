@@ -16,6 +16,7 @@ public class SpecialsDirectMessageCommandTests
         Assert.Equal(fixture.Clock.Now.AddDays(-7), fixture.Gateway.Since);
         Assert.Contains(pending.Menu, fixture.Replies[1]);
         Assert.Contains("New Sign Supper", pending.Menu);
+        Assert.Contains("8 silver", pending.Menu);
         Assert.DoesNotContain("source", pending.Menu);
         Assert.DoesNotContain("The guild was renamed", pending.Menu);
         var review = fixture.Replies[^1];
@@ -401,7 +402,7 @@ public class SpecialsDirectMessageCommandTests
             return Task.FromResult<IReadOnlyList<SpecialsDish>>(
                 events.Count == 0
                     ? []
-                    : [new(0, "New Sign Supper", "Same batter. Suspiciously fresh packaging.", "8g", "The guild was renamed.", [Gateway.Url])]
+                    : [new(0, "New Sign Supper", "Same batter. Suspiciously fresh packaging.", "8 silver", "The guild was renamed.", [Gateway.Url])]
             );
         }
     }

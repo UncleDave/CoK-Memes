@@ -63,6 +63,7 @@ public class FeatureRegistrationTests
         Assert.Equal(ServiceLifetime.Scoped, Assert.Single(services, descriptor => descriptor.ServiceType == typeof(INotebookDiscoverer)).Lifetime);
         Assert.Equal(ServiceLifetime.Scoped, Assert.Single(services, descriptor => descriptor.ServiceType == typeof(ILoreEditPlanner)).Lifetime);
         Assert.Equal(ServiceLifetime.Scoped, Assert.Single(services, descriptor => descriptor.ServiceType == typeof(ISpecialsWriter)).Lifetime);
+        Assert.Equal(ServiceLifetime.Scoped, Assert.Single(services, descriptor => descriptor.ServiceType == typeof(ISpecialsLoreReader)).Lifetime);
         Assert.Equal(
             ServiceLifetime.Scoped,
             Assert.Single(services, descriptor => descriptor.ServiceType == typeof(NotebookObserverService)).Lifetime

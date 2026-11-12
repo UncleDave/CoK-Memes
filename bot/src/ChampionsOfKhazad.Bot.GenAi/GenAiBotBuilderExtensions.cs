@@ -69,6 +69,7 @@ public static class GenAiBotBuilderExtensions
             .AddScoped<INotebookDiscoverer, NotebookDiscoverer>()
             .AddScoped<ILoreEditPlanner, LoreEditPlanner>()
             .AddScoped<ISpecialsWriter, SpecialsWriter>()
+            .AddScoped<ISpecialsLoreReader, SpecialsLoreReader>()
             .AddScoped<NotebookObserverService>()
             .AddScoped<IEmojiHandler, TEmojiHandler>()
             .AddSingleton(config.ImageGeneration)

@@ -14,7 +14,8 @@ public sealed partial class SpecialsDirectMessageCommand(
     SpecialsSession session,
     IOptions<DirectMessageHandlerOptions> adminOptions,
     TimeProvider clock,
-    ILogger<SpecialsDirectMessageCommand> logger
+    ILogger<SpecialsDirectMessageCommand> logger,
+    ISpecialsLoreReader lore
 )
 {
     private const string NoDraft = "No live specials draft. Request `specials draft` first.";
@@ -81,6 +82,9 @@ public sealed partial class SpecialsDirectMessageCommand(
                 var resolved = rawContext.Length == 0 ? [] : await gateway.ResolveNamesAsync(rawContext, cancellationToken);
                 var names = resolved.ToDictionary(source => source.Url, StringComparer.Ordinal);
                 contexts = contexts.Select(item => item with { Sources = item.Sources.Select(source => names[source.Url]).ToArray() }).ToArray();
+                stage = "reading established guild lore";
+                var loreBatch = await lore.ReadAsync(contexts, cancellationToken);
+                contexts = loreBatch.Contexts;
                 stage = "writing the specials menu";
                 var dishes = await writer.WriteAsync(contexts, until, cancellationToken);
                 if (dishes.Count == 0)
@@ -92,21 +96,33 @@ public sealed partial class SpecialsDirectMessageCommand(
                 var menu = Render(dishes, since, until);
                 var urls = dishes.SelectMany(dish => dish.SourceUrls).ToHashSet(StringComparer.Ordinal);
                 var evidence = resolved.Where(source => urls.Contains(source.Url)).ToArray();
+                var suppliedLore = contexts.SelectMany(item => item.Lore).DistinctBy(entry => entry.Key).ToArray();
+                var usedKeys = dishes.SelectMany(dish => dish.LoreKeys).ToHashSet(StringComparer.Ordinal);
+                var usedLore = suppliedLore.Where(entry => usedKeys.Contains(entry.Key)).ToArray();
                 stage = "checking draft evidence";
-                if (urls.Count != evidence.Length || !await gateway.VerifyAsync(destination.Id, evidence, cancellationToken))
+                if (
+                    urls.Count != evidence.Length
+                    || usedKeys.Count != usedLore.Length
+                    || !await gateway.VerifyAsync(destination.Id, evidence, cancellationToken)
+                    || !await lore.VerifyAsync(usedLore, cancellationToken)
+                )
                 {
-                    await reply("The selected evidence changed or became unavailable. Request `specials draft` again.", cancellationToken);
+                    await reply("The selected evidence or lore changed or became unavailable. Request `specials draft` again.", cancellationToken);
                     return true;
                 }
                 var pending = new SpecialsPendingDraft(
                     Guid.NewGuid().ToString("N")[..12],
                     destination,
                     menu,
-                    RenderEvidence(dishes),
-                    coverage,
+                    RenderEvidence(dishes, usedLore),
+                    coverage
+                        + $" Lore: {suppliedLore.Length} related entries supplied, {usedLore.Length} used; {loreBatch.OmittedEntries} omitted by bounds.",
                     evidence,
                     clock.GetUtcNow().AddMinutes(30)
-                );
+                )
+                {
+                    Lore = usedLore,
+                };
                 stage = "sending the private preview";
                 await PreviewAsync(pending, reply, cancellationToken);
                 cancellationToken.ThrowIfCancellationRequested();
@@ -138,10 +154,11 @@ public sealed partial class SpecialsDirectMessageCommand(
                     if (
                         gateway.GetDestination()?.Id != pending.Destination.Id
                         || !await gateway.VerifyAsync(pending.Destination.Id, pending.Sources, cancellationToken)
+                        || !await lore.VerifyAsync(pending.Lore, cancellationToken)
                         || clock.GetUtcNow() >= pending.ExpiresAtUtc
                     )
                         await reply(
-                            "The destination or evidence changed, became unavailable, or approval expired. Request `specials draft` again.",
+                            "The destination, evidence or lore changed, became unavailable, or approval expired. Request `specials draft` again.",
                             cancellationToken
                         );
                     else if (gateway.GetPublicationError(pending.Destination.Id) is { } error)
@@ -209,8 +226,9 @@ public sealed partial class SpecialsDirectMessageCommand(
     {
         await reply($"PRIVATE SPECIALS DRAFT — #{pending.Destination.Name}\n\n{pending.Menu}", cancellationToken);
         await reply(
-            $"**Selected moments & sources**\n{pending.Evidence}\n\n{pending.Coverage}\n\n"
-                + $"Review the menu and sources. Reply `specials approve {pending.Token}` within {Math.Max(0, (int)Math.Ceiling((pending.ExpiresAtUtc - clock.GetUtcNow()).TotalMinutes))} minutes to publish, or `specials discard`.",
+            $"**Selected moments & sources**\n{pending.Evidence}{RenderLore(pending.Lore)}\n\n{pending.Coverage}\n\n"
+                + (pending.Lore.Count == 0 ? "Review the menu and sources. " : "Review the menu, sources and lore callbacks. ")
+                + $"Reply `specials approve {pending.Token}` within {Math.Max(0, (int)Math.Ceiling((pending.ExpiresAtUtc - clock.GetUtcNow()).TotalMinutes))} minutes to publish, or `specials discard`.",
             cancellationToken
         );
     }
@@ -237,17 +255,28 @@ public sealed partial class SpecialsDirectMessageCommand(
         return text.ToString().TrimEnd();
     }
 
-    private static string RenderEvidence(IReadOnlyList<SpecialsDish> dishes) =>
+    private static string RenderEvidence(IReadOnlyList<SpecialsDish> dishes, IReadOnlyList<SpecialsLoreReference> lore) =>
         string.Join(
             "\n\n",
             dishes.Select(
                 (dish, index) =>
                     $"{index + 1}. **{Escape(dish.Name)}** — {Escape(dish.EventSummary)}\n"
                     + string.Join(" · ", dish.SourceUrls.Select((url, number) => $"[source {number + 1}]({url})"))
+                    + (
+                        dish.LoreKeys.Count == 0
+                            ? ""
+                            : "\nCallback: " + string.Join(", ", dish.LoreKeys.Select(key => Escape(lore.Single(entry => entry.Key == key).Name)))
+                    )
             )
         );
 
     private static string Escape(string text) => MarkdownRegex().Replace(text, "\\$1");
+
+    private static string RenderLore(IReadOnlyList<SpecialsLoreReference> references) =>
+        references.Count == 0
+            ? ""
+            : "\n\n**Established lore used**\n"
+                + string.Join("\n\n", references.Select(entry => $"**{Escape(entry.Name)}**\n{Escape(entry.Content)}"));
 
     internal static string FormatDates(DateTimeOffset since, DateTimeOffset until)
     {

@@ -37,7 +37,8 @@ public class DirectMessageHandlerTests
             new(),
             Options.Create(new DirectMessageHandlerOptions { AdminUserId = 1 }),
             TimeProvider.System,
-            NullLogger<SpecialsDirectMessageCommand>.Instance
+            NullLogger<SpecialsDirectMessageCommand>.Instance,
+            new SpecialsDirectMessageCommandTests.LoreReader()
         );
         var handler = CreateHandler(null!, null!, specialsCommand: command);
         await handler.Handle(new MessageReceived(CreateMessage(admin, dm, bot, "specials draft", [])), TestContext.Current.CancellationToken);
@@ -271,7 +272,8 @@ public class DirectMessageHandlerTests
                     new(),
                     Options.Create(new DirectMessageHandlerOptions { AdminUserId = 1 }),
                     TimeProvider.System,
-                    NullLogger<SpecialsDirectMessageCommand>.Instance
+                    NullLogger<SpecialsDirectMessageCommand>.Instance,
+                    new SpecialsDirectMessageCommandTests.LoreReader()
                 )
         );
 

@@ -7,4 +7,7 @@ public sealed record SpecialsDish(
     string Price,
     string EventSummary,
     IReadOnlyList<string> SourceUrls
-);
+)
+{
+    public IReadOnlyList<string> LoreKeys { get; init; } = [];
+}

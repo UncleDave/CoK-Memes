@@ -1,5 +1,9 @@
 # Guild context in AI prompts
 
+The [weekly specials writer](specials.md) also receives the shared dated background.
+Its final Sol writing pass additionally gets bounded established-lore callbacks for
+selected current events; this does not change ordinary personality routing or recall.
+
 **Crossroads Mega Chippy**, formerly Champions of Khazad, is moving to
 **World of Warcraft: Forever**, playing **Horde on a PvE realm**. The realm name is
 not established in code. PvE describes the realm type, not a ban on members playing

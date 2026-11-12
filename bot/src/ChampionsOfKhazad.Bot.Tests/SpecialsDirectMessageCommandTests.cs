@@ -25,7 +25,8 @@ public class SpecialsDirectMessageCommandTests
         Assert.Contains($"specials approve {pending.Token}", review);
         Assert.Contains("`specials discard`", review);
         Assert.Contains("Coverage:", review);
-        Assert.DoesNotContain("lore", string.Join('\n', fixture.Replies));
+        Assert.Contains("Lore: 0 related entries supplied, 0 used", review);
+        Assert.DoesNotContain("lore is unchanged", string.Join('\n', fixture.Replies), StringComparison.OrdinalIgnoreCase);
         await fixture.Run($"specials approve {pending.Token}");
         Assert.Equal(pending.Menu, Assert.Single(fixture.Gateway.Publications));
         Assert.Null(fixture.Session.Pending);
@@ -49,6 +50,77 @@ public class SpecialsDirectMessageCommandTests
         Assert.Contains(context.Sources, source => source.Content == "Chat 201");
         Assert.All(context.Sources, source => Assert.Equal("Server display name", source.AuthorName));
         Assert.Single(fixture.Gateway.VerifiedSources!);
+    }
+
+    [Fact]
+    public async Task UsedEstablishedLoreIsPreviewedAndRecheckedButNeverAppendedToThePublicMenu()
+    {
+        var fixture = new Fixture();
+        fixture.Lore.References = [new("L1", "Old guild joke", "An established historical callback.")];
+        fixture.Writer.UseLore = true;
+        await fixture.Run("specials draft");
+        var pending = Assert.IsType<SpecialsPendingDraft>(fixture.Session.Pending);
+        Assert.Equal(fixture.Lore.References, Assert.Single(fixture.Writer.Contexts!).Lore);
+        Assert.Equal(fixture.Lore.References, pending.Lore);
+        Assert.Equal(pending.Lore, fixture.Lore.Verified);
+        Assert.Contains("**Established lore used**", fixture.Replies[^1]);
+        Assert.Contains("Callback: Old guild joke", fixture.Replies[^1]);
+        Assert.Contains("Old guild joke", fixture.Replies[^1]);
+        Assert.Contains("An established historical callback.", fixture.Replies[^1]);
+        Assert.Contains("1 related entries supplied, 1 used", pending.Coverage);
+        await fixture.Run($"specials approve {pending.Token}");
+        Assert.Equal(pending.Menu, Assert.Single(fixture.Gateway.Publications));
+        Assert.DoesNotContain("Established lore", fixture.Gateway.Publications[0]);
+        Assert.DoesNotContain("An established historical callback.", fixture.Gateway.Publications[0]);
+    }
+
+    [Fact]
+    public async Task ACallbackIsOptionalAndUnusedEntriesAreNotShownAsUsed()
+    {
+        var fixture = new Fixture();
+        fixture.Lore.References = [new("L1", "Unhelpful callback", "History that does not improve the current joke.")];
+        await fixture.Run("specials draft");
+        Assert.Single(Assert.Single(fixture.Writer.Contexts!).Lore);
+        Assert.Empty(fixture.Session.Pending!.Lore);
+        Assert.Contains("1 related entries supplied, 0 used", fixture.Replies[^1]);
+        Assert.DoesNotContain("**Established lore used**", fixture.Replies[^1]);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ChangedOrUnavailableLoreBlocksPreviewOrPublication(bool afterPreview)
+    {
+        var fixture = new Fixture();
+        fixture.Lore.References = [new("L1", "Callback", "Established history")];
+        fixture.Writer.UseLore = true;
+        if (afterPreview)
+        {
+            await fixture.Run("specials draft");
+            var token = fixture.Session.Pending!.Token;
+            fixture.Lore.Valid = false;
+            await fixture.Run($"specials approve {token}");
+        }
+        else
+        {
+            fixture.Lore.Valid = false;
+            await fixture.Run("specials draft");
+        }
+        Assert.Null(fixture.Session.Pending);
+        Assert.Empty(fixture.Gateway.Publications);
+        Assert.Contains("lore changed", fixture.Replies[^1]);
+    }
+
+    [Fact]
+    public async Task LoreRetrievalFailureIsNotSilentlyPresentedAsNoMatchingLore()
+    {
+        var fixture = new Fixture();
+        fixture.Lore.Fail = true;
+        await fixture.Run("specials draft");
+        Assert.Null(fixture.Session.Pending);
+        Assert.Equal(0, fixture.Writer.WriteCalls);
+        Assert.Contains("reading established guild lore", fixture.Replies[^1]);
+        Assert.DoesNotContain("SECRET", string.Join('\n', fixture.Replies.Concat(fixture.Logger.Messages)));
     }
 
     [Fact]
@@ -264,11 +336,12 @@ public class SpecialsDirectMessageCommandTests
         public Writer Writer { get; } = new();
         public SpecialsSession Session { get; } = new();
         public List<string> Replies { get; } = [];
+        public LoreReader Lore { get; } = new();
         public CapturingLogger Logger { get; } = new();
         public SpecialsDirectMessageCommand Command { get; }
 
         public Fixture() =>
-            Command = new(Gateway, Writer, Session, Options.Create(new DirectMessageHandlerOptions { AdminUserId = 1 }), Clock, Logger);
+            Command = new(Gateway, Writer, Session, Options.Create(new DirectMessageHandlerOptions { AdminUserId = 1 }), Clock, Logger, Lore);
 
         public Task Run(string content) =>
             Command.TryExecuteAsync(
@@ -368,6 +441,7 @@ public class SpecialsDirectMessageCommandTests
         public bool Fail { get; set; }
         public Exception? Failure { get; set; }
         public int FailAtBatch { get; set; } = 1;
+        public bool UseLore { get; set; }
 
         public Task<IReadOnlyList<SpecialsEvent>> DiscoverAsync(
             IReadOnlyList<NotebookSource> sources,
@@ -402,8 +476,33 @@ public class SpecialsDirectMessageCommandTests
             return Task.FromResult<IReadOnlyList<SpecialsDish>>(
                 events.Count == 0
                     ? []
-                    : [new(0, "New Sign Supper", "Same batter. Suspiciously fresh packaging.", "8 silver", "The guild was renamed.", [Gateway.Url])]
+                    :
+                    [
+                        new(0, "New Sign Supper", "Same batter. Suspiciously fresh packaging.", "8 silver", "The guild was renamed.", [Gateway.Url])
+                        {
+                            LoreKeys = UseLore ? events[0].Lore.Select(entry => entry.Key).ToArray() : [],
+                        },
+                    ]
             );
+        }
+    }
+
+    internal sealed class LoreReader : ISpecialsLoreReader
+    {
+        public IReadOnlyList<SpecialsLoreReference> References { get; set; } = [];
+        public bool Valid { get; set; } = true;
+        public bool Fail { get; set; }
+        public IReadOnlyList<SpecialsLoreReference>? Verified { get; private set; }
+
+        public Task<SpecialsLoreBatch> ReadAsync(IReadOnlyList<SpecialsContext> contexts, CancellationToken cancellationToken) =>
+            Fail
+                ? Task.FromException<SpecialsLoreBatch>(new InvalidOperationException("SECRET lore details"))
+                : Task.FromResult(new SpecialsLoreBatch(contexts.Select(context => context with { Lore = References }).ToArray(), 0));
+
+        public Task<bool> VerifyAsync(IReadOnlyList<SpecialsLoreReference> references, CancellationToken cancellationToken)
+        {
+            Verified = references;
+            return Task.FromResult(Valid);
         }
     }
 }

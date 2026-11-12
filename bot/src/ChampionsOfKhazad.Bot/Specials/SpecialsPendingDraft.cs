@@ -10,4 +10,7 @@ public sealed record SpecialsPendingDraft(
     string Coverage,
     IReadOnlyList<NotebookSource> Sources,
     DateTimeOffset ExpiresAtUtc
-);
+)
+{
+    public IReadOnlyList<SpecialsLoreReference> Lore { get; init; } = [];
+}

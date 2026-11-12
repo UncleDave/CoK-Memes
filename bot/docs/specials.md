@@ -16,6 +16,14 @@ The writer must choose exactly one of `2 silver`, `3 silver`, `4 silver`, `5 sil
 validation rejects anything else, including gold-denominated or inflated prices. These
 are fictional menu amounts, not a claim about game vendor prices or a player economy.
 
+The writing target is a joke, not a food-shaped illustration of the event. Find the
+real irony, contradiction, excess or reversal; use the name as setup and the description
+as Grub's blunt payoff through a ridiculous serving arrangement, contradictory promise,
+missing ingredient or condition of sale. Sauce, shapes and packaging are not humour by
+themselves. A hypothetical technique example teaches a finished joke without supplying
+guild evidence. Relevant established lore can make the callback recognisable, but a
+reference is optional and must improve the joke rather than merely name an old story.
+
 Only the configured `EventHandlers:DirectMessage:AdminUserId`, in a human DM, can use:
 
 - `specials` — help.
@@ -101,7 +109,63 @@ shown when reads or later discovery are incomplete; do not imply exhaustive cove
 5. The final writer receives raw context, not just summaries. It can omit an unsupported
    event and must distinguish proposals/announcements from completed events or winners.
    Each dish is bound to one distinct selected event and one to three exact source URLs
-   from that event's context. Its private factual event summary shares those citations.
+    from that event's context. Its private factual event summary shares those citations.
+
+## Established lore callbacks
+
+After event selection and server-name resolution, a read-only lore reader enriches
+each selected event. Discovery and selection receive no archival lore: old stories
+cannot become candidates for this week's activity merely because retrieval found them.
+
+- For each event, search existing semantic lore using its selected summary and up to
+  three resolved anchor-author names, with a 1,000-character query limit and at most
+  four search results. Use guild-lore entries from these results; do not infer member
+  identity from a semantic hit, name or alias.
+- Independently look up up to three distinct participant accounts per event through
+  the existing exact Discord-account link, prioritising cited authors, then cited
+  mentions, then context authors. Cache these reads only within the draft. Include
+  only a returned member whose linked ID exactly matches the requested account.
+  Supply name and biography, not pronouns, nationality, character, roles or aliases.
+- Interleave guild and linked-member candidates and attach at most three complete
+  entries/event. Retain at most twelve distinct entries and a combined 12,000-character
+  serialized attachment budget (repeated attachments count again). Entries over 4,000
+  content characters or the remaining serialized budget are omitted whole, never cut.
+  Private diagnostics report supplied/used and bound-omission counts. A failed lookup
+  stops the draft rather than silently pretending no lore exists.
+
+Permanent lore is the existing administrator-maintained guild/member context, not raw
+private chat, notebook observations, editor instructions or revision history. It has
+no per-channel audience metadata: retrieval itself does not prove every stored detail
+is suitable for publication. Sensitive-topic restrictions still apply, member linkage
+is explicit, and the administrator must review the actual callback before approval.
+
+The final writer receives each entry as separately keyed untrusted data alongside,
+not inside, the event's recent source records. Lore supports its own established
+history/jokes only. Keep old expansion settings and identities historical; it is not
+proof that an old mishap recurred this week, or permission to invent current actions.
+Current speaker names remain resolved server names, not guessed aliases.
+
+Every dish returns `loreKeys`: zero to two exact keys from that event for lore actually
+used, or `[]` if no callback improves the joke. Local validation rejects invented,
+duplicate or cross-event references. Recent-event `sourceUrls` still cite only verified
+chat; `eventSummary` describes this week's event rather than laundering old lore into
+fresh evidence. Each private source review names its dish's callbacks, and the preview
+includes the complete used entries for review;
+unused entries and provenance are not appended to the public menu.
+
+Refetch used entries by name before preview and again on approval. Changed/deleted
+text, entry type, name or member-account link invalidates the draft. Only the used
+name/content/link snapshot is retained transiently; no lore is created or updated.
+
+## Model and response contracts
+
+Final menu writing and its optional text repair explicitly use `gpt-6.1-sol` through
+the existing OpenAI Responses client. Discovery, event selection and their repairs
+stay on the shared `gpt-6-luna` default. Other bot replies and image generation are
+unchanged. There is no silent fallback to Luna if Sol is unavailable; the draft fails
+at writing. This uses the existing OpenAI key, with no new credentials or setting.
+Sol may have different latency/cost; no claim of better humour is established by
+choosing the model alone.
 
 All calls use named, strict JSON schemas and no tools. Final request data is capped at
 100,000 serialized characters; oversized context fails closed rather than silently
@@ -116,7 +180,7 @@ For those three text failures only, make one bounded repair request for the fail
 response, with the same source/schema contract and original input plus the rejected
 draft and fixed-field numeric diagnostic as untrusted data. Instruct it to preserve
 facts and uncertainty; mechanically require the same incident/dish count, citations
-per position and menu event bindings. Validate the entire repaired response again.
+per position, menu event bindings and used lore keys. Validate the entire repaired response again.
 A second rejection stops drafting; provider, incomplete-response,
 JSON/shape, citation, event-binding and other failures are never retried. Earlier
 successful batches are not restarted. Repair input shares the 100,000-character ceiling.
@@ -132,7 +196,8 @@ is interpretation only, never proof of an event or a source of menu ingredients.
 ## Preview and publication
 
 The private preview shows the exact public menu, then each dish's selected real moment
-and clickable source links, followed by coverage and approval actions. Only the dated
+and clickable source links, any complete established lore used, then coverage and
+approval actions. Only the dated
 menu, dish names, descriptions and prices are posted publicly. No source appendix,
 diagnostics, token, disclaimers or extra explanatory footer accompanies the menu.
 The menu is escaped for Discord markdown and bounded to one 2,000-character message;
@@ -148,7 +213,8 @@ expiry or regenerates copy. Conversational approval cannot publish a menu.
 
 Before preview and again on approval, refetch cited messages and compare author,
 timestamp, raw-content hash and sanitised-view hash, including fresh server names and
-current source audience. Changed/deleted evidence, access loss or destination changes
+current source audience, and verify the used permanent-lore snapshots. Changed/deleted
+evidence or lore, access loss or destination changes
 require a new draft. This does not mechanically establish prose accuracy or validate
 uncited context; the administrator must review the selected moments and sources.
 
@@ -172,7 +238,11 @@ partial reads, whole-message discovery, Unicode/serialized bounds, context corre
 packing many quiet channel/day runs without unassessed evidence, affordable price enums,
 request/schema/data boundaries, citation/event binding, private preview gating, admin
 DM routing, expiry/replacement/discard, exact publication, concurrent approval and
-ambiguous sends. No static prompt substring test establishes event ranking or humour.
+ambiguous sends. Lore tests cover linked-identity boundaries, omission of personal
+profile fields, whole-entry/serialized budgets, untrusted input separation, optional
+callbacks, per-event keys, private review and edits/deletions/rebindings before approval.
+Model tests check request/repair routing and actual Responses transport serialization,
+not just client metadata. No static prompt substring test establishes event ranking or humour.
 
 For the first deployed trial, use `specials draft` if the guild rename and banner
 competition are within the current seven-day window; otherwise assess the next major
@@ -189,3 +259,10 @@ The November 11 live preview read 1,306 messages from all 35 eligible channels b
 as a coverage regression, not a set of hardcoded story choices. Its dishes also
 overweighted routine progress and several aspects of a launch; judge the next live
 selection against the whole candidate set, with one coherent angle per shared episode.
+
+The November 12 preview found more coherent incidents but rendered them as food
+illustrations (charter signatures in ketchup, five fishcakes and a takeaway bag), with
+little payoff. Review Sol's next draft with the same incident evidence, both with and
+without relevant established callbacks: does each item actually land as a joke without
+the private explanation, and is the lore used accurately rather than name-dropped?
+These previews remain live evaluation material, not runtime facts or prompt examples.

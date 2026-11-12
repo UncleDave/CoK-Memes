@@ -281,6 +281,31 @@ are independent of an individual contributor and remain deliverable after depart
 Synthetic regression tests cover celebration detection, migration, restarts, combined
 Discord payloads, mentions, and size limits. Live Discord presentation is not yet verified.
 
+### Diagnosing a delayed level announcement
+
+Levels come only from the membership roster; professions come from independently
+cached character-profession responses. The live guild roster advertises
+`max-age=10800` (three hours). Checking every minute does not download a new roster
+while that HTTP cache entry remains fresh. Professions can therefore announce new
+skills while `/leaderboard` still shows a character's previous level. Its `Last
+checked` footer is not evidence of a fresh upstream download.
+
+If a reported 60 still appears as 59 in `/leaderboard`, first distinguish a cached
+level from a delivery failure. A separate diagnostic request can already see 60
+while the running bot legitimately retains its earlier cached roster. Read the
+roster `cache_hit`/`fetched` diagnostics and `CacheExpiresUtc` to establish the bot's
+actual refresh deadline; a new diagnostic process cannot reveal that deadline.
+The character profile may also be newer, but is not currently an input to level
+detection. Do not reset progression, silently change sources, bypass upstream cache
+policy, or manually replay a milestone merely because the endpoints differ.
+
+An end-to-end fake-HTTP regression covers both ordinary profession notices and
+rank-300 firsts arriving during a three-hour cached level-59 roster. Neither consumes
+the first-60 honour. After roster expiry, an accepted 60 produces and delivers the
+combined guild/class first celebration exactly once in the normal polling sequence.
+If the accepted roster already says 60 but no announcement appears, inspect the
+stored high-water mark and pending/sent notice before diagnosing an HTTP delay.
+
 ## Validation and launch debugging
 
 Backend tests exercise the live HTTP/schema boundaries with fake HTTP responses,

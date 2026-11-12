@@ -1,5 +1,27 @@
 # Forever web API research
 
+## Delayed first-60 investigation — 12 November 2026
+
+At **00:00:18 UTC**, a focused app-token check compared the configured EU guild
+roster with the reported character's profile and professions. Both roster and
+profile returned level **60**, with matching stable character and guild IDs;
+the roster contained exactly **one** character at 60 or above. The profession
+owner ID also matched. All three requests returned HTTP 200.
+
+- Roster: `max-age=10800`, no `Age` header, Last-Modified **11 November 22:36:55 UTC**.
+- Profile and professions: no advertised max-age or Age; Last-Modified
+  **11 November 23:13:10 UTC**.
+
+The administrator reported that the bot's leaderboard still showed 59 while
+profession announcements had arrived. These independent endpoint values/cache
+policies support a roster-cache delay, not a confirmed notification-delivery bug.
+This diagnostic used a new HTTP client: it did not inspect the production cache's
+expiry, database high-water marks, or notice records. Normal polling should detect
+the crossing once its cached roster refreshes; actual production delivery remains
+to be confirmed. No raw bodies or credentials were saved, no database writes were
+made, and no Discord messages were sent. See
+[delayed-announcement diagnostics](guild-roster-runtime.md#diagnosing-a-delayed-level-announcement).
+
 ## Post-launch check — 7 November 2026
 
 Authenticated EU app-token requests at **03:11 UTC** now return 200 for

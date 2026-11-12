@@ -250,6 +250,70 @@ public class BlizzardGuildRosterSourceTests
         Assert.All(diagnostics, entry => Assert.Equal(original.ObservedAtUtc, entry.Properties["SourceAtUtc"]));
     }
 
+    [Theory]
+    [InlineData(74, 75)]
+    [InlineData(299, 300)]
+    public async Task ProfessionAnnouncementsDuringThreeHourRosterCacheDoNotConsumeTheLaterFirstSixty(int previousRank, int currentRank)
+    {
+        using var fixture = new Fixture
+        {
+            RosterCacheSeconds = 10800,
+            RosterJson = Roster.Replace("\"level\":19", "\"level\":59", StringComparison.Ordinal),
+            ProfessionJson = Professions
+                .Replace("\"skill_points\":74", $"\"skill_points\":{previousRank}", StringComparison.Ordinal)
+                .Replace("\"max_skill_points\":150", "\"max_skill_points\":300", StringComparison.Ordinal),
+        };
+        using var memory = new RosterFixture();
+        using var service = new GuildRosterService(memory.Options, fixture.Source, memory.Store, memory.Notices, fixture.Clock);
+        var queries = new GuildRosterQueries(memory.Options, service, memory.Store);
+        var sender = new RecordingSender();
+        var initial = fixture.Clock.Now;
+        await service.RefreshAsync(fixture.Token, force: true);
+        Assert.Empty(memory.Notices.Items);
+
+        fixture.Clock.Now = initial.AddSeconds(601);
+        fixture.RosterJson = fixture.RosterJson.Replace("\"level\":59", "\"level\":60", StringComparison.Ordinal);
+        fixture.ProfessionJson = fixture.ProfessionJson.Replace(
+            $"\"skill_points\":{previousRank}",
+            $"\"skill_points\":{currentRank}",
+            StringComparison.Ordinal
+        );
+        await service.RefreshAsync(fixture.Token, force: true);
+        await service.DeliverAsync(sender, fixture.Token);
+        var profession = Assert.Single(memory.Notices.Items.Values);
+        Assert.Equal(currentRank, profession.Threshold);
+        Assert.Equal("Blacksmithing", profession.ProfessionName);
+        Assert.NotNull(profession.SentAtUtc);
+        Assert.Equal(59, Assert.Single((await queries.QueryAsync(50, cancellationToken: fixture.Token)).Rows).Character.Level);
+        Assert.DoesNotContain("first:level:60", memory.Store.States[service.ScopeId].Celebrations!.Claimed);
+
+        fixture.Clock.Now = initial.AddSeconds(10799);
+        await service.RefreshAsync(fixture.Token, force: true);
+        await service.DeliverAsync(sender, fixture.Token);
+        Assert.Single(sender.Batches);
+        Assert.Equal(59, Assert.Single(memory.Store.States[service.ScopeId].Characters).Level);
+        Assert.Single(fixture.Requests, request => request.Path.EndsWith("/roster", StringComparison.Ordinal));
+
+        fixture.Clock.Now = initial.AddSeconds(10801);
+        await service.RefreshAsync(fixture.Token, force: true);
+        await service.DeliverAsync(sender, fixture.Token);
+        var level = Assert.Single(memory.Notices.Items.Values, notice => notice.TrackKey == "level");
+        Assert.Equal(60, level.Threshold);
+        Assert.Equal(RosterCelebrationKind.First, level.Celebration);
+        Assert.Equal(["First recorded level 60 in the guild", "First recorded Warrior at level 60"], level.Honours);
+        Assert.NotNull(level.SentAtUtc);
+        Assert.Equal(60, Assert.Single((await queries.QueryAsync(50, cancellationToken: fixture.Token)).Rows).Character.Level);
+        Assert.Equal(2, sender.Batches.Count);
+        Assert.Equal("Guild firsts — Grub's honours ledger", sender.Batches[1].Title);
+        Assert.Equal(level.Id, Assert.Single(sender.Batches[1].Notices).Id);
+
+        fixture.Clock.Now = fixture.Clock.Now.AddSeconds(61);
+        await service.RefreshAsync(fixture.Token, force: true);
+        await service.DeliverAsync(sender, fixture.Token);
+        Assert.Equal(2, memory.Notices.Items.Count);
+        Assert.Equal(2, sender.Batches.Count);
+    }
+
     [Fact]
     public async Task CacheDiagnosticsReportActualHeadersAndOldSourceTimestampWithoutLoggingPlayerPathsOrCredentials()
     {
@@ -417,6 +481,7 @@ public class BlizzardGuildRosterSourceTests
         public HttpStatusCode OAuthStatus { get; set; } = HttpStatusCode.OK;
         public HttpStatusCode ClassStatus { get; set; } = HttpStatusCode.OK;
         public int CacheSeconds { get; set; }
+        public int? RosterCacheSeconds { get; set; }
         public int AgeSeconds { get; set; }
         public DateTimeOffset? LastModified { get; set; }
         public bool NotModified { get; set; }
@@ -469,14 +534,18 @@ public class BlizzardGuildRosterSourceTests
             if (request.RequestUri.AbsolutePath.EndsWith("/professions", StringComparison.Ordinal))
                 return Response(ProfessionStatus, ProfessionJson);
             return request.RequestUri.AbsolutePath.EndsWith("/roster", StringComparison.Ordinal)
-                ? Response(HttpStatusCode.OK, RosterJson)
+                ? Response(HttpStatusCode.OK, RosterJson, RosterCacheSeconds)
                 : Response(ClassStatus, """{"classes":[{"id":1,"name":"Warrior"}]}""");
         }
 
-        private HttpResponseMessage Response(HttpStatusCode status, string body)
+        private HttpResponseMessage Response(HttpStatusCode status, string body, int? cacheSeconds = null)
         {
             var response = new HttpResponseMessage(status) { Content = new StringContent(body, Encoding.UTF8, "application/json") };
-            response.Headers.CacheControl = new CacheControlHeaderValue { MaxAge = TimeSpan.FromSeconds(CacheSeconds), NoStore = NoStore };
+            response.Headers.CacheControl = new CacheControlHeaderValue
+            {
+                MaxAge = TimeSpan.FromSeconds(cacheSeconds ?? CacheSeconds),
+                NoStore = NoStore,
+            };
             response.Headers.ETag = new EntityTagHeaderValue("\"document-v1\"");
             response.Headers.Age = TimeSpan.FromSeconds(AgeSeconds);
             response.Headers.RetryAfter = new RetryConditionHeaderValue(TimeSpan.FromSeconds(120));
@@ -488,6 +557,17 @@ public class BlizzardGuildRosterSourceTests
     }
 
     private sealed record Request(string Host, string Path, string Query, string? Scheme, string? ConditionalETag, DateTime? IfModifiedSince);
+
+    private sealed class RecordingSender : IRosterNotificationSender
+    {
+        public List<RosterNoticeBatch> Batches { get; } = [];
+
+        public Task<ulong> SendAsync(ulong guildId, ulong channelId, RosterNoticeBatch batch, CancellationToken cancellationToken)
+        {
+            Batches.Add(batch);
+            return Task.FromResult(123UL);
+        }
+    }
 
     private sealed class TestClock : TimeProvider
     {

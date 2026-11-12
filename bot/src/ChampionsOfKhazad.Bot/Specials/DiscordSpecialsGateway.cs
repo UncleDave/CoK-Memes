@@ -20,12 +20,13 @@ internal sealed class DiscordSpecialsGateway(DiscordPublicationAudience audience
         var channel = guild?.GetTextChannel(destinationId);
         if (channel is null || guild?.CurrentUser is not { } bot)
             return "The guild connection is not ready.";
-        return GetTextPublicationError(bot.GetPermissions(channel), channel.Name);
+        return GetEmbedPublicationError(bot.GetPermissions(channel), channel.Name);
     }
 
-    internal static string? GetTextPublicationError(ChannelPermissions permissions, string name) =>
+    internal static string? GetEmbedPublicationError(ChannelPermissions permissions, string name) =>
         !permissions.ViewChannel ? $"The bot needs View Channel in #{name}."
         : !permissions.SendMessages ? $"The bot needs Send Messages in #{name}."
+        : !permissions.EmbedLinks ? $"The bot needs Embed Links in #{name}."
         : null;
 
     public async Task<SpecialsChatBatch> ReadWeekAsync(
@@ -128,9 +129,9 @@ internal sealed class DiscordSpecialsGateway(DiscordPublicationAudience audience
     public Task<bool> VerifyAsync(ulong destinationId, IReadOnlyList<NotebookSource> sources, CancellationToken cancellationToken) =>
         audience.VerifySourcesAsync(destinationId, sources, cancellationToken);
 
-    public async Task<ulong> PublishAsync(ulong destinationId, string menu, CancellationToken cancellationToken)
+    public async Task<ulong> PublishAsync(ulong destinationId, Embed menu, CancellationToken cancellationToken)
     {
-        if (menu.Length > 2000 || GetPublicationError(destinationId) is not null)
+        if (GetPublicationError(destinationId) is not null)
             throw new InvalidOperationException("Specials publication is unavailable.");
         var channel = await rest.Client.GetChannelAsync(destinationId, options: new RequestOptions { CancelToken = cancellationToken });
         if (
@@ -144,13 +145,13 @@ internal sealed class DiscordSpecialsGateway(DiscordPublicationAudience audience
         return await SendMenuAsync(text, menu, () => GetPublicationError(destinationId) is null, cancellationToken);
     }
 
-    internal static async Task<ulong> SendMenuAsync(ITextChannel text, string menu, Func<bool> canSend, CancellationToken cancellationToken)
+    internal static async Task<ulong> SendMenuAsync(ITextChannel text, Embed menu, Func<bool> canSend, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        if (string.IsNullOrWhiteSpace(menu) || menu.Length > 2000 || !canSend())
+        if (string.IsNullOrWhiteSpace(menu.Title) || menu.Fields.Length is < 1 or > 5 || !canSend())
             throw new InvalidOperationException("Specials publication is unavailable.");
         var message = await text.SendMessageAsync(
-            menu,
+            embed: menu,
             allowedMentions: AllowedMentions.None,
             options: new RequestOptions { CancelToken = cancellationToken }
         );

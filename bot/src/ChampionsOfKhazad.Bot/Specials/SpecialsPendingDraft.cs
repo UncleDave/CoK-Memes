@@ -1,11 +1,12 @@
 using ChampionsOfKhazad.Bot.GenAi;
+using Discord;
 
 namespace ChampionsOfKhazad.Bot;
 
 public sealed record SpecialsPendingDraft(
     string Token,
     SpecialsDestination Destination,
-    string Menu,
+    Embed Menu,
     string Evidence,
     string Coverage,
     IReadOnlyList<NotebookSource> Sources,

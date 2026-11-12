@@ -29,7 +29,7 @@ Only the configured `EventHandlers:DirectMessage:AdminUserId`, in a human DM, ca
 - `specials` — help.
 - `specials draft` — read the preceding seven days and privately preview a menu.
 - `specials show` — repeat the pending menu, selected moments, sources and diagnostics.
-- `specials approve <token>` — publish exactly the previewed menu text.
+- `specials approve <token>` — publish exactly the previewed menu embed.
 - `specials discard` — clear the pending draft.
 
 There is no schedule, public generation command, image generation or additional
@@ -195,15 +195,20 @@ is interpretation only, never proof of an event or a source of menu ingredients.
 
 ## Preview and publication
 
-The private preview shows the exact public menu, then each dish's selected real moment
+The private preview shows the exact public menu embed, then each dish's selected real moment
 and clickable source links, any complete established lore used, then coverage and
 approval actions. Only the dated
 menu, dish names, descriptions and prices are posted publicly. No source appendix,
 diagnostics, token, disclaimers or extra explanatory footer accompanies the menu.
-The menu is escaped for Discord markdown and bounded to one 2,000-character message;
-all delivery uses `AllowedMentions.None`. Text posting needs View Channel and Send
-Messages, not Embed Links or Attach Files. Missing posting permissions do not block
-private drafting.
+The menu is a single gold-accented embed headed Crossroads Mega Chippy, with the dated
+weekly-specials heading and one full-width field per dish (name and price above its
+description). There are no images, attachments or buttons. Generated text is escaped
+for Discord markdown, with no truncation; Discord's 256-character field-name,
+1,024-character field-value and 6,000-character total embed bounds apply. The exact
+same immutable embed is retained for `show` and approval. All delivery uses
+`AllowedMentions.None`. Posting needs View Channel, Send Messages and Embed Links,
+not Attach Files. Missing posting permissions do not block private drafting; approval
+reports the missing permission without silently falling back to plain text.
 
 There is one in-memory pending specials draft, serialised across command instances.
 A new draft clears/replaces the previous approval; all preview messages must deliver

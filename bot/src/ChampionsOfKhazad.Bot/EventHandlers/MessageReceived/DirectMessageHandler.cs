@@ -84,7 +84,18 @@ public class DirectMessageHandler(
                     await specialsCommand.TryExecuteAsync(
                         message.Author.Id,
                         message.Content,
-                        (response, token) => message.Channel.SendMessageInChunksAsync(response, token),
+                        async (response, embed, token) =>
+                        {
+                            if (embed is null)
+                                await message.Channel.SendMessageInChunksAsync(response, token);
+                            else
+                                await message.Channel.SendMessageAsync(
+                                    response,
+                                    embed: embed,
+                                    allowedMentions: AllowedMentions.None,
+                                    options: new RequestOptions { CancelToken = token }
+                                );
+                        },
                         cancellationToken
                     )
                 )

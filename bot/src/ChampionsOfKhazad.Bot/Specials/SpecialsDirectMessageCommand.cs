@@ -1,8 +1,8 @@
 using System.Globalization;
-using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using ChampionsOfKhazad.Bot.GenAi;
+using Discord;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -26,10 +26,12 @@ public sealed partial class SpecialsDirectMessageCommand(
     public async Task<bool> TryExecuteAsync(
         ulong actorId,
         string content,
-        Func<string, CancellationToken, Task> reply,
+        Func<string, Embed?, CancellationToken, Task> sendReply,
         CancellationToken cancellationToken
     )
     {
+        Task reply(string text, CancellationToken token) => sendReply(text, null, token);
+
         var parts = content.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
         if (actorId != adminOptions.Value.AdminUserId || parts.Length == 0 || !parts[0].Equals("specials", StringComparison.OrdinalIgnoreCase))
             return false;
@@ -124,14 +126,14 @@ public sealed partial class SpecialsDirectMessageCommand(
                     Lore = usedLore,
                 };
                 stage = "sending the private preview";
-                await PreviewAsync(pending, reply, cancellationToken);
+                await PreviewAsync(pending, sendReply, cancellationToken);
                 cancellationToken.ThrowIfCancellationRequested();
                 session.Pending = pending;
             }
             else if (parts.Length == 2 && parts[1].Equals("show", StringComparison.OrdinalIgnoreCase))
             {
                 if (session.Pending is { } pending)
-                    await PreviewAsync(pending, reply, cancellationToken);
+                    await PreviewAsync(pending, sendReply, cancellationToken);
                 else
                     await reply(NoDraft, cancellationToken);
             }
@@ -222,13 +224,18 @@ public sealed partial class SpecialsDirectMessageCommand(
             _ => "",
         };
 
-    private async Task PreviewAsync(SpecialsPendingDraft pending, Func<string, CancellationToken, Task> reply, CancellationToken cancellationToken)
+    private async Task PreviewAsync(
+        SpecialsPendingDraft pending,
+        Func<string, Embed?, CancellationToken, Task> reply,
+        CancellationToken cancellationToken
+    )
     {
-        await reply($"PRIVATE SPECIALS DRAFT — #{pending.Destination.Name}\n\n{pending.Menu}", cancellationToken);
+        await reply($"PRIVATE SPECIALS DRAFT — #{pending.Destination.Name}", pending.Menu, cancellationToken);
         await reply(
             $"**Selected moments & sources**\n{pending.Evidence}{RenderLore(pending.Lore)}\n\n{pending.Coverage}\n\n"
                 + (pending.Lore.Count == 0 ? "Review the menu and sources. " : "Review the menu, sources and lore callbacks. ")
                 + $"Reply `specials approve {pending.Token}` within {Math.Max(0, (int)Math.Ceiling((pending.ExpiresAtUtc - clock.GetUtcNow()).TotalMinutes))} minutes to publish, or `specials discard`.",
+            null,
             cancellationToken
         );
     }
@@ -243,16 +250,25 @@ public sealed partial class SpecialsDirectMessageCommand(
                 : ""
         );
 
-    internal static string Render(IReadOnlyList<SpecialsDish> dishes, DateTimeOffset since, DateTimeOffset until)
+    internal static Embed Render(IReadOnlyList<SpecialsDish> dishes, DateTimeOffset since, DateTimeOffset until)
     {
         if (dishes.Count is < 1 or > 5 || dishes.Select(dish => dish.EventIndex).Distinct().Count() != dishes.Count)
             throw new SpecialsValidationException("MenuCount");
-        var text = new StringBuilder($"**Crossroads Mega Chippy — Specials of the week**\n*{FormatDates(since, until)}*\n");
+        var menu = new EmbedBuilder()
+            .WithTitle("🍟 Crossroads Mega Chippy")
+            .WithDescription($"**Specials of the week**\n{FormatDates(since, until)}")
+            .WithColor(Color.Gold);
         foreach (var dish in dishes)
-            text.Append($"\n**{Escape(dish.Name)} — {Escape(dish.Price)}**\n{Escape(dish.Description)}\n");
-        if (text.Length > 2000)
+        {
+            var name = $"{Escape(dish.Name)} — {Escape(dish.Price)}";
+            var description = Escape(dish.Description);
+            if (name.Length > 256 || description.Length > 1024)
+                throw new SpecialsValidationException("MenuLength");
+            menu.AddField(name, description, inline: false);
+        }
+        if (menu.Length > 6000)
             throw new SpecialsValidationException("MenuLength");
-        return text.ToString().TrimEnd();
+        return menu.Build();
     }
 
     private static string RenderEvidence(IReadOnlyList<SpecialsDish> dishes, IReadOnlyList<SpecialsLoreReference> lore) =>

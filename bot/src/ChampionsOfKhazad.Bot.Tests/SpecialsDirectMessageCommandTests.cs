@@ -1,4 +1,5 @@
 using ChampionsOfKhazad.Bot.GenAi;
+using Discord;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -14,11 +15,12 @@ public class SpecialsDirectMessageCommandTests
         var pending = Assert.IsType<SpecialsPendingDraft>(fixture.Session.Pending);
         Assert.Empty(fixture.Gateway.Publications);
         Assert.Equal(fixture.Clock.Now.AddDays(-7), fixture.Gateway.Since);
-        Assert.Contains(pending.Menu, fixture.Replies[1]);
-        Assert.Contains("New Sign Supper", pending.Menu);
-        Assert.Contains("8 silver", pending.Menu);
-        Assert.DoesNotContain("source", pending.Menu);
-        Assert.DoesNotContain("The guild was renamed", pending.Menu);
+        Assert.Same(pending.Menu, Assert.Single(fixture.Embeds));
+        var dish = Assert.Single(pending.Menu.Fields);
+        Assert.Equal("New Sign Supper — 8 silver", dish.Name);
+        Assert.Equal("Same batter. Suspiciously fresh packaging.", dish.Value);
+        Assert.DoesNotContain("source", MenuText(pending.Menu));
+        Assert.DoesNotContain("The guild was renamed", MenuText(pending.Menu));
         var review = fixture.Replies[^1];
         Assert.Contains("The guild was renamed", review);
         Assert.Contains(Gateway.Url, review);
@@ -70,8 +72,8 @@ public class SpecialsDirectMessageCommandTests
         Assert.Contains("1 related entries supplied, 1 used", pending.Coverage);
         await fixture.Run($"specials approve {pending.Token}");
         Assert.Equal(pending.Menu, Assert.Single(fixture.Gateway.Publications));
-        Assert.DoesNotContain("Established lore", fixture.Gateway.Publications[0]);
-        Assert.DoesNotContain("An established historical callback.", fixture.Gateway.Publications[0]);
+        Assert.DoesNotContain("Established lore", MenuText(fixture.Gateway.Publications[0]));
+        Assert.DoesNotContain("An established historical callback.", MenuText(fixture.Gateway.Publications[0]));
     }
 
     [Fact]
@@ -142,6 +144,8 @@ public class SpecialsDirectMessageCommandTests
         fixture.Clock.Now = fixture.Clock.Now.AddMinutes(8);
         await fixture.Run("specials show");
         Assert.Same(pending, fixture.Session.Pending);
+        Assert.Equal(2, fixture.Embeds.Count);
+        Assert.All(fixture.Embeds, embed => Assert.Same(pending.Menu, embed));
         Assert.Contains("within 22 minutes", fixture.Replies[^1]);
         Assert.Equal(1, fixture.Writer.WriteCalls);
         await fixture.Run("specials discard");
@@ -155,6 +159,7 @@ public class SpecialsDirectMessageCommandTests
     [InlineData("changed-evidence")]
     [InlineData("changed-destination")]
     [InlineData("permissions")]
+    [InlineData("embed-permission")]
     public async Task StaleOrUnavailableApprovalCannotPublish(string reason)
     {
         var fixture = new Fixture();
@@ -168,16 +173,20 @@ public class SpecialsDirectMessageCommandTests
             fixture.Gateway.Destination = new(99, "other");
         if (reason == "permissions")
             fixture.Gateway.PublicationError = "The bot needs Send Messages.";
+        if (reason == "embed-permission")
+            fixture.Gateway.PublicationError = "The bot needs Embed Links.";
         await fixture.Run($"specials approve {token}");
         Assert.Null(fixture.Session.Pending);
         Assert.Empty(fixture.Gateway.Publications);
+        if (reason == "embed-permission")
+            Assert.Contains("Embed Links", fixture.Replies[^1]);
     }
 
     [Fact]
     public async Task PostingPermissionsAreOnlyCheckedAtApprovalAndBadTokensDoNotConsumeTheDraft()
     {
         var fixture = new Fixture();
-        fixture.Gateway.PublicationError = "The bot needs Send Messages.";
+        fixture.Gateway.PublicationError = "The bot needs Embed Links.";
         await fixture.Run("specials draft");
         Assert.NotNull(fixture.Session.Pending);
         Assert.Equal(0, fixture.Gateway.PublicationChecks);
@@ -201,15 +210,17 @@ public class SpecialsDirectMessageCommandTests
         Assert.Single(fixture.Gateway.Publications);
     }
 
-    [Fact]
-    public async Task FailedPreviewDeliveryCannotActivateApproval()
+    [Theory]
+    [InlineData(2)]
+    [InlineData(3)]
+    public async Task FailedPreviewDeliveryCannotActivateApproval(int failedSend)
     {
         var fixture = new Fixture();
         var sends = 0;
         await fixture.Command.TryExecuteAsync(
             1,
             "specials draft",
-            (_, _) => ++sends == 3 ? Task.FromException(new InvalidOperationException("SECRET DM content")) : Task.CompletedTask,
+            (_, _, _) => ++sends == failedSend ? Task.FromException(new InvalidOperationException("SECRET DM content")) : Task.CompletedTask,
             TestContext.Current.CancellationToken
         );
         Assert.Null(fixture.Session.Pending);
@@ -298,7 +309,7 @@ public class SpecialsDirectMessageCommandTests
             fixture.Command.TryExecuteAsync(
                 1,
                 "specials draft",
-                async (_, _) =>
+                async (_, _, _) =>
                 {
                     await cancellation.CancelAsync();
                     cancellation.Token.ThrowIfCancellationRequested();
@@ -322,12 +333,15 @@ public class SpecialsDirectMessageCommandTests
             await fixture.Command.TryExecuteAsync(
                 actor,
                 content,
-                (_, _) => throw new InvalidOperationException(),
+                (_, _, _) => throw new InvalidOperationException(),
                 TestContext.Current.CancellationToken
             )
         );
         Assert.Empty(fixture.Writer.Discovered);
     }
+
+    private static string MenuText(Embed menu) =>
+        $"{menu.Title}\n{menu.Description}\n" + string.Join('\n', menu.Fields.Select(field => $"{field.Name}\n{field.Value}"));
 
     private sealed class Fixture
     {
@@ -336,6 +350,7 @@ public class SpecialsDirectMessageCommandTests
         public Writer Writer { get; } = new();
         public SpecialsSession Session { get; } = new();
         public List<string> Replies { get; } = [];
+        public List<Embed> Embeds { get; } = [];
         public LoreReader Lore { get; } = new();
         public CapturingLogger Logger { get; } = new();
         public SpecialsDirectMessageCommand Command { get; }
@@ -347,9 +362,11 @@ public class SpecialsDirectMessageCommandTests
             Command.TryExecuteAsync(
                 1,
                 content,
-                (text, _) =>
+                (text, embed, _) =>
                 {
                     Replies.Add(text);
+                    if (embed is not null)
+                        Embeds.Add(embed);
                     return Task.CompletedTask;
                 },
                 TestContext.Current.CancellationToken
@@ -388,7 +405,7 @@ public class SpecialsDirectMessageCommandTests
         public bool SendFails { get; set; }
         public string? PublicationError { get; set; }
         public int PublicationChecks { get; private set; }
-        public List<string> Publications { get; } = [];
+        public List<Embed> Publications { get; } = [];
         public IReadOnlyList<NotebookSource>? VerifiedSources { get; private set; }
         public DateTimeOffset Since { get; private set; }
         public bool DestinationCalled { get; private set; }
@@ -425,7 +442,7 @@ public class SpecialsDirectMessageCommandTests
             return Task.FromResult(Valid);
         }
 
-        public Task<ulong> PublishAsync(ulong destinationId, string menu, CancellationToken cancellationToken)
+        public Task<ulong> PublishAsync(ulong destinationId, Embed menu, CancellationToken cancellationToken)
         {
             Publications.Add(menu);
             return SendFails ? Task.FromException<ulong>(new InvalidOperationException("SECRET provider data")) : Task.FromResult(100UL);

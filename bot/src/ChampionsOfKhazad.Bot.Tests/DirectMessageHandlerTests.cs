@@ -45,6 +45,43 @@ public class DirectMessageHandlerTests
         Assert.Equal(expected, gateway.DestinationCalled);
     }
 
+    [Fact]
+    public async Task SpecialsShowDeliversTheStoredEmbedAndKeepsApprovalInstructionsOutsideIt()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var menu = SpecialsDirectMessageCommand.Render(
+            [new(0, "New Sign Supper", "Same batter.", "8 silver", "Private event summary", [SpecialsDirectMessageCommandTests.Gateway.Url])],
+            now.AddDays(-7),
+            now
+        );
+        var session = new SpecialsSession
+        {
+            Pending = new("test-token", new(8, "ai-tavern"), menu, "Private sources", "Coverage: complete", [], now.AddMinutes(30)),
+        };
+        var command = new SpecialsDirectMessageCommand(
+            null!,
+            null!,
+            session,
+            Options.Create(new DirectMessageHandlerOptions { AdminUserId = 1 }),
+            TimeProvider.System,
+            NullLogger<SpecialsDirectMessageCommand>.Instance,
+            new SpecialsDirectMessageCommandTests.LoreReader()
+        );
+        var replies = new List<string>();
+        var embeds = new List<Embed>();
+        var handler = CreateHandler(null!, null!, specialsCommand: command);
+        await handler.Handle(
+            new MessageReceived(CreateMessage(true, true, false, "specials show", replies, embeds: embeds)),
+            TestContext.Current.CancellationToken
+        );
+        Assert.Same(menu, Assert.Single(embeds));
+        Assert.Equal(2, replies.Count);
+        Assert.Equal("PRIVATE SPECIALS DRAFT — #ai-tavern", replies[0]);
+        Assert.Contains("Private sources", replies[1]);
+        Assert.Contains("specials approve test-token", replies[1]);
+        Assert.Same(menu, session.Pending!.Menu);
+    }
+
     [Theory]
     [InlineData(true, true, false, true, "personality furious")]
     [InlineData(false, true, false, false, "personality furious")]
@@ -277,7 +314,15 @@ public class DirectMessageHandlerTests
                 )
         );
 
-    private static IUserMessage CreateMessage(bool admin, bool dm, bool bot, string content, List<string> replies, ulong messageId = 100)
+    private static IUserMessage CreateMessage(
+        bool admin,
+        bool dm,
+        bool bot,
+        string content,
+        List<string> replies,
+        ulong messageId = 100,
+        List<Embed>? embeds = null
+    )
     {
         var user = Stub<IUser>(method =>
             method.Name switch
@@ -292,6 +337,15 @@ public class DirectMessageHandlerTests
             if (method.Name != "SendMessageAsync")
                 throw new NotSupportedException(method.Name);
             replies.Add((string)args![0]!);
+            if (embeds is not null)
+            {
+                var parameters = method.GetParameters();
+                object? Argument(string name) => args[Array.FindIndex(parameters, parameter => parameter.Name == name)];
+                Assert.Same(AllowedMentions.None, Argument("allowedMentions"));
+                Assert.Equal(TestContext.Current.CancellationToken, Assert.IsType<RequestOptions>(Argument("options")).CancelToken);
+                if (Argument("embed") is Embed embed)
+                    embeds.Add(embed);
+            }
             return Task.FromResult<IUserMessage>(null!);
         }
         IMessageChannel channel = dm ? Stub<IDMChannel>(ChannelCall) : Stub<ITextChannel>(ChannelCall);

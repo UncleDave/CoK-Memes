@@ -222,10 +222,23 @@ public class SpecialsDiscoveryTests
     }
 
     [Fact]
-    public void TextPublicationDoesNotRequireImagesOrEmbedPermissions()
+    public void EmbedPublicationRequiresViewSendAndEmbedLinksButNotAttachments()
     {
-        Assert.Null(DiscordSpecialsGateway.GetTextPublicationError(new ChannelPermissions(viewChannel: true, sendMessages: true), "tavern"));
-        Assert.Contains("Send Messages", DiscordSpecialsGateway.GetTextPublicationError(new ChannelPermissions(viewChannel: true), "tavern"));
+        Assert.Null(
+            DiscordSpecialsGateway.GetEmbedPublicationError(new ChannelPermissions(viewChannel: true, sendMessages: true, embedLinks: true), "tavern")
+        );
+        Assert.Contains(
+            "View Channel",
+            DiscordSpecialsGateway.GetEmbedPublicationError(new ChannelPermissions(sendMessages: true, embedLinks: true), "tavern")
+        );
+        Assert.Contains(
+            "Send Messages",
+            DiscordSpecialsGateway.GetEmbedPublicationError(new ChannelPermissions(viewChannel: true, embedLinks: true), "tavern")
+        );
+        Assert.Contains(
+            "Embed Links",
+            DiscordSpecialsGateway.GetEmbedPublicationError(new ChannelPermissions(viewChannel: true, sendMessages: true), "tavern")
+        );
     }
 
     internal static NotebookSource Source(int id, int channel, DateTimeOffset when, string content) =>

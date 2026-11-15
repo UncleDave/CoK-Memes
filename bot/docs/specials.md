@@ -44,7 +44,9 @@ requested menus.
 
 Specials have a destination and optional source-channel subset under `Specials`
 (`DestinationChannelId`, `DestinationChannelName`, `SourceChannelIds`). The committed
-Development and Production configurations retain the former Gazette destination IDs.
+Production destination is `1567646266689851402`, shared with roster milestones rather
+than the former Gazette/bot-conversation channel. Development retains its test-server
+destination `1092927596938924054`. An explicit ID takes precedence over the name fallback.
 Move any externally supplied `Gazette` destination/source overrides to `Specials`;
 old keys are no longer read. There are no new credentials. The destination and sources must satisfy the
 existing normal-member/publication-audience checks, independent of the admin's own

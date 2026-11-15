@@ -7,18 +7,14 @@ namespace ChampionsOfKhazad.Bot.Tests;
 public class DiscordPublicationAudienceTests
 {
     [Theory]
-    [InlineData("Production")]
-    [InlineData("Development")]
-    public void SpecialsDestinationRemainsTheExistingBotConversationChannel(string environment)
+    [InlineData("Production", 1567646266689851402UL)]
+    [InlineData("Development", 1092927596938924054UL)]
+    public void SpecialsDestinationUsesTheConfiguredPublicationChannel(string environment, ulong expectedDestination)
     {
         using var config = JsonDocument.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, $"appsettings.{environment}.json")));
         var root = config.RootElement;
         var destination = root.GetProperty("Specials").GetProperty("DestinationChannelId").GetUInt64();
-        Assert.Equal(root.GetProperty("Followers").GetProperty("IgnoreBotMentionsInChannelId").GetUInt64(), destination);
-        Assert.Contains(
-            destination,
-            root.GetProperty("EventHandlers").GetProperty("Mention").GetProperty("ChannelIds").EnumerateArray().Select(value => value.GetUInt64())
-        );
+        Assert.Equal(expectedDestination, destination);
         Assert.False(root.TryGetProperty("Gazette", out _));
     }
 

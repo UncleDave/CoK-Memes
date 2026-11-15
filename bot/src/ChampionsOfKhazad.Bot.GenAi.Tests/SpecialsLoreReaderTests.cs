@@ -27,15 +27,12 @@ public class SpecialsLoreReaderTests
         Assert.Equal(new[] { "Old guild story", "Canonical Member" }, batch.Contexts[0].Lore.Select(entry => entry.Name));
         Assert.Equal(new ulong[] { 9 }, store.MemberRequests);
         Assert.Equal(2, search.Queries.Count);
-        Assert.All(
-            search.Queries,
-            query =>
-            {
-                Assert.Contains(Context.Event.Summary, query);
-                Assert.Contains(Source.AuthorName, query);
-                Assert.DoesNotContain(Source.Content, query);
-            }
-        );
+        Assert.All(search.Queries, query =>
+        {
+            Assert.Contains(Context.Event.Summary, query);
+            Assert.Contains(Source.AuthorName, query);
+            Assert.DoesNotContain(Source.Content, query);
+        });
         Assert.Equal(batch.Contexts[0].Lore, batch.Contexts[1].Lore);
         Assert.Equal(9UL, batch.Contexts[0].Lore[1].DiscordUserId);
         var data = JsonSerializer.Serialize(batch);

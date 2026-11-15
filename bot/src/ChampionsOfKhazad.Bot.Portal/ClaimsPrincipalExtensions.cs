@@ -8,8 +8,8 @@ public static class ClaimsPrincipalExtensions
     {
         public ulong GetDiscordUserId()
         {
-            var nameIdentifier =
-                claimsPrincipal.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new InvalidOperationException("NameIdentifier claim not found.");
+            var nameIdentifier = claimsPrincipal.FindFirstValue(ClaimTypes.NameIdentifier)
+                ?? throw new InvalidOperationException("NameIdentifier claim not found.");
 
             var splitNameIdentifier = nameIdentifier.Split('|');
 

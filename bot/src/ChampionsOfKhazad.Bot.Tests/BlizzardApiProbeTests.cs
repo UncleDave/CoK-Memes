@@ -42,19 +42,16 @@ public class BlizzardApiProbeTests
         Assert.Equal("Basic", requests[0].Scheme);
         Assert.Equal(Convert.ToBase64String(Encoding.UTF8.GetBytes("public-client:private-secret")), requests[0].Parameter);
         Assert.Equal("grant_type=client_credentials", requests[0].Body);
-        Assert.All(
-            requests.Skip(1),
-            request =>
-            {
-                Assert.Equal("eu.api.blizzard.com", request.Uri.Host);
-                Assert.Equal("https", request.Uri.Scheme);
-                Assert.Equal("Bearer", request.Scheme);
-                Assert.Equal("private-token", request.Parameter);
-                Assert.Null(request.Body);
-                Assert.DoesNotContain("private-token", request.Uri.ToString());
-                Assert.DoesNotContain("private-secret", request.Uri.ToString());
-            }
-        );
+        Assert.All(requests.Skip(1), request =>
+        {
+            Assert.Equal("eu.api.blizzard.com", request.Uri.Host);
+            Assert.Equal("https", request.Uri.Scheme);
+            Assert.Equal("Bearer", request.Scheme);
+            Assert.Equal("private-token", request.Parameter);
+            Assert.Null(request.Body);
+            Assert.DoesNotContain("private-token", request.Uri.ToString());
+            Assert.DoesNotContain("private-secret", request.Uri.ToString());
+        });
         Assert.Contains(requests, request => request.Uri.Query.Contains("dynamic-probe-invalid-eu"));
         Assert.Contains(requests, request => request.Uri.Query.Contains("static-1.60.1_70399-forever-eu"));
         Assert.Null(http.DefaultRequestHeaders.Authorization);
@@ -97,13 +94,11 @@ public class BlizzardApiProbeTests
         ]);
         Assert.Equal(0, await new BlizzardApiProbe(http, output).RunAsync(options, "id", "secret", TestContext.Current.CancellationToken));
         Assert.Equal(12, requests.Count);
-        Assert.Contains(
-            requests,
-            uri => uri.AbsolutePath == "/profile/wow/character/%C3%A9lodie-firebrand/professions" && uri.Query.Contains("profile-forever-us")
+        Assert.Contains(requests, uri =>
+            uri.AbsolutePath == "/profile/wow/character/%C3%A9lodie-firebrand/professions" && uri.Query.Contains("profile-forever-us")
         );
-        Assert.Contains(
-            requests,
-            uri => uri.AbsolutePath == "/data/wow/guild/camwow-us1-realm-1-pve/test-guild/roster" && uri.Query.Contains("profile-forever-us")
+        Assert.Contains(requests, uri =>
+            uri.AbsolutePath == "/data/wow/guild/camwow-us1-realm-1-pve/test-guild/roster" && uri.Query.Contains("profile-forever-us")
         );
         Assert.DoesNotContain(requests, uri => uri.AbsolutePath.StartsWith("/profile/user/", StringComparison.Ordinal));
         Assert.DoesNotContain("not a roster", output.ToString());

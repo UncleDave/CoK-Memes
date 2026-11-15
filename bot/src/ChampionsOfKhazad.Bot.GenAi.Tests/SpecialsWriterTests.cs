@@ -201,14 +201,11 @@ public class SpecialsWriterTests
         else
             await writer.DiscoverAsync([Source], Now, TestContext.Current.CancellationToken);
         Assert.Equal(repair ? 2 : 1, client.OptionHistory.Count);
-        Assert.All(
-            client.OptionHistory,
-            options =>
-            {
-                Assert.Equal(stage == "menu" ? Constants.SpecialsWritingModel : Constants.DefaultCompletionsModel, options!.ModelId);
-                Assert.Empty(options.Tools!);
-            }
-        );
+        Assert.All(client.OptionHistory, options =>
+        {
+            Assert.Equal(stage == "menu" ? Constants.SpecialsWritingModel : Constants.DefaultCompletionsModel, options!.ModelId);
+            Assert.Empty(options.Tools!);
+        });
     }
 
     [Fact]

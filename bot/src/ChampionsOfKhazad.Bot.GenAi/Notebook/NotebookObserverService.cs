@@ -129,8 +129,7 @@ public class NotebookObserverService(
             messageCount = sources.Count;
             if (sources.Count == 0)
             {
-                outcome =
-                    await ConsumeAsync(scanId, initial.ReviewRevision, progress, readableChannels, token)
+                outcome = await ConsumeAsync(scanId, initial.ReviewRevision, progress, readableChannels, token)
                     ?? (readFailures > 0 ? NotebookObservationOutcome.ReadFailed : NotebookObservationOutcome.NoMessages);
                 return;
             }

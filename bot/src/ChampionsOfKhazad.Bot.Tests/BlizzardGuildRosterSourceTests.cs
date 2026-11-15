@@ -114,21 +114,17 @@ public class BlizzardGuildRosterSourceTests
         Assert.Equal(0, professions.Skills[1].Skill);
         Assert.Equal("1", professions.Skills[0].Tier);
         Assert.Equal(1, fixture.OAuthCalls);
-        Assert.Contains(
-            fixture.Requests,
-            request => request.Path == "/data/wow/guild/crossroads-mega-chippy/roster" && request.Query.Contains("profile-forever-eu")
+        Assert.Contains(fixture.Requests, request =>
+            request.Path == "/data/wow/guild/crossroads-mega-chippy/roster" && request.Query.Contains("profile-forever-eu")
         );
         Assert.Contains(fixture.Requests, request => request.Path == "/data/wow/playable-class/index" && request.Query.Contains("static-forever-eu"));
         Assert.Contains(fixture.Requests, request => request.Path == "/profile/wow/character/borin-ironhide/professions");
-        Assert.All(
-            fixture.Requests.Where(request => request.Path != "/token"),
-            request =>
-            {
-                Assert.Equal("eu.api.blizzard.com", request.Host);
-                Assert.Equal("Bearer", request.Scheme);
-                Assert.DoesNotContain("private-token", request.Query);
-            }
-        );
+        Assert.All(fixture.Requests.Where(request => request.Path != "/token"), request =>
+        {
+            Assert.Equal("eu.api.blizzard.com", request.Host);
+            Assert.Equal("Bearer", request.Scheme);
+            Assert.DoesNotContain("private-token", request.Query);
+        });
     }
 
     [Fact]
@@ -241,9 +237,8 @@ public class BlizzardGuildRosterSourceTests
         fixture.NotModified = true;
         var revalidated = await fixture.Source.GetRosterAsync(fixture.Token);
         Assert.Equal(original.ObservedAtUtc, revalidated.ObservedAtUtc);
-        Assert.Contains(
-            fixture.Requests,
-            request => request.ConditionalETag == "\"document-v1\"" && request.IfModifiedSince == original.ObservedAtUtc
+        Assert.Contains(fixture.Requests, request =>
+            request.ConditionalETag == "\"document-v1\"" && request.IfModifiedSince == original.ObservedAtUtc
         );
         var diagnostics = fixture.Logger.Entries.Where(entry => Equals(entry.Properties.GetValueOrDefault("ResourceKind"), "roster")).ToArray();
         Assert.Equal(["fetched", "cache_hit", "not_modified"], diagnostics.Select(entry => entry.Properties["CacheOutcome"]).ToArray());
@@ -330,16 +325,13 @@ public class BlizzardGuildRosterSourceTests
         fixture.Clock.Now = fixture.Clock.Now.AddSeconds(60);
         await fixture.Source.GetProfessionsAsync(character, fixture.Token);
         Assert.Equal("cache_hit", fixture.Logger.Entries.Last().Properties["CacheOutcome"]);
-        Assert.All(
-            fixture.Logger.Entries,
-            entry =>
-            {
-                Assert.Null(entry.Exception);
-                Assert.DoesNotContain("private-", entry.Message);
-                Assert.DoesNotContain("borin-ironhide", entry.Message);
-                Assert.DoesNotContain("https://", entry.Message);
-            }
-        );
+        Assert.All(fixture.Logger.Entries, entry =>
+        {
+            Assert.Null(entry.Exception);
+            Assert.DoesNotContain("private-", entry.Message);
+            Assert.DoesNotContain("borin-ironhide", entry.Message);
+            Assert.DoesNotContain("https://", entry.Message);
+        });
     }
 
     [Fact]
@@ -357,14 +349,11 @@ public class BlizzardGuildRosterSourceTests
         Assert.Equal(requests, fixture.Requests.Count);
         Assert.False(fixture.Logger.Entries.Last().Properties.ContainsKey("StatusCode"));
         Assert.Equal(fixture.Clock.Now.AddSeconds(120), fixture.Logger.Entries.Last().Properties["BlockedUntilUtc"]);
-        Assert.All(
-            fixture.Logger.Entries,
-            entry =>
-            {
-                Assert.Null(entry.Exception);
-                Assert.DoesNotContain("private-", entry.Message);
-            }
-        );
+        Assert.All(fixture.Logger.Entries, entry =>
+        {
+            Assert.Null(entry.Exception);
+            Assert.DoesNotContain("private-", entry.Message);
+        });
     }
 
     [Fact]

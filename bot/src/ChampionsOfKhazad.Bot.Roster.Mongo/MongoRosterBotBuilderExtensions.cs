@@ -12,14 +12,12 @@ public static class MongoRosterBotBuilderExtensions
         builder
             .AddMongo()
             .AddCollection<RosterState>("guildRosters")
-            .AddCollection<RosterNotice>(
-                "guildRosterNotices",
-                collection =>
-                    collection.Indexes.CreateOne(
-                        new CreateIndexModel<RosterNotice>(
-                            Builders<RosterNotice>.IndexKeys.Ascending(item => item.ScopeId).Ascending(item => item.SentAtUtc)
-                        )
+            .AddCollection<RosterNotice>("guildRosterNotices", collection =>
+                collection.Indexes.CreateOne(
+                    new CreateIndexModel<RosterNotice>(
+                        Builders<RosterNotice>.IndexKeys.Ascending(item => item.ScopeId).Ascending(item => item.SentAtUtc)
                     )
+                )
             )
             .Services.AddSingleton<IRosterStore, MongoRosterStore>()
             .AddSingleton<IRosterNoticeStore, MongoRosterNoticeStore>();

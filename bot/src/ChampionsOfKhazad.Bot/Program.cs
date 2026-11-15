@@ -118,8 +118,9 @@ host.Services.AddBot(configuration =>
         configuration.OpenAiApiKey = host.Configuration.GetRequiredString("OpenAIServiceOptions:ApiKey");
         configuration.AzureStorageAccountName = host.Configuration.GetRequiredString("AzureStorageAccountName");
         configuration.AzureStorageAccountAccessKey = host.Configuration.GetRequiredString("AzureStorageAccountAccessKey");
-        configuration.ImageGeneration.DailyAllowances =
-            host.Configuration.GetSection("ImageGeneration:DailyAllowances").Get<Dictionary<ulong, short>>() ?? new Dictionary<ulong, short>();
+        configuration.ImageGeneration.DailyAllowances = host.Configuration.GetSection("ImageGeneration:DailyAllowances")
+            .Get<Dictionary<ulong, short>>()
+            ?? new Dictionary<ulong, short>();
     })
     .AddGenAiMongoPersistence()
     .AddRosterMongoPersistence();

@@ -62,14 +62,11 @@ public class RosterCelebrationTests
         await fixture.Refresh();
         var special = fixture.Notices.Items.Values.Where(notice => notice.Threshold is 60 or 300).ToArray();
         Assert.Equal(2, special.Length);
-        Assert.All(
-            special,
-            notice =>
-            {
-                Assert.Equal(RosterCelebrationKind.Personal, notice.Celebration);
-                Assert.Empty(notice.Honours);
-            }
-        );
+        Assert.All(special, notice =>
+        {
+            Assert.Equal(RosterCelebrationKind.Personal, notice.Celebration);
+            Assert.Empty(notice.Honours);
+        });
         var batch = Assert.Single(RosterText.NoticeBatches(special));
         Assert.Equal("[Mock] Strength and mastery earned", batch.Title);
         Assert.Equal(0x2ECC71u, batch.Colour);
@@ -85,14 +82,11 @@ public class RosterCelebrationTests
         fixture.SetMembers(Character("1", 60, professions: Professions(300)), Character("2", 60, "Zara", professions: Professions(300)));
         await fixture.Refresh();
         Assert.Equal(4, fixture.Notices.Items.Count);
-        Assert.All(
-            fixture.Notices.Items.Values,
-            notice =>
-            {
-                Assert.Equal(RosterCelebrationKind.First, notice.Celebration);
-                Assert.All(notice.Honours, heading => Assert.StartsWith("Joint first recorded", heading));
-            }
-        );
+        Assert.All(fixture.Notices.Items.Values, notice =>
+        {
+            Assert.Equal(RosterCelebrationKind.First, notice.Celebration);
+            Assert.All(notice.Honours, heading => Assert.StartsWith("Joint first recorded", heading));
+        });
         var batch = Assert.Single(RosterText.NoticeBatches(fixture.Notices.Items.Values));
         Assert.Equal(4, batch.Notices.Length);
         Assert.Contains("Borin Ironhide", batch.Text);
@@ -484,18 +478,15 @@ public class RosterCelebrationTests
         Assert.True(batches.Length > 1);
         Assert.Equal(30, batches.Sum(batch => batch.Notices.Length));
         Assert.Equal(30, batches.SelectMany(batch => batch.Notices).Select(notice => notice.Id).Distinct().Count());
-        Assert.All(
-            batches,
-            batch =>
-            {
-                Assert.InRange(batch.Text.Length, 1, 2000);
-                Assert.InRange(batch.Title!.Length, 1, 256);
-                Assert.DoesNotContain("@everyone", batch.Text, StringComparison.Ordinal);
-                Assert.Contains("\\*", batch.Text);
-                Assert.Single(batch.Notices.Select(notice => notice.CreatedAtUtc).Distinct());
-                Assert.NotNull(DiscordRosterNotificationSender.CreateEmbed(batch));
-            }
-        );
+        Assert.All(batches, batch =>
+        {
+            Assert.InRange(batch.Text.Length, 1, 2000);
+            Assert.InRange(batch.Title!.Length, 1, 256);
+            Assert.DoesNotContain("@everyone", batch.Text, StringComparison.Ordinal);
+            Assert.Contains("\\*", batch.Text);
+            Assert.Single(batch.Notices.Select(notice => notice.CreatedAtUtc).Distinct());
+            Assert.NotNull(DiscordRosterNotificationSender.CreateEmbed(batch));
+        });
     }
 
     private static string Field<T>(string property) => BsonClassMap.LookupClassMap(typeof(T)).GetMemberMap(property).ElementName;

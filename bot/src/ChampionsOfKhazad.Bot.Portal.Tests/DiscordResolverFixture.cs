@@ -40,20 +40,15 @@ internal sealed class DiscordResolverFixture : IDisposable
         Resolver = new DiscordUserResolver(new ClientProvider(client), new(1), Clock);
     }
 
-    private IGuildUser GetMember(ulong id) =>
-        _members.GetOrAdd(
-            id,
-            userId =>
-                DiscordTestProxy.Create<IGuildUser>(
-                    (method, _) =>
-                        method.Name switch
-                        {
-                            "get_Id" => userId,
-                            "get_GuildId" => 1UL,
-                            _ => throw new NotSupportedException(method.Name),
-                        }
-                )
-        );
+    private IGuildUser GetMember(ulong id) => _members.GetOrAdd(id, userId => DiscordTestProxy.Create<IGuildUser>(
+                (method, _) =>
+                    method.Name switch
+                    {
+                        "get_Id" => userId,
+                        "get_GuildId" => 1UL,
+                        _ => throw new NotSupportedException(method.Name),
+                    }
+            ));
 
     private async Task<IGuild> ReadGuildAsync(IGuild guild)
     {

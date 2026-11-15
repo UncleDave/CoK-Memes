@@ -892,8 +892,7 @@ public class CustomerDisciplineReplyTests
                     IsMock = true,
                     ObservedAtUtc = DateTime.UtcNow,
                     GuildName = "Mock Guild",
-                    Characters =
-                        Characters
+                    Characters = Characters
                         ??
                         [
                             new()

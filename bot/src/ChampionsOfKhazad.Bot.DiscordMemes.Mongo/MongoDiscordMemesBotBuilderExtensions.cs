@@ -15,13 +15,10 @@ public static class MongoDiscordMemesBotBuilderExtensions
             .AddMongo()
             .AddCollection<StreakBreak>("streakBreaks")
             .AddCollection<CharacterDeath>("characterDeaths")
-            .AddCollection<WordOfTheDay>(
-                "wordOfTheDay",
-                collection =>
-                {
-                    collection.CreateUniqueIndex(x => x.Date, descending: true);
-                }
-            )
+            .AddCollection<WordOfTheDay>("wordOfTheDay", collection =>
+            {
+                collection.CreateUniqueIndex(x => x.Date, descending: true);
+            })
             .Services.AddSingleton<MongoStreakBreakStore>()
             .AddSingleton<IGetStreakBreaks>(sp => sp.GetRequiredService<MongoStreakBreakStore>())
             .AddSingleton<IStoreStreakBreaks>(sp => sp.GetRequiredService<MongoStreakBreakStore>())

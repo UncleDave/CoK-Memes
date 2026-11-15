@@ -385,12 +385,10 @@ internal sealed partial class DiscordMessageService(
     private static string SanitizeMessageContent(string content, IReadOnlyDictionary<ulong, string> accessibleChannels, bool preserveUserIds = false)
     {
         var sanitized = ChannelMentionRegex()
-            .Replace(
-                content,
-                match =>
-                    ulong.TryParse(match.Groups[1].Value, out var channelId) && accessibleChannels.TryGetValue(channelId, out var channelName)
-                        ? $"#{channelName}"
-                        : "[unavailable channel]"
+            .Replace(content, match =>
+                ulong.TryParse(match.Groups[1].Value, out var channelId) && accessibleChannels.TryGetValue(channelId, out var channelName)
+                    ? $"#{channelName}"
+                    : "[unavailable channel]"
             );
         sanitized = RoleMentionRegex().Replace(sanitized, "[role mention]");
         sanitized = preserveUserIds

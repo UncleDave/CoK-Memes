@@ -100,8 +100,7 @@ public class DirectMessageHandler(
                     )
                 )
                     return;
-                var response =
-                    await personalityCommand.ExecuteAsync(message.Content, cancellationToken)
+                var response = await personalityCommand.ExecuteAsync(message.Content, cancellationToken)
                     ?? await customerCommand.ExecuteAsync(message.Content, message.Id, cancellationToken)
                     ?? await notebookCommand.ExecuteAsync(message.Content, cancellationToken)
                     ?? await loreCommand.ExecuteAsync(message.Author.Id, message.Content, cancellationToken);

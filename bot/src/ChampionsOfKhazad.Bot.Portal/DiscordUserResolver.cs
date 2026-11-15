@@ -32,17 +32,12 @@ public class DiscordUserResolver(IDiscordClientProvider discordClientProvider, D
         return await discordClient.GetUserAsync(userId) ?? throw new InvalidOperationException($"Discord user {userId} was not found.");
     }
 
-    private Task<IGuild> GetGuildAsync() =>
-        GetCachedAsync(
-            _guildMetadata,
-            options.GuildId,
-            async () =>
-            {
-                var discordClient = await discordClientProvider.GetClientAsync();
-                return await discordClient.GetGuildAsync(options.GuildId)
-                    ?? throw new InvalidOperationException("The configured Discord guild was not found.");
-            }
-        );
+    private Task<IGuild> GetGuildAsync() => GetCachedAsync(_guildMetadata, options.GuildId, async () =>
+        {
+            var discordClient = await discordClientProvider.GetClientAsync();
+            return await discordClient.GetGuildAsync(options.GuildId)
+                ?? throw new InvalidOperationException("The configured Discord guild was not found.");
+        });
 
     private async Task<T> GetCachedAsync<T>(MemoryCache cache, object key, Func<Task<T>> load)
     {

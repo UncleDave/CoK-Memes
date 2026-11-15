@@ -87,46 +87,35 @@ app.UseAuthorization();
 
 var apiGroup = app.MapGroup("api");
 
-apiGroup.MapGet(
-    "me",
-    (ClaimsPrincipal claimsPrincipal) =>
-    {
-        var userId = claimsPrincipal.FindFirstValue(ClaimTypes.NameIdentifier);
+apiGroup.MapGet("me", (ClaimsPrincipal claimsPrincipal) =>
+{
+    var userId = claimsPrincipal.FindFirstValue(ClaimTypes.NameIdentifier);
 
-        if (userId is null)
-            return Results.Unauthorized();
+    if (userId is null)
+        return Results.Unauthorized();
 
-        IEnumerable<string> roles = authOptions.UserIsAdmin(userId) ? ["Admin"] : [];
+    IEnumerable<string> roles = authOptions.UserIsAdmin(userId) ? ["Admin"] : [];
 
-        return Results.Ok(new UserContract(roles));
-    }
-);
+    return Results.Ok(new UserContract(roles));
+});
 
 var loreGroup = apiGroup.MapGroup("lore").RequireAuthorization(adminPolicy);
 
-loreGroup.MapGet(
-    "",
-    async (IGetLore loreGetter, CancellationToken cancellationToken) =>
-        Results.Ok((await loreGetter.GetLoreAsync(cancellationToken)).OrderByDescending(x => x is GuildLore).ThenBy(x => x.Name))
+loreGroup.MapGet("", async (IGetLore loreGetter, CancellationToken cancellationToken) =>
+    Results.Ok((await loreGetter.GetLoreAsync(cancellationToken)).OrderByDescending(x => x is GuildLore).ThenBy(x => x.Name))
 );
 
-loreGroup.MapGet(
-    "{name}",
-    async (string name, IGetLore loreGetter, CancellationToken cancellationToken) =>
-    {
-        var lore = await loreGetter.GetLoreAsync(name, cancellationToken);
-        return lore is null ? Results.NotFound() : Results.Ok(lore);
-    }
-);
+loreGroup.MapGet("{name}", async (string name, IGetLore loreGetter, CancellationToken cancellationToken) =>
+{
+    var lore = await loreGetter.GetLoreAsync(name, cancellationToken);
+    return lore is null ? Results.NotFound() : Results.Ok(lore);
+});
 
-loreGroup.MapDelete(
-    "{name}",
-    async (string name, [FromServices] IDeleteLore loreDeleter) =>
-    {
-        await loreDeleter.DeleteLoreAsync(name);
-        return Results.NoContent();
-    }
-);
+loreGroup.MapDelete("{name}", async (string name, [FromServices] IDeleteLore loreDeleter) =>
+{
+    await loreDeleter.DeleteLoreAsync(name);
+    return Results.NoContent();
+});
 
 apiGroup.MapLoreMutations(adminPolicy);
 

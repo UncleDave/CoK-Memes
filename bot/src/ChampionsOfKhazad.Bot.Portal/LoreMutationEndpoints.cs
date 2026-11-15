@@ -18,15 +18,12 @@ public static class LoreMutationEndpoints
                 return updated ? Results.NoContent() : Results.NotFound();
             }
         );
-        guildLore.MapPost(
-            "",
-            async (CreateGuildLoreContract contract, ICreateLore loreCreator, CancellationToken cancellationToken) =>
-            {
-                if (!await loreCreator.CreateLoreAsync(new GuildLore(contract.Name, contract.Content), cancellationToken))
-                    return Results.Conflict(new { message = "Lore with this name already exists." });
-                return Results.Created($"/api/lore/{Uri.EscapeDataString(contract.Name)}", null);
-            }
-        );
+        guildLore.MapPost("", async (CreateGuildLoreContract contract, ICreateLore loreCreator, CancellationToken cancellationToken) =>
+        {
+            if (!await loreCreator.CreateLoreAsync(new GuildLore(contract.Name, contract.Content), cancellationToken))
+                return Results.Conflict(new { message = "Lore with this name already exists." });
+            return Results.Created($"/api/lore/{Uri.EscapeDataString(contract.Name)}", null);
+        });
 
         var memberLore = apiGroup.MapGroup("member-lore").RequireAuthorization(adminPolicy);
         memberLore.MapPut(

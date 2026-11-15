@@ -12,18 +12,13 @@ public static class MongoGenAiBotBuilderExtensions
     {
         builder
             .AddMongo()
-            .AddCollection<GeneratedImage>(
-                "generatedImages",
-                collection =>
-                {
-                    collection.Indexes.CreateOne(new CreateIndexModel<GeneratedImage>(Builders<GeneratedImage>.IndexKeys.Ascending(x => x.UserId)));
-                    collection.Indexes.CreateOne(
-                        new CreateIndexModel<GeneratedImage>(Builders<GeneratedImage>.IndexKeys.Ascending(x => x.Timestamp))
-                    );
-                    collection.CreateUniqueIndex(x => x.Filename);
-                    collection.Indexes.CreateOne(new CreateIndexModel<GeneratedImage>(Builders<GeneratedImage>.IndexKeys.Text(x => x.Prompt)));
-                }
-            )
+            .AddCollection<GeneratedImage>("generatedImages", collection =>
+            {
+                collection.Indexes.CreateOne(new CreateIndexModel<GeneratedImage>(Builders<GeneratedImage>.IndexKeys.Ascending(x => x.UserId)));
+                collection.Indexes.CreateOne(new CreateIndexModel<GeneratedImage>(Builders<GeneratedImage>.IndexKeys.Ascending(x => x.Timestamp)));
+                collection.CreateUniqueIndex(x => x.Filename);
+                collection.Indexes.CreateOne(new CreateIndexModel<GeneratedImage>(Builders<GeneratedImage>.IndexKeys.Text(x => x.Prompt)));
+            })
             .AddCollection<LorekeeperPersonalitySetting>("lorekeeperPersonality")
             .AddCollection<CustomerDisciplineState>("grubCustomers")
             .AddCollection<NotebookState>("lorekeeperNotebook")

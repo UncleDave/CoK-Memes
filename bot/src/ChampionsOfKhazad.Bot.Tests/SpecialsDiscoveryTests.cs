@@ -106,14 +106,11 @@ public class SpecialsDiscoveryTests
         Assert.Equal(1200, plan.Batches.SelectMany(batch => batch).DistinctBy(source => source.Url).Count());
         Assert.Contains(sources[0], plan.Batches.SelectMany(batch => batch));
         Assert.Contains(sources[950], plan.Batches.SelectMany(batch => batch));
-        Assert.All(
-            plan.Batches,
-            batch =>
-            {
-                Assert.InRange(batch.Count, 1, 100);
-                Assert.True(JsonSerializer.Serialize(new { sources = batch }).Length <= SpecialsDiscoveryPlan.MaximumBatchCharacters);
-            }
-        );
+        Assert.All(plan.Batches, batch =>
+        {
+            Assert.InRange(batch.Count, 1, 100);
+            Assert.True(JsonSerializer.Serialize(new { sources = batch }).Length <= SpecialsDiscoveryPlan.MaximumBatchCharacters);
+        });
     }
 
     [Fact]
@@ -154,14 +151,11 @@ public class SpecialsDiscoveryTests
         Assert.Contains(sources[^1], assessed);
         Assert.Equal(35, assessed.Select(source => source.Url.Split('/')[5]).Distinct().Count());
         Assert.Equal(7, assessed.Select(source => source.TimestampUtc.Date).Distinct().Count());
-        Assert.All(
-            plan.Batches,
-            batch =>
-            {
-                Assert.InRange(batch.Count, 1, 100);
-                Assert.True(JsonSerializer.Serialize(new { sources = batch }).Length <= SpecialsDiscoveryPlan.MaximumBatchCharacters);
-            }
-        );
+        Assert.All(plan.Batches, batch =>
+        {
+            Assert.InRange(batch.Count, 1, 100);
+            Assert.True(JsonSerializer.Serialize(new { sources = batch }).Length <= SpecialsDiscoveryPlan.MaximumBatchCharacters);
+        });
         var reversed = SpecialsDiscoveryPlan.Create(sources.Reverse().ToArray(), Now.AddDays(-7), Now);
         Assert.Equal(assessed.Select(source => source.Url), reversed.Batches.SelectMany(batch => batch).Select(source => source.Url));
     }
@@ -190,15 +184,12 @@ public class SpecialsDiscoveryTests
         var plan = SpecialsDiscoveryPlan.Create(sources, Now.AddDays(-7), Now);
         Assert.Equal(0, plan.UnassessedMessages);
         Assert.True(plan.Batches.Count > 1);
-        Assert.All(
-            plan.Batches,
-            batch =>
-            {
-                Assert.InRange(batch.Count, 1, 100);
-                Assert.True(JsonSerializer.Serialize(new { sources = batch }).Length <= SpecialsDiscoveryPlan.MaximumBatchCharacters);
-                Assert.All(batch, source => Assert.Contains(source, sources));
-            }
-        );
+        Assert.All(plan.Batches, batch =>
+        {
+            Assert.InRange(batch.Count, 1, 100);
+            Assert.True(JsonSerializer.Serialize(new { sources = batch }).Length <= SpecialsDiscoveryPlan.MaximumBatchCharacters);
+            Assert.All(batch, source => Assert.Contains(source, sources));
+        });
         Assert.Contains(plan.Batches, batch => batch.Select(source => source.Url.Split('/')[5]).Distinct().Count() > 1);
     }
 

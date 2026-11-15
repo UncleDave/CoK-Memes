@@ -46,14 +46,11 @@ public class GuildRosterWorkerTests
         Assert.Equal(2, fixture.Source.RosterReads);
         Assert.Equal("refresh_failed", (await fixture.Queries.QueryAsync(50, cancellationToken: fixture.Token)).Status);
         Assert.Equal(2, logger.Entries.Count);
-        Assert.All(
-            logger.Entries,
-            entry =>
-            {
-                Assert.Equal(LogLevel.Information, entry.Level);
-                Assert.Null(entry.Exception);
-            }
-        );
+        Assert.All(logger.Entries, entry =>
+        {
+            Assert.Equal(LogLevel.Information, entry.Level);
+            Assert.Null(entry.Exception);
+        });
         Assert.Empty(sender.Messages);
         Assert.Empty(fixture.Notices.Items);
 

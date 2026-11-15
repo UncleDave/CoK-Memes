@@ -240,14 +240,11 @@ public class RosterLeaderboardDiagnosticsTests
         await service.RefreshAsync(fixture.Token);
         Assert.Equal(3, logger.Entries.Last().Properties["Failures"]);
         Assert.Contains(logger.Entries, entry => Equals(entry.Properties.GetValueOrDefault("FailureCategory"), "invalid_data"));
-        Assert.All(
-            logger.Entries,
-            entry =>
-            {
-                Assert.Null(entry.Exception);
-                Assert.DoesNotContain("private-response-details", entry.Message);
-            }
-        );
+        Assert.All(logger.Entries, entry =>
+        {
+            Assert.Null(entry.Exception);
+            Assert.DoesNotContain("private-response-details", entry.Message);
+        });
     }
 
     [Fact]

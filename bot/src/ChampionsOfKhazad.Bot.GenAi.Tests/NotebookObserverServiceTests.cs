@@ -24,34 +24,25 @@ public class NotebookObserverServiceTests
         Assert.Equal(candidateCount, fixture.Evaluator.Candidates.Count);
         Assert.Equal(candidateCount, fixture.Reviewer.Notes.Count);
         Assert.Equal(candidateCount, fixture.Store.State.EvaluationAttempts.Count);
-        Assert.All(
-            fixture.Store.State.Notes,
-            note =>
+        Assert.All(fixture.Store.State.Notes, note =>
+        {
+            Assert.Equal(NotebookOrigin.Background, note.Origin);
+            Assert.Equal(0UL, note.RequestedBy);
+            Assert.True(note.IsActive(fixture.Clock.Now));
+            Assert.Equal(fixture.Clock.Now.AddDays(NotebookService.LifetimeDays), note.ExpiresAtUtc);
+            Assert.All(note.Sources, source =>
             {
-                Assert.Equal(NotebookOrigin.Background, note.Origin);
-                Assert.Equal(0UL, note.RequestedBy);
-                Assert.True(note.IsActive(fixture.Clock.Now));
-                Assert.Equal(fixture.Clock.Now.AddDays(NotebookService.LifetimeDays), note.ExpiresAtUtc);
-                Assert.All(
-                    note.Sources,
-                    source =>
-                    {
-                        Assert.Empty(source.Content);
-                        Assert.Empty(source.MentionedUsers);
-                        Assert.Equal(64, source.ContentHash.Length);
-                        Assert.Equal(64, source.ViewHash.Length);
-                    }
-                );
-            }
-        );
-        Assert.All(
-            fixture.Store.State.EvaluationAttempts,
-            attempt =>
-            {
-                Assert.Equal(NotebookOrigin.Background, attempt.Origin);
-                Assert.Equal(0UL, attempt.UserId);
-            }
-        );
+                Assert.Empty(source.Content);
+                Assert.Empty(source.MentionedUsers);
+                Assert.Equal(64, source.ContentHash.Length);
+                Assert.Equal(64, source.ViewHash.Length);
+            });
+        });
+        Assert.All(fixture.Store.State.EvaluationAttempts, attempt =>
+        {
+            Assert.Equal(NotebookOrigin.Background, attempt.Origin);
+            Assert.Equal(0UL, attempt.UserId);
+        });
         Assert.All(fixture.Store.State.WriteAttempts, attempt => Assert.Equal(NotebookOrigin.Background, attempt.Origin));
         Assert.Equal(candidateCount, Assert.Single(fixture.Store.State.Observer.Scans).Saved);
         Assert.Equal(NotebookObservationOutcome.Completed, fixture.Store.State.Observer.Scans[0].Outcome);
@@ -794,14 +785,11 @@ public class NotebookObserverServiceTests
         fixture.Reader.SetMessages(20, 3, contentLength: 3000);
         fixture.Reader.SetMessages(20, 4, contentLength: 3000);
         await fixture.CreateObserver().ObserveAsync(TestContext.Current.CancellationToken);
-        Assert.All(
-            fixture.Discoverer.Inputs,
-            sources =>
-            {
-                Assert.Contains(sources, source => source.Url.Contains("/3/", StringComparison.Ordinal));
-                Assert.Contains(sources, source => source.Url.Contains("/4/", StringComparison.Ordinal));
-            }
-        );
+        Assert.All(fixture.Discoverer.Inputs, sources =>
+        {
+            Assert.Contains(sources, source => source.Url.Contains("/3/", StringComparison.Ordinal));
+            Assert.Contains(sources, source => source.Url.Contains("/4/", StringComparison.Ordinal));
+        });
     }
 
     [Theory]

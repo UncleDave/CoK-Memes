@@ -11,14 +11,11 @@ public static class MongoLoreBotBuilderExtensions
     {
         builder
             .AddMongo()
-            .AddCollection<LoreDocument>(
-                Collections.Lore.Name,
-                collection =>
-                {
-                    collection.CreateUniqueIndex(Collections.Lore.UniqueIndex.Field, Collections.Lore.UniqueIndex.Collation);
-                    collection.Indexes.CreateOne(Collections.MemberDiscordUserIdIndex);
-                }
-            )
+            .AddCollection<LoreDocument>(Collections.Lore.Name, collection =>
+            {
+                collection.CreateUniqueIndex(Collections.Lore.UniqueIndex.Field, Collections.Lore.UniqueIndex.Collation);
+                collection.Indexes.CreateOne(Collections.MemberDiscordUserIdIndex);
+            })
             .Services.AddSingleton<MongoLoreStore>()
             .AddSingleton<IStoreLore>(services => services.GetRequiredService<MongoLoreStore>())
             .AddSingleton<IEditLoreStore>(services => services.GetRequiredService<MongoLoreStore>());

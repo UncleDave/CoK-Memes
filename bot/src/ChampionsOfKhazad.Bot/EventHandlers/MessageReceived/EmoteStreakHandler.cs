@@ -16,8 +16,7 @@ public class EmoteStreakHandler(
 
     public async Task Handle(MessageReceived notification, CancellationToken cancellationToken)
     {
-        var emote =
-            botContext.Guild.Emotes.SingleOrDefault(x => x.Name == _options.EmoteName)
+        var emote = botContext.Guild.Emotes.SingleOrDefault(x => x.Name == _options.EmoteName)
             ?? await botContext.Guild.GetEmotesAsync().SingleAsync(x => x.Name == _options.EmoteName);
 
         var message = notification.Message;

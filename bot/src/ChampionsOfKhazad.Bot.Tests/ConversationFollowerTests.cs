@@ -22,9 +22,8 @@ public class ConversationFollowerTests
 
         Assert.Equal(2, fixture.Replies.Count);
         Assert.Equal(new ulong[] { 123, 456 }, fixture.RespondedTo);
-        Assert.All(
-            fixture.Replies,
-            reply => Assert.Contains(reply, new[] { "Sycophant", "Contrarian", "DisappointedTeacher", "CondescendingTeacher", "StonerBro" })
+        Assert.All(fixture.Replies, reply =>
+            Assert.Contains(reply, new[] { "Sycophant", "Contrarian", "DisappointedTeacher", "CondescendingTeacher", "StonerBro" })
         );
     }
 

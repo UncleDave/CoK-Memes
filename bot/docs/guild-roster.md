@@ -7,10 +7,8 @@ portal import; fictional fixtures remain test-only. A separate manual app-token
 [API probe and research checkpoint](forever-api-research.md) checks availability
 without feeding the roster. See [implemented behaviour and live API
 assumptions](guild-roster-runtime.md) and [local configuration](../README.md#guild-roster).
-A standalone diagnostic addon exists in
-[`addons/GrubRosterProbe`](../../addons/GrubRosterProbe), with local mock tests;
-it has not yet been verified in the Forever client and is now on the backburner.
-See the [in-game probe checklist](../../addons/docs/roster-probe.md).
+The standalone diagnostic addon and proposed paste-import fallback were retired
+on 17 November: API ingestion meets the collection goal.
 This records the requested direction and proposed first-version defaults,
 not a claim that every detail below has been approved.
 
@@ -34,8 +32,7 @@ documentation or keep a fictional runtime source as the shipping path. EU and th
 Crossroads Mega Chippy guild name/slug are confirmed by the administrator; the
 realm-free wire contract remains an assumption, not a Blizzard announcement.
 Validate complete responses and retain prior data on failure rather than weakening
-membership boundaries to make uncertain endpoints appear successful. Addon testing
-remains paused. The diagnostic report is not a production contract.
+membership boundaries to make uncertain endpoints appear successful.
 
 ## Direction
 
@@ -45,8 +42,8 @@ remains paused. The diagnostic report is not a production contract.
 - Make the same roster queries available to Grub through read-only tools.
 - Announce selected level and profession milestones after observing them in
   accepted roster data, without turning every poll into a Discord post.
-- Keep consumers independent of collection method: plan for an external Blizzard
-  API adapter first. Retain the addon/paste approach as a paused fallback.
+- Keep consumers independent of collection method, using the external Blizzard
+  API adapter. The addon/paste fallback is retired.
 - External API support at release is a working assumption, not confirmed support
   or a promise that levels and professions will have the same endpoint coverage.
 
@@ -96,16 +93,9 @@ not prove knowledge of a recipe, specialisation, availability, or willingness to
 craft. Grub now uses explicit `known_recipes` for recipe-name/ID crafter lookup;
 static recipe catalogues and item-to-recipe mapping remain deferred.
 
-The [GetGuildTradeSkillInfo reference](https://warcraft.wiki.gg/wiki/API:GetGuildTradeSkillInfo)
-lists profession IDs, member names, and skill ranks, and marks the function as
-available in Forever. That is a collection lead, not proof of complete/current
-guild data. The client spike must test offline visibility, refresh behaviour,
-secondary profession coverage, and whether maximum ranks are exposed if addon
-work resumes. This investigation is paused; the API path instead needs to verify
-its own profession endpoints and fields. If one exporter cannot see other
-members' professions, per-character addon exports or
-addon-to-addon sharing are possible later fallbacks, not assumed first-version
-capabilities. Level collection can ship without profession collection.
+Profession coverage depends on the API's verified endpoints and fields, including
+primary/secondary professions and maximum ranks. Level collection can ship without
+profession collection; client collection and member-supplied exports are outside scope.
 
 Proposed Grub tools:
 
@@ -135,13 +125,12 @@ snapshot age once when reporting levels, without repeating internal caveats.
 ## Shared data boundary
 
 ```text
-Live Blizzard adapter ─┐
-Paused paste adapter ─┴─> validated roster data ─> Mongo store
-                                                   │
-                                          shared roster queries
-                                             ├─> /leaderboard
-                                             ├─> Grub tools
-                                             └─> milestone detection
+Live Blizzard adapter ─> validated roster data ─> Mongo store
+                                                    │
+                                           shared roster queries
+                                              ├─> /leaderboard
+                                              ├─> Grub tools
+                                              └─> milestone detection
 ```
 
 Proposed normalized snapshot fields:
@@ -195,18 +184,17 @@ data. Compose these observations for queries, retaining their individual ages.
 If one response supplies both levels and professions, consume both without
 introducing an unnecessary second request or refresh schedule.
 
-Reject stale updates and repeat imports idempotently. Prevent concurrent import
-confirmations from overwriting a newer revision; reuploading an old export must
-not make it appear fresh. Switching sources is explicit, not a field-by-field
-multi-source merge or silent fallback to older addon data.
+Reject stale updates and process repeated observations idempotently. Prevent
+concurrent refreshes from overwriting a newer revision; receiving an older
+response must not make it appear fresh. Switching sources is explicit, not a field-by-field
+multi-source merge or silent fallback to an older source.
 
 Only a validated, structurally complete response under the configured roster contract
 can replace the current membership list. Confirm that contract against real launch
 data; do not equate a successful HTTP status with completeness. Reject
 partial/online-only exports for the initial version rather than treating absent
 characters as guild departures. Snapshot replacement does not delete lore or
-member links. Pasted addon data is a member-supplied observation, not
-Blizzard-verified ownership or proof of a person's identity.
+member links. Roster data is not proof of a person's identity or character ownership.
 
 ### Membership lifecycle
 
@@ -348,32 +336,21 @@ progression/delivery state, not a full historical snapshot archive or race syste
 Celebration keys are persisted with that state; the accepted expansion does not
 add historical timing.
 
-## Copy/paste import — paused fallback
+## Collection scope
 
-Use the existing portal admin authorization policy initially; officer/self-service
-permissions are a separate decision. The addon presents a versioned export string
-that an admin pastes into a dedicated roster import page. No desktop agent needed.
-
-1. Parse and validate size, version, configured guild scope, timestamps, character
-   keys, class/level values, profession IDs/ranks/coverage, duplicates, and
-   complete-roster status. Never execute pasted Lua, scripts, or other embedded
-   instructions.
-2. Preview character count, observation time, and additions/removals/level changes
-   against the current snapshot, including profession changes and unknown coverage.
-   Highlight unexpected decreases or a large drop in roster size; do not quietly
-   clamp values or accept malformed rows.
-3. Confirm the exact validated snapshot against the previewed current revision.
-   Failures leave the current snapshot untouched and preserve a useful retry path.
+API ingestion is the supported collection path. The diagnostic addon and proposed
+portal paste/preview/confirm flow are retired, not pending delivery.
 
 Collect only the fields needed for the roster. Exclude public/officer notes, chat,
-and Battle.net identifiers. Do not log raw pasted exports. Keep current roster
+and Battle.net identifiers. Do not log raw source payloads. Keep current roster
 data separate from permanent lore and the temporary notebook. Historical snapshot
 retention and growth tracking are outside the first version.
 
 ## Delivery slices
 
-- [x] Build a standalone collection probe with copyable diagnostics and local
-  mock tests. No bot, portal, or database integration.
+- [x] Retire the standalone collection probe and its local mock tests after API
+  ingestion met the collection goal (17 November). No exporter or portal importer
+  is planned.
 - [x] Add a separate manual app-token HTTP probe with local credential setup,
   bounded status/shape output, and fake-HTTP regression tests. Confirm initial EU
   dynamic/static namespace access; this does not complete the guild/profile checks below.
@@ -383,10 +360,6 @@ retention and growth tracking are outside the first version.
   publication delay. Verify internal API realm scope without requiring player-facing
   realm selection. Capture sanitized fixtures; do not
   invent an endpoint contract.
-- [ ] Paused: verify Forever addon collection in-client, especially offline members,
-  completeness, refresh timing, two-part names, and available identifiers. Verify
-  profession names/ranks, primary/secondary coverage, and cached/unknown values
-  separately. Capture sanitized fixtures and define the versioned export format.
 - [x] Build the roster feature's normalized model, validator, snapshot store,
   ranking, and lookup services with fixture-based tests. Follow the existing
   feature-project/Mongo separation; keep Discord, portal, and AI dependencies out
@@ -404,10 +377,6 @@ retention and growth tracking are outside the first version.
   namespace. Document assumptions explicitly rather than claiming live verification.
 - [ ] Confirm the assumed live contract and tune parsing/routing after launch.
   Reassess whether separate profession requests and their lower frequency remain useful.
-- [ ] Paused: adapt the tested probe into a production exporter and add the admin portal
-  paste/preview/confirm flow. Test
-  authorization, invalid and partial exports, stale/duplicate imports, concurrent
-  confirmations, and atomic replacement. Exercise the flow with `npm run dev`.
 - [x] Register `/leaderboard` as an opt-in guild command. Test acknowledgement, ranking,
   profession filters, ties, pagination, output limits/escaping, observation times,
   empty/failure states, and isolation between guild scopes.
@@ -441,11 +410,8 @@ behavior as each slice ships; do not mark planned work as implemented.
 
 - Command name and defaults: `/leaderboard`, top 10, public response, all alts.
 - Optional profession rankings and crafter lookup; exact collection coverage is
-  gated on the available API, not assumed from the level roster. The client spike
-  is needed only if the addon fallback resumes.
-- Guild identity, API region where relevant, and API configuration (no realm);
-  import permissions can wait while the addon path is paused (admin-only portal
-  remains its proposed default).
+  gated on the available API, not assumed from the level roster.
+- Guild identity, API region where relevant, and API configuration (no realm).
 - Proposed polling cadence: roster every 60 seconds; profession details every
   5–15 minutes only if separate requests make that worthwhile. Otherwise consume
   professions alongside the roster. Adjust to actual API behaviour and limits.

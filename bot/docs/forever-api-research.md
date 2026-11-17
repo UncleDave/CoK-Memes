@@ -250,4 +250,5 @@ guild/character checks after launch rather than interpreting arbitrary-target
   conditional requests, throttling, and failure behavior.
 - Correct the implemented `IGuildRosterSource` against these findings without
   changing its live-source identity silently or reviving a runtime mock fallback.
-  The addon fallback remains paused.
+  The addon fallback was retired on 17 November after API ingestion met the
+  collection goal.

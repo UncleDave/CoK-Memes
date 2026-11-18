@@ -161,7 +161,7 @@ name/content/link snapshot is retained transiently; no lore is created or update
 
 ## Model and response contracts
 
-Final menu writing and its optional text repair explicitly use `gpt-6.1-sol` through
+Final menu writing and its optional text repair explicitly use `gpt-6.2-sol` through
 the existing OpenAI Responses client. Discovery, event selection and their repairs
 stay on the shared `gpt-6-luna` default. Other bot replies and image generation are
 unchanged. There is no silent fallback to Luna if Sol is unavailable; the draft fails

@@ -222,7 +222,7 @@ public class SpecialsWriterTests
         var writer = new SpecialsWriter(client);
         await writer.DiscoverAsync([Source], Now, TestContext.Current.CancellationToken);
         await writer.WriteAsync([Context], Now, TestContext.Current.CancellationToken);
-        Assert.Equal(new[] { Constants.DefaultCompletionsModel, Constants.SpecialsWritingModel }, handler.Models);
+        Assert.Equal(new[] { Constants.DefaultCompletionsModel, "gpt-6.2-sol" }, handler.Models);
     }
 
     [Fact]

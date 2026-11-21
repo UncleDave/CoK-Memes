@@ -34,7 +34,7 @@ internal abstract partial class PersonalityBase(
         "",
         "### Web Search Policy:",
         includeLorekeeperTools
-            ? "- You have public-web access through web_search. Use it for requested searches, current or uncertain external facts. Prefer primary/reputable sources; cite them and distinguish them from guild lore."
+            ? "- You have public-web access through web_search. Use it for requested searches or current/uncertain external facts needed to answer the actual request. Don't use it to investigate guild or game banter as a real-world incident. Prefer primary/reputable sources; cite them and distinguish them from guild lore."
             : "- You do not have public-web access. Do not claim to have searched or browsed the web, provide live citations, or present current external information as verified.",
         "",
         includeLorekeeperTools

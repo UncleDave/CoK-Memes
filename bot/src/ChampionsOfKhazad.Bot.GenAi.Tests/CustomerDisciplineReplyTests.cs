@@ -81,6 +81,23 @@ public class CustomerDisciplineReplyTests
         Assert.Empty((await fixture.GetAsync()).Strikes);
     }
 
+    [Fact]
+    public async Task DungeonFollowUpAfterAnEarlierSafetyGuessReachesTheModelInOneRequest()
+    {
+        using var fixture = new Fixture();
+        var history = new ChatHistory([
+            new ChatMessage(ChatRole.User, "So much for the chip shop."),
+            new ChatMessage(ChatRole.Assistant, "Was that a real fire? Is anyone in danger?"),
+            new ChatMessage(ChatRole.User, "Dunno, went home to farm dungeons."),
+        ]);
+
+        await fixture.InvokeAsync(history);
+
+        Assert.Equal(1, fixture.Chat.Calls);
+        Assert.Equal(history, fixture.Chat.Messages.Skip(2));
+        Assert.Contains(fixture.Chat.Options!.Tools!, tool => tool is HostedWebSearchTool);
+    }
+
     [Theory]
     [InlineData("Hello")]
     [InlineData("Shame. I liked the old clanker more")]

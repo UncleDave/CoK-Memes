@@ -216,7 +216,7 @@ high-water marks; a trained maximum changing alone does not trigger anything.
 The accepted [milestone design](guild-roster.md#milestone-notifications) adds:
 
 - A green celebration embed for each newly crossed level 60 or profession rank 300,
-  with a short authored Grub commendation. Ordinary milestones retain plain text.
+  with a short Grub tagline. Ordinary milestones retain plain text.
 - Gold recognition for the first recorded level 60 in the guild, the first recorded
   level 60 of each class, and the first recorded 300 in each profession/skill track.
   Multiple qualifying arrivals in one refresh receive joint recognition, never an
@@ -247,6 +247,8 @@ shared milestone without firsts; green identifies ordinary cap celebrations. Spl
 only when needed to fit Discord limits, with each persisted notice included once.
 Separate observations are not merged into a supposed joint first. Names, class and
 profession data are escaped; embeds and plain notices both disable all mentions.
+Each celebration embed gets one randomly chosen, authored Grub joke from the
+level, profession, mixed, or shared guild pool.
 
 `RosterState.Celebrations` stores consumed first/completion/count keys alongside
 existing per-character high-water marks. Already achieved keys are silently seeded

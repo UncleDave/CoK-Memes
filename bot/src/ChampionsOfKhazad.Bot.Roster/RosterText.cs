@@ -5,6 +5,50 @@ namespace ChampionsOfKhazad.Bot.Roster;
 
 public static partial class RosterText
 {
+    private static readonly string[] LevelTaglines =
+    [
+        "Good. Now you can die in more expensive gear.",
+        "The boars of the Barrens are calling it a public holiday.",
+        "You reached the end of the grind. That was the joke.",
+        "You may now spend forty minutes outside a dungeon with the best of them.",
+        "The fire doesn't check your level before you stand in it. I asked.",
+        "The flight master heard the news. As a mark of respect, the fare is exactly the same.",
+        "You earned a round of applause. Don't try to redeem it for chips.",
+        "Somewhere a quest giver just remembered six more errands.",
+    ];
+
+    private static readonly string[] ProfessionTaglines =
+    [
+        "Three hundred. You may now call your mistakes technique.",
+        "Your prize is twelve whispers that start with 'quick question'.",
+        "That's not a bank alt anymore. That's a warehouse with a name.",
+        "Good. Now you can charge guild prices: same as normal, but with an argument.",
+        "Your tools asked for the day off. I told them to ask you.",
+        "Don't brag to the trainer. They'll find a way to charge for listening.",
+        "At last, an expert. Can you get the burnt bits off this pan?",
+        "The first 299 points took patience. The last one was spite.",
+    ];
+
+    private static readonly string[] MixedTaglines =
+    [
+        "Levels and trades. You're all becoming dangerously employable.",
+        "One hand on the weapon, one on the toolbox. Who's holding the chips?",
+        "The guild can fight and craft. Watch us still need a mage for water.",
+        "Two kinds of progress in one ledger entry. I'm charging the ink to the guild bank.",
+        "All that levelling and trade work, and someone's still going to ask for spare linen.",
+        "Enough muscle and know-how to build a raid boss. Please don't.",
+    ];
+
+    private static readonly string[] GuildTaglines =
+    [
+        "I'd buy you all a round, but that's how guilds go bankrupt.",
+        "Good work. Nobody tell the Alliance we can count.",
+        "That's teamwork. I was beginning to think it was a rumour started by the raid leader.",
+        "Group photo. Anyone still on a flight path can be a smudge on the horizon.",
+        "Look at that. You lot can coordinate when there's no ready check to ignore.",
+        "For once, the ledger has something in it besides names and amounts owed.",
+    ];
+
     public static string Safe(string value) => Markdown().Replace(value, @"\$1").Replace("@", "@\u200b", StringComparison.Ordinal);
 
     public static string[] Leaderboard(RosterPage page)
@@ -64,8 +108,9 @@ public static partial class RosterText
         return Pack(lines).ToArray();
     }
 
-    public static IEnumerable<RosterNoticeBatch> NoticeBatches(IEnumerable<RosterNotice> notices)
+    public static IEnumerable<RosterNoticeBatch> NoticeBatches(IEnumerable<RosterNotice> notices, Random? random = null)
     {
+        random ??= Random.Shared;
         var items = notices.ToArray();
         foreach (
             var observation in items
@@ -75,15 +120,16 @@ public static partial class RosterText
         foreach (
             var batch in PackNotices(
                 observation.OrderBy(notice => notice.CharacterName, StringComparer.Ordinal).ThenBy(notice => notice.TrackKey, StringComparer.Ordinal),
+                random,
                 celebration: true
             )
         )
             yield return batch;
-        foreach (var batch in PackNotices(items.Where(notice => notice.Celebration == RosterCelebrationKind.None), celebration: false))
+        foreach (var batch in PackNotices(items.Where(notice => notice.Celebration == RosterCelebrationKind.None), random, celebration: false))
             yield return batch;
     }
 
-    private static IEnumerable<RosterNoticeBatch> PackNotices(IEnumerable<RosterNotice> notices, bool celebration)
+    private static IEnumerable<RosterNoticeBatch> PackNotices(IEnumerable<RosterNotice> notices, Random random, bool celebration)
     {
         var batch = new List<RosterNotice>();
         var lines = new List<string>();
@@ -100,7 +146,7 @@ public static partial class RosterText
                 throw new InvalidDataException("Roster notice exceeds Discord's message limit.");
             if (length + line.Length + 1 > limit && batch.Count > 0)
             {
-                yield return NoticeBatch(lines, batch, celebration);
+                yield return NoticeBatch(lines, batch, random, celebration);
                 batch.Clear();
                 lines.Clear();
                 length = 0;
@@ -110,7 +156,7 @@ public static partial class RosterText
             length += line.Length + 1;
         }
         if (batch.Count > 0)
-            yield return NoticeBatch(lines, batch, celebration);
+            yield return NoticeBatch(lines, batch, random, celebration);
     }
 
     private static string CelebrationLine(RosterNotice notice)
@@ -124,7 +170,7 @@ public static partial class RosterText
             + (notice.Honours.Length > 0 ? "\n" + string.Join('\n', honours) : "");
     }
 
-    private static RosterNoticeBatch NoticeBatch(List<string> lines, List<RosterNotice> notices, bool celebration)
+    private static RosterNoticeBatch NoticeBatch(List<string> lines, List<RosterNotice> notices, Random random, bool celebration)
     {
         var text = string.Join('\n', lines);
         if (!celebration)
@@ -139,12 +185,14 @@ public static partial class RosterText
             : levels.Length > 0 && professions ? "Strength and mastery earned"
             : levels.Length > 0 ? $"Level {levels[0].Threshold} — strength earned"
             : "Skill 300 — mastery earned";
-        var commendation =
-            guild ? "Strong hands. Strong guild. Stand together."
-            : professions && levels.Length == 0 ? "Skill earned through work. Put it to use."
-            : "Strength earned. Stand proud.";
+        var taglines =
+            guild ? GuildTaglines
+            : levels.Length == 0 ? ProfessionTaglines
+            : professions ? MixedTaglines
+            : LevelTaglines;
+        var tagline = taglines[random.Next(taglines.Length)];
         return new(
-            text + $"\n\n*“{commendation}” — Grub*",
+            text + $"\n\n*“{tagline}” — Grub*",
             notices.ToArray(),
             (notices[0].IsMock ? "[Mock] " : "") + title,
             first ? 0xF1C40Fu

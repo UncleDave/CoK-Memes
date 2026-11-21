@@ -22,13 +22,13 @@ public class RosterCelebrationTests
         var notice = Assert.Single(fixture.Notices.Items.Values);
         Assert.Equal(RosterCelebrationKind.First, notice.Celebration);
         Assert.Equal(["First recorded level 60 in the guild", "First recorded Warrior at level 60"], notice.Honours);
-        var batch = Assert.Single(RosterText.NoticeBatches([notice]));
+        var batch = Assert.Single(RosterText.NoticeBatches([notice], new SequenceRandom(0)));
         Assert.Equal("[Mock] Guild firsts — Grub's honours ledger", batch.Title);
         Assert.Equal(0xF1C40Fu, batch.Colour);
         Assert.Equal(
             "**Borin Ironhide** — **level 60** · Warrior\n"
                 + "🏆 **First recorded level 60 in the guild**\n🏆 **First recorded Warrior at level 60**\n\n"
-                + "*“Strength earned. Stand proud.” — Grub*",
+                + "*“Good. Now you can die in more expensive gear.” — Grub*",
             batch.Text
         );
         var embed = DiscordRosterNotificationSender.CreateEmbed(batch)!;
@@ -70,6 +70,42 @@ public class RosterCelebrationTests
         var batch = Assert.Single(RosterText.NoticeBatches(special));
         Assert.Equal("[Mock] Strength and mastery earned", batch.Title);
         Assert.Equal(0x2ECC71u, batch.Colour);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void SeparatePersonalCapEmbedsDrawTheirOwnGrubTaglines(bool profession)
+    {
+        var first = new RosterNotice
+        {
+            Id = "1",
+            ScopeId = "scope",
+            CharacterKey = "id:1",
+            CharacterName = "Borin Ironhide",
+            TrackKey = profession ? "profession:3:185:" : "level",
+            ClassName = "Warrior",
+            ProfessionName = profession ? "Cooking" : null,
+            Threshold = profession ? 300 : 60,
+            Celebration = RosterCelebrationKind.Personal,
+            CreatedAtUtc = DateTime.UnixEpoch,
+        };
+        var second = first with { Id = "2", CharacterKey = "id:2", CharacterName = "Zara Ironhide", CreatedAtUtc = first.CreatedAtUtc.AddMinutes(1) };
+        var batches = RosterText.NoticeBatches([first, second], new SequenceRandom(0, 1)).ToArray();
+
+        Assert.Equal(2, batches.Length);
+        Assert.All(batches, batch =>
+        {
+            var lines = batch.Text.Split('\n');
+            Assert.Equal(3, lines.Length);
+            var achievement = profession ? "**300 Cooking**" : "**level 60** · Warrior";
+            Assert.Equal($"**{Assert.Single(batch.Notices).CharacterName}** — {achievement}", lines[0]);
+            Assert.Empty(lines[1]);
+            Assert.Matches(@"^\*“[^”]+” — Grub\*$", lines[2]);
+            Assert.Equal(profession ? "Skill 300 — mastery earned" : "Level 60 — strength earned", batch.Title);
+            Assert.Equal(0x2ECC71u, batch.Colour);
+        });
+        Assert.NotEqual(batches[0].Text.Split('\n')[^1], batches[1].Text.Split('\n')[^1]);
     }
 
     [Fact]
@@ -413,8 +449,12 @@ public class RosterCelebrationTests
         Assert.Equal(300, notice.Threshold);
         Assert.Equal(RosterCelebrationKind.First, notice.Celebration);
         Assert.Equal("Fishing", notice.ProfessionName);
-        var batch = Assert.Single(RosterText.NoticeBatches([notice]));
-        Assert.Contains("Skill earned through work. Put it to use.", batch.Text);
+        var batch = Assert.Single(RosterText.NoticeBatches([notice], new SequenceRandom(0)));
+        Assert.Equal(
+            "**Borin Ironhide** — **300 Fishing**\n🏆 **First recorded 300 Fishing**\n\n"
+                + "*“Three hundred. You may now call your mistakes technique.” — Grub*",
+            batch.Text
+        );
     }
 
     [Fact]
@@ -490,6 +530,13 @@ public class RosterCelebrationTests
     }
 
     private static string Field<T>(string property) => BsonClassMap.LookupClassMap(typeof(T)).GetMemberMap(property).ElementName;
+
+    private sealed class SequenceRandom(params int[] choices) : Random
+    {
+        private readonly Queue<int> _choices = new(choices);
+
+        public override int Next(int maxValue) => _choices.Dequeue();
+    }
 
     private sealed class Sender : IRosterNotificationSender
     {

@@ -268,12 +268,12 @@ persistence, rollout baselines, and delivery.
   `1567646266689851402` in Production), with no automatic
   member/role mentions. Use full character names; do not infer Discord ownership.
   The normal roster/Grub read tools do not grant posting authority.
-- Use short deterministic copy, for example `Borin Ironhide reached level 20!` or
+- Use short deterministic copy for ordinary notices, for example `Borin Ironhide reached level 20!` or
   `Élodie Firebrand reached 150 Alchemy!`. Combine observations for readability,
   splitting at Discord's message limits without silently truncating notices.
   No LLM call is needed to detect milestones or write each announcement.
 - Level 60 and 300 in a profession receive a distinctive celebration embed and
-  short Grub commendation, rather than the ordinary one-line notice.
+  one short, randomly chosen Grub joke, rather than the ordinary one-line notice.
 - Give extra recognition to the first recorded 60 in the guild, first recorded
   60 of each class, and first recorded 300 in each profession/skill track. Multiple
   arrivals in one observation get joint recognition, not a fabricated ordering.

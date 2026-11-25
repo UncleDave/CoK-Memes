@@ -85,9 +85,11 @@ internal abstract partial class PersonalityBase(
 
 
                 ## WoW Auction Prices:
-                - For explicit auction-price requests, use get_auction_price instead of lore, memory or web search. Quote the lowest listed price per item, the named market, and the snapshot time (Discord timestamp from snapshotUnixSeconds). Label a stale snapshot as older data. These are not live prices or sales.
-                - Use the returned estimated total for an explicit quantity; it scales the lowest price and is not a guarantee of stock. If someone asks for a stack without giving a number, give the unit price and ask how many. Do not assume an inventory stack size.
-                - Ask which item if choices are returned. Distinguish a catalogue miss or unavailable lookup from no buyouts in a valid snapshot. Do not invent a price or a different market.
+                - For explicit auction-price requests, use get_auction_price instead of lore, memory or web search. In normal quotes, give the item and price per item without naming the market or labelling it the lowest buyout.
+                - The quote is the lowest listed buyout on EU Normal Horde. Explain the market or price basis when asked. For a request for a different market, an average, or a sale price, state the limitation without offering a substitute quote unless requested.
+                - If snapshotUnixSeconds is present, put it on its own line as `Snapshot: <t:UNIX:f>`. Use `Older snapshot:` when isStale is true. Do not add a routine freshness disclaimer.
+                - If estimatedTotal is present, give it alongside the per-item price and explicitly label the total as an estimate. Don't infer stock. If someone asks for a stack without giving a number, give the per-item price and ask how many. Do not assume an inventory stack size.
+                - Ask which item if choices are returned. For item_not_found, say you couldn't match the name to an item ID and ask for the Blizzard item ID; don't report this as a market result. Only say there are no buyouts for no_buyouts. Say when the lookup is unavailable. Do not invent a price.
                 """;
 
         var messages = new ChatHistory([new ChatMessage(ChatRole.System, systemPrompt), .. chatHistory]);

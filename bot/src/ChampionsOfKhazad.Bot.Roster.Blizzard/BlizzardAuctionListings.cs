@@ -9,7 +9,7 @@ internal static class BlizzardAuctionListings
     private const int MaximumListings = 600_000;
     private static readonly JsonSerializerOptions WireOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower, MaxDepth = 24 };
 
-    public static async Task<Dictionary<int, decimal>> ReadAsync(
+    public static async Task<Dictionary<int, decimal?>> ReadAsync(
         HttpContent content,
         int houseId,
         bool commodities,
@@ -22,7 +22,7 @@ internal static class BlizzardAuctionListings
         if (document?.Auctions is not { } listings || (!commodities && document.Id != houseId))
             throw new InvalidDataException("Expected a complete auction document for the configured market.");
 
-        var prices = new Dictionary<int, decimal>();
+        var prices = new Dictionary<int, decimal?>();
         foreach (var listing in listings)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -30,12 +30,15 @@ internal static class BlizzardAuctionListings
                 throw new InvalidDataException("Auction listing is missing an item or quantity.");
             var amount = commodities ? listing.UnitPrice : listing.Buyout;
             if (!commodities && amount is null or 0)
-                continue; // A bid is not a buyout.
+            {
+                prices.TryAdd(listing.Item.Id, null);
+                continue;
+            }
             if (amount is null or <= 0)
                 throw new InvalidDataException("Auction listing has an invalid price.");
 
             var unit = commodities ? amount.Value : (decimal)amount.Value / listing.Quantity;
-            if (!prices.TryGetValue(listing.Item.Id, out var best) || unit < best)
+            if (prices.GetValueOrDefault(listing.Item.Id) is not { } best || unit < best)
                 prices[listing.Item.Id] = unit;
         }
         return prices;

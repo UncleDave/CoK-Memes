@@ -17,11 +17,12 @@ public sealed class BlizzardAuctionPriceLookup(
     private const int HouseId = 114;
     private const string Market = "EU Normal Horde";
     private const string HousePath = "/data/wow/ruleset/2/auctions/114";
+    private const string RetailNamespace = "static-eu";
     private const int SearchPageSize = 50;
     private const int MaximumSearchesCached = 128;
     private static readonly TimeSpan FeedLifetime = TimeSpan.FromHours(1);
     private readonly SemaphoreSlim _gate = new(1, 1);
-    private readonly Dictionary<string, ItemResolution> _catalogue = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, CatalogueMatch> _catalogue = new(StringComparer.OrdinalIgnoreCase);
     private BlizzardAppToken? _appToken;
     private Feed? _listings;
     private Feed? _commodities;
@@ -57,20 +58,9 @@ public sealed class BlizzardAuctionPriceLookup(
         {
             if (clock.GetUtcNow() < _blockedUntil)
                 return Unavailable();
-            AuctionItem resolved;
-            if (itemId > 0)
-                resolved = new(itemId, FormattableString.Invariant($"Item #{itemId}"));
-            else
-            {
-                var match = await FindItemAsync(query, token);
-                if (match.Item is not { } found)
-                    return new(match.Choices.Length == 0 ? "item_not_found" : "ambiguous_item") { Market = Market, Choices = match.Choices };
-                resolved = found;
-            }
-
-            var listings = await GetFeedAsync(commodities: false, token);
-            var commodities = await GetFeedAsync(commodities: true, token);
-            return Price(resolved, quantity, listings, commodities, clock.GetUtcNow());
+            return itemId > 0
+                ? Price(new(itemId, FormattableString.Invariant($"Item #{itemId}")), quantity, await GetMarketAsync(token))
+                : await QuoteByNameAsync(query, quantity, token);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -88,12 +78,30 @@ public sealed class BlizzardAuctionPriceLookup(
         }
     }
 
-    private async Task<ItemResolution> FindItemAsync(string query, CancellationToken cancellationToken)
+    private async Task<AuctionPriceQuote> QuoteByNameAsync(string query, int? quantity, CancellationToken cancellationToken)
     {
-        if (_catalogue.TryGetValue(query, out var cached) && clock.GetUtcNow() < cached.Expires)
+        var forever = await FindItemsAsync(query, options.StaticNamespace, cancellationToken);
+        if (forever.Exact is [var match])
+            return Price(match, quantity, await GetMarketAsync(cancellationToken));
+        if (forever.Exact.Length > 1)
+            return Unresolved(forever.Exact);
+
+        var retail = await FindItemsAsync(query, RetailNamespace, cancellationToken);
+        if (retail.Exact.Length == 0)
+            return Unresolved(forever.Partial);
+
+        var market = await GetMarketAsync(cancellationToken);
+        var listed = retail.Exact.Where(item => market.ContainsItem(item.Id)).ToArray();
+        return listed is [var verified] ? Price(verified, quantity, market) : Unresolved(listed.Length > 0 ? listed : forever.Partial);
+    }
+
+    private async Task<CatalogueMatch> FindItemsAsync(string query, string itemNamespace, CancellationToken cancellationToken)
+    {
+        var cacheKey = $"{itemNamespace}:{query}";
+        if (_catalogue.TryGetValue(cacheKey, out var cached) && clock.GetUtcNow() < cached.Expires)
             return cached;
         using var response = await GetAsync(
-            $"/data/wow/search/item?namespace=static-forever-eu&locale=en_GB&name.en_US={Uri.EscapeDataString(query)}&_page=1&_pageSize={SearchPageSize}",
+            $"/data/wow/search/item?namespace={itemNamespace}&locale=en_GB&name.en_US={Uri.EscapeDataString(query)}&_page=1&_pageSize={SearchPageSize}",
             null,
             cancellationToken
         );
@@ -118,18 +126,28 @@ public sealed class BlizzardAuctionPriceLookup(
             throw new InvalidDataException("Item search did not return results or an empty page count.");
 
         var exact = matches.Values.Where(hit => hit.Name.Equals(query, StringComparison.OrdinalIgnoreCase)).ToArray();
-        var choices = exact.Length > 0 ? exact : matches.Values.Where(hit => hit.Name.Contains(query, StringComparison.OrdinalIgnoreCase));
         var now = clock.GetUtcNow();
-        var result = new ItemResolution(
-            exact.Length == 1 ? exact[0] : null,
-            exact.Length == 1 ? [] : choices.Take(6).ToArray(),
+        var result = new CatalogueMatch(
+            exact,
+            exact.Length == 0 ? matches.Values.Where(hit => hit.Name.Contains(query, StringComparison.OrdinalIgnoreCase)).Take(6).ToArray() : [],
             Expires(response, now)
         );
         if (_catalogue.Count >= MaximumSearchesCached)
             _catalogue.Clear();
         if (result.Expires > now)
-            _catalogue[query] = result;
+            _catalogue[cacheKey] = result;
         return result;
+    }
+
+    private async Task<MarketSnapshot> GetMarketAsync(CancellationToken cancellationToken)
+    {
+        var listings = await GetFeedAsync(commodities: false, cancellationToken);
+        var commodities = await GetFeedAsync(commodities: true, cancellationToken);
+        var now = clock.GetUtcNow();
+        var oldest = listings.SnapshotAt < commodities.SnapshotAt ? listings.SnapshotAt : commodities.SnapshotAt;
+        if (oldest < now.AddDays(-1) || (listings.SnapshotAt - commodities.SnapshotAt).Duration() > TimeSpan.FromHours(2))
+            throw new InvalidDataException("Auction feeds are too old or describe different market windows.");
+        return new(listings, commodities, oldest, oldest < now.AddHours(-2));
     }
 
     private async Task<Feed> GetFeedAsync(bool commodities, CancellationToken cancellationToken)
@@ -161,20 +179,17 @@ public sealed class BlizzardAuctionPriceLookup(
         return feed;
     }
 
-    private static AuctionPriceQuote Price(AuctionItem item, int? quantity, Feed listings, Feed commodities, DateTimeOffset now)
+    private static AuctionPriceQuote Price(AuctionItem item, int? quantity, MarketSnapshot market)
     {
-        var oldest = listings.SnapshotAt < commodities.SnapshotAt ? listings.SnapshotAt : commodities.SnapshotAt;
-        if (oldest < now.AddDays(-1) || (listings.SnapshotAt - commodities.SnapshotAt).Duration() > TimeSpan.FromHours(2))
-            throw new InvalidDataException("Auction feeds are too old or describe different market windows.");
-        var itemPrice = listings.Prices.GetValueOrDefault(item.Id);
-        var commodityPrice = commodities.Prices.GetValueOrDefault(item.Id);
+        var itemPrice = market.Listings.Prices.GetValueOrDefault(item.Id) ?? 0;
+        var commodityPrice = market.Commodities.Prices.GetValueOrDefault(item.Id) ?? 0;
         if (itemPrice == 0 && commodityPrice == 0)
             return new("no_buyouts")
             {
                 Market = Market,
                 Item = item,
-                SnapshotAtUtc = oldest,
-                IsStale = oldest < now.AddHours(-2),
+                SnapshotAtUtc = market.Oldest,
+                IsStale = market.IsStale,
             };
 
         var useCommodities = itemPrice == 0 || (commodityPrice > 0 && commodityPrice <= itemPrice);
@@ -189,8 +204,8 @@ public sealed class BlizzardAuctionPriceLookup(
             EstimatedTotal = quantity is > 1
                 ? FormatCopper(Math.Max(1, decimal.Round(lowest * quantity.Value, 0, MidpointRounding.AwayFromZero)))
                 : null,
-            SnapshotAtUtc = useCommodities ? commodities.SnapshotAt : listings.SnapshotAt,
-            IsStale = oldest < now.AddHours(-2),
+            SnapshotAtUtc = (useCommodities ? market.Commodities : market.Listings).SnapshotAt,
+            IsStale = market.IsStale,
         };
     }
 
@@ -275,13 +290,21 @@ public sealed class BlizzardAuctionPriceLookup(
 
     private static AuctionPriceQuote Unavailable() => new("unavailable") { Market = Market };
 
+    private static AuctionPriceQuote Unresolved(AuctionItem[] choices) =>
+        new(choices.Length == 0 ? "item_not_found" : "ambiguous_item") { Market = Market, Choices = choices.Take(6).ToArray() };
+
     public void Dispose()
     {
         http.Dispose();
         _gate.Dispose();
     }
 
-    private sealed record ItemResolution(AuctionItem? Item, AuctionItem[] Choices, DateTimeOffset Expires);
+    private sealed record CatalogueMatch(AuctionItem[] Exact, AuctionItem[] Partial, DateTimeOffset Expires);
 
-    private sealed record Feed(IReadOnlyDictionary<int, decimal> Prices, DateTimeOffset SnapshotAt, DateTimeOffset Expires);
+    private sealed record Feed(IReadOnlyDictionary<int, decimal?> Prices, DateTimeOffset SnapshotAt, DateTimeOffset Expires);
+
+    private sealed record MarketSnapshot(Feed Listings, Feed Commodities, DateTimeOffset Oldest, bool IsStale)
+    {
+        public bool ContainsItem(int id) => Listings.Prices.ContainsKey(id) || Commodities.Prices.ContainsKey(id);
+    }
 }

@@ -28,6 +28,12 @@ public class BlizzardAuctionPriceLookupTests
           {"data":{"id":248815,"name":{"en_US":"Heavy Thorium Ore"}}}
         ]}
         """;
+    private const string EmptySearch = """{"page":1,"pageCount":0}""";
+    private const string BlackskullSearch = """
+        {"page":1,"pageCount":1,"results":[
+          {"data":{"id":1169,"name":{"en_US":"Blackskull Shield"}}}
+        ]}
+        """;
 
     [Fact]
     public async Task ExactNameUsesCommodityUnitPriceAndReturnsAnEstimateAtTheOriginalSnapshotTime()
@@ -105,10 +111,80 @@ public class BlizzardAuctionPriceLookupTests
         var choices = await fixture.QuoteAsync("Thorium");
         Assert.Equal("ambiguous_item", choices.Status);
         Assert.Equal([10620, 248815], choices.Choices!.Select(item => item.Id).ToArray());
-        fixture.SearchJson = """{"page":1,"pageCount":0}""";
+        fixture.SearchJson = EmptySearch;
         Assert.Equal("item_not_found", (await fixture.QuoteAsync("Not an item")).Status);
-        Assert.Equal(3, fixture.Requests.Count);
         Assert.DoesNotContain(fixture.Requests, request => request.Uri.AbsolutePath.Contains("/auctions/", StringComparison.Ordinal));
+    }
+
+    [Theory]
+    [InlineData("buyout", "ok", "29g 90s")]
+    [InlineData("bid", "no_buyouts", null)]
+    public async Task BlackskullShieldCanBeQuotedWhenOnlyRetailReturnsTheName(string priceField, string status, string? price)
+    {
+        using var fixture = new Fixture
+        {
+            SearchJson = EmptySearch,
+            RetailSearchJson = BlackskullSearch,
+            ListingsJson = $$"""{"id":114,"auctions":[{"item":{"id":1169},"quantity":1,"{{priceField}}":299000}]}""",
+        };
+
+        var quote = await fixture.QuoteAsync("Blackskull shield");
+
+        Assert.Equal(status, quote.Status);
+        Assert.Equal(new AuctionItem(1169, "Blackskull Shield"), quote.Item);
+        Assert.Equal(price, quote.LowestUnitPrice);
+        Assert.Equal(price is not null ? fixture.ListingsAt : fixture.CommoditiesAt, quote.SnapshotAtUtc);
+        Assert.Collection(
+            fixture.Requests.Where(request => request.Uri.AbsolutePath == "/data/wow/search/item"),
+            request => Assert.Contains("namespace=static-forever-eu&", request.Uri.Query),
+            request => Assert.Contains("namespace=static-eu&", request.Uri.Query)
+        );
+    }
+
+    [Fact]
+    public async Task ANameFoundOnlyInRetailDoesNotProduceAQuoteWithoutAMatchingForeverListing()
+    {
+        using var fixture = new Fixture { SearchJson = EmptySearch, RetailSearchJson = BlackskullSearch };
+
+        var quote = await fixture.QuoteAsync("Blackskull Shield");
+
+        Assert.Equal("item_not_found", quote.Status);
+        Assert.Null(quote.Item);
+        Assert.Null(quote.SnapshotAtUtc);
+        Assert.Contains(fixture.Requests, request => request.Uri.AbsolutePath == "/data/wow/ruleset/2/auctions/114/commodities");
+    }
+
+    [Theory]
+    [InlineData(false, "ok")]
+    [InlineData(true, "ambiguous_item")]
+    public async Task OnlyExactRetailMatchesListedInTheForeverMarketAreEligible(bool bothListed, string status)
+    {
+        using var fixture = new Fixture
+        {
+            SearchJson = EmptySearch,
+            RetailSearchJson = """
+                {"page":1,"pageCount":1,"results":[
+                  {"data":{"id":10620,"name":{"en_US":"Thorium Ore"}}},
+                  {"data":{"id":77,"name":{"en_US":"Thorium Ore"}}},
+                  {"data":{"id":2589,"name":{"en_US":"Heavy Thorium Ore"}}}
+                ]}
+                """,
+            ListingsJson = bothListed ? Listings : Listings.Replace("\"id\":77", "\"id\":78", StringComparison.Ordinal),
+        };
+
+        var quote = await fixture.QuoteAsync("Thorium Ore");
+
+        Assert.Equal(status, quote.Status);
+        if (bothListed)
+        {
+            Assert.Equal([10620, 77], quote.Choices!.Select(choice => choice.Id));
+            Assert.Null(quote.LowestUnitPrice);
+        }
+        else
+        {
+            Assert.Equal(10620, quote.Item?.Id);
+            Assert.Equal("20s 42c", quote.LowestUnitPrice);
+        }
     }
 
     [Theory]
@@ -203,6 +279,7 @@ public class BlizzardAuctionPriceLookupTests
         public string ListingsJson { get; set; } = Listings;
         public string CommoditiesJson { get; set; } = Commodities;
         public string SearchJson { get; set; } = Search;
+        public string RetailSearchJson { get; set; } = EmptySearch;
         public DateTimeOffset? ListingsAt { get; set; } = new DateTimeOffset(2026, 11, 25, 1, 23, 1, TimeSpan.Zero);
         public DateTimeOffset? CommoditiesAt { get; set; } = new DateTimeOffset(2026, 11, 25, 1, 23, 0, TimeSpan.Zero);
         public HttpStatusCode CommodityStatus { get; set; } = HttpStatusCode.OK;
@@ -240,7 +317,11 @@ public class BlizzardAuctionPriceLookupTests
             if (Revalidate && request.Headers.IfModifiedSince.HasValue)
                 return new(HttpStatusCode.NotModified);
             if (uri.AbsolutePath == "/data/wow/search/item")
-                return Response(HttpStatusCode.OK, SearchJson, null);
+                return Response(
+                    HttpStatusCode.OK,
+                    uri.Query.Contains("namespace=static-eu&", StringComparison.Ordinal) ? RetailSearchJson : SearchJson,
+                    null
+                );
             return uri.AbsolutePath.EndsWith("/commodities", StringComparison.Ordinal)
                 ? Response(CommodityStatus, CommoditiesJson, CommoditiesAt)
                 : Response(HttpStatusCode.OK, ListingsJson, ListingsAt);

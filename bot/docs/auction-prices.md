@@ -1,14 +1,20 @@
 # Forever auction prices
 
 Ask Grub in guild chat, for example, “What will 20 Thorium Ore cost?” The lookup
-covers **EU Normal Horde**. It quotes the lowest listed buyout per item, the
-Blizzard snapshot time, and, if a quantity was supplied, an estimate for that
-amount at the same unit price. The estimate isn't a guarantee that enough is
-listed at that price or that a seller will split a lot.
+covers **EU Normal Horde**. It quotes the lowest listed buyout per item and, if a
+quantity was supplied, an estimate at that same unit price. The estimate isn't a
+guarantee that enough is listed at that price or that a seller will split a lot.
+Routine quotes don't repeat the market or price basis. Grub explains them if
+asked or if the request is for a different market or price basis. The timestamp
+goes on a separate `Snapshot:` line (`Older snapshot:` when stale), without
+another freshness disclaimer.
 
-Search matches an exact English item name on the first bounded catalogue page.
-If the name is ambiguous or only partial, Grub asks which item from up to six
-choices. A Blizzard item ID bypasses the catalogue. A request for “a stack”
+Search checks the first bounded page of Blizzard's Forever item catalogue for an
+exact English name. The catalogue [omits some listed items](https://blizzard.pinta.land/forever/auctions/#missing-item-data),
+so if there's no exact match, Grub checks one Retail catalogue page for an exact
+name and verifies the ID against the Forever market snapshots. Retail never
+supplies prices. Grub offers up to six choices for ambiguous names or partial
+Forever matches. A Blizzard item ID bypasses both catalogues. A request for “a stack”
 without a quantity gets a unit price and a question about how many; Blizzard's
 item detail does not expose a usable inventory stack size. For example, both
 Thorium Ore and Linen Cloth returned `is_stackable: true` and `max_count: 0`
@@ -16,8 +22,8 @@ in an authenticated EU check on 25 November 2026. Do not substitute item IDs
 for recipe IDs in the separate guild crafter lookup.
 
 “No buyouts” is a result from valid snapshots. A catalogue miss, failed lookup,
-or unavailable market is not evidence of an empty auction house. Label older
-snapshots without repeating standing implementation details in every reply.
+or unavailable market is not evidence of an empty auction house. If Grub can't
+match a name, retry with the item ID, e.g. `check price for item ID 1169`.
 There are no bids, purchases, sales history, alerts, public slash commands, or
 background polling. The read-only tool is restricted to normal Grub service in
 the configured Discord guild; it isn't offered in DMs, to followers, or to
@@ -47,7 +53,8 @@ factions/rulesets. Recheck the mapping if Blizzard changes the index.
 - The feeds were about 19.8 and 12.8 MB uncompressed at the EU checkpoint. The
   auction client reads them one at a time, bounded to 64 MiB of decompressed
   JSON and 600,000 rows per feed. It caches only each item's lowest unit price
-  and snapshot metadata in memory, not raw listings, seller data, or history.
+  (or the presence of a bid-only item) and snapshot metadata in memory, not raw
+  listings, seller data, or history.
   A cold lookup has a 20-second budget. The auction client has its own cache,
   HTTP gate, token and backoff; its larger reads don't use the roster client's
   2 MiB path or its gate. Both use the existing Blizzard app credentials.

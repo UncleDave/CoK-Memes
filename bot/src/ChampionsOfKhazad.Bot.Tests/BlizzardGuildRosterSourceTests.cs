@@ -20,6 +20,7 @@ public class BlizzardGuildRosterSourceTests
           "tiers":[{"tier":{"id":1},"skill_points":74,"max_skill_points":150}]}],
           "secondaries":[{"profession":{"id":185,"name":"Cooking"},"skill_points":0,"max_skill_points":75}]}
         """;
+    private const string AvatarUrl = "https://render.worldofwarcraft.com/forever-eu/character/7/1001-avatar.jpg";
 
     [Fact]
     public async Task CollectsKnownRecipesFromTieredAndUntieredProfessionsWithoutFollowingRecipeLinks()
@@ -275,6 +276,7 @@ public class BlizzardGuildRosterSourceTests
         );
         await service.RefreshAsync(fixture.Token, force: true);
         await service.DeliverAsync(sender, fixture.Token);
+        Assert.Empty(fixture.MediaRequests);
         var profession = Assert.Single(memory.Notices.Items.Values);
         Assert.Equal(currentRank, profession.Threshold);
         Assert.Equal("Blacksmithing", profession.ProfessionName);
@@ -291,6 +293,7 @@ public class BlizzardGuildRosterSourceTests
 
         fixture.Clock.Now = initial.AddSeconds(10801);
         await service.RefreshAsync(fixture.Token, force: true);
+        Assert.Empty(fixture.MediaRequests);
         await service.DeliverAsync(sender, fixture.Token);
         var level = Assert.Single(memory.Notices.Items.Values, notice => notice.TrackKey == "level");
         Assert.Equal(60, level.Threshold);
@@ -301,12 +304,121 @@ public class BlizzardGuildRosterSourceTests
         Assert.Equal(2, sender.Batches.Count);
         Assert.Equal("Guild firsts — Grub's honours ledger", sender.Batches[1].Title);
         Assert.Equal(level.Id, Assert.Single(sender.Batches[1].Notices).Id);
+        Assert.Equal(AvatarUrl, DiscordRosterNotificationSender.CreateEmbed(sender.Batches[1])!.Thumbnail?.Url);
+        var media = Assert.Single(fixture.MediaRequests);
+        Assert.Equal("eu.api.blizzard.com", media.Host);
+        Assert.Equal("/profile/wow/character/borin-ironhide/character-media", media.Path);
+        Assert.Equal("?namespace=profile-forever-eu&locale=en_GB", media.Query);
+        Assert.Equal("Bearer", media.Scheme);
 
         fixture.Clock.Now = fixture.Clock.Now.AddSeconds(61);
         await service.RefreshAsync(fixture.Token, force: true);
         await service.DeliverAsync(sender, fixture.Token);
         Assert.Equal(2, memory.Notices.Items.Count);
         Assert.Equal(2, sender.Batches.Count);
+        Assert.Single(fixture.MediaRequests);
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.NotFound, 1001, "avatar", AvatarUrl)]
+    [InlineData(HttpStatusCode.ServiceUnavailable, 1001, "avatar", AvatarUrl)]
+    [InlineData(HttpStatusCode.OK, 1002, "avatar", AvatarUrl)]
+    [InlineData(HttpStatusCode.OK, 1001, "main-raw", AvatarUrl)]
+    [InlineData(HttpStatusCode.OK, 1001, "avatar", "https://example.test/forever-eu/character/7/1001-avatar.jpg")]
+    [InlineData(HttpStatusCode.OK, 1001, "avatar", "http://render.worldofwarcraft.com/forever-eu/character/7/1001-avatar.jpg")]
+    [InlineData(HttpStatusCode.OK, 1001, "avatar", "https://render.worldofwarcraft.com/forever-us/character/7/1001-avatar.jpg")]
+    public async Task MissingOrUntrustedPortraitStillSendsTheCelebration(HttpStatusCode status, int owner, string key, string value)
+    {
+        using var fixture = new Fixture { MediaStatus = status, MediaJson = CharacterMedia(owner, key, value) };
+        using var memory = new RosterFixture();
+        using var service = new GuildRosterService(memory.Options, fixture.Source, memory.Store, memory.Notices, fixture.Clock);
+        await QueueSoloLevelSixtyAsync(fixture, service);
+        var sender = new RecordingSender();
+
+        await service.DeliverAsync(sender, fixture.Token);
+
+        var embed = DiscordRosterNotificationSender.CreateEmbed(Assert.Single(sender.Batches))!;
+        Assert.Contains("**Borin Ironhide** — **level 60**", embed.Description);
+        Assert.Null(embed.Thumbnail);
+        Assert.NotNull(Assert.Single(memory.Notices.Items.Values).SentAtUtc);
+        Assert.Single(fixture.MediaRequests);
+        Assert.All(fixture.Requests, request => Assert.Contains(request.Host, new[] { "oauth.battle.net", "eu.api.blizzard.com" }));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task PortraitTimeoutFallsBackButWorkerCancellationKeepsTheNoticePending(bool cancelWorker)
+    {
+        using var fixture = new Fixture();
+        using var memory = new RosterFixture();
+        using var service = new GuildRosterService(memory.Options, fixture.Source, memory.Store, memory.Notices, fixture.Clock);
+        await QueueSoloLevelSixtyAsync(fixture, service);
+        using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(fixture.Token);
+        lifetime.CancelAfter(TimeSpan.FromSeconds(10));
+        fixture.BeforeMediaResponse = token =>
+        {
+            if (cancelWorker)
+                lifetime.Cancel();
+            return Task.Delay(Timeout.InfiniteTimeSpan, token);
+        };
+        var sender = new RecordingSender();
+
+        var delivery = service.DeliverAsync(sender, lifetime.Token);
+        var noticeId = Assert.Single(memory.Notices.Items.Keys);
+        if (cancelWorker)
+        {
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => delivery);
+            Assert.Empty(sender.Batches);
+            Assert.Null(memory.Notices.Items[noticeId].SentAtUtc);
+        }
+        else
+        {
+            await delivery;
+            Assert.Null(Assert.Single(sender.Batches).PortraitUrl);
+            Assert.NotNull(memory.Notices.Items[noticeId].SentAtUtc);
+        }
+        Assert.Single(fixture.MediaRequests);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task JointLevelSixtiesNeverLookUpAPortraitEvenIfOneMemberDepartsBeforeDelivery(bool oneDeparts)
+    {
+        using var fixture = new Fixture { ProfessionJson = """{"primaries":[],"secondaries":[]}""" };
+        using var memory = new RosterFixture();
+        using var service = new GuildRosterService(memory.Options, fixture.Source, memory.Store, memory.Notices, fixture.Clock);
+        var roster = JsonNode.Parse(Roster.Replace("\"level\":19", "\"level\":59", StringComparison.Ordinal))!;
+        var members = roster["members"]!.AsArray();
+        var second = members[0]!.DeepClone();
+        second["character"]!["id"] = 1002;
+        second["character"]!["name"] = "Karg";
+        second["character"]!.AsObject().Remove("key");
+        members.Add(second);
+        fixture.RosterJson = roster.ToJsonString();
+        await service.RefreshAsync(fixture.Token, force: true);
+        fixture.Clock.Now = fixture.Clock.Now.AddSeconds(61);
+        foreach (var member in members)
+            member!["character"]!["level"] = 60;
+        fixture.RosterJson = roster.ToJsonString();
+        await service.RefreshAsync(fixture.Token, force: true);
+        Assert.Equal(2, memory.Notices.Items.Count);
+
+        if (oneDeparts)
+        {
+            members.RemoveAt(1);
+            fixture.Clock.Now = fixture.Clock.Now.AddSeconds(61);
+            fixture.RosterJson = roster.ToJsonString();
+            await service.RefreshAsync(fixture.Token, force: true);
+        }
+        var sender = new RecordingSender();
+        await service.DeliverAsync(sender, fixture.Token);
+
+        var batch = Assert.Single(sender.Batches);
+        Assert.Equal(oneDeparts ? 1 : 2, batch.Notices.Length);
+        Assert.Null(batch.PortraitUrl);
+        Assert.Empty(fixture.MediaRequests);
     }
 
     [Fact]
@@ -460,13 +572,28 @@ public class BlizzardGuildRosterSourceTests
         Assert.DoesNotContain("private-secret", error.ToString());
     }
 
+    private static string CharacterMedia(int owner = 1001, string key = "avatar", string value = AvatarUrl) =>
+        $$"""{"character":{"id":{{owner}}},"assets":[{"key":"{{key}}","value":"{{value}}"}]}""";
+
+    private static async Task QueueSoloLevelSixtyAsync(Fixture fixture, GuildRosterService service)
+    {
+        fixture.RosterJson = Roster.Replace("\"level\":19", "\"level\":59", StringComparison.Ordinal);
+        await service.RefreshAsync(fixture.Token, force: true);
+        fixture.Clock.Now = fixture.Clock.Now.AddSeconds(61);
+        fixture.RosterJson = fixture.RosterJson.Replace("\"level\":59", "\"level\":60", StringComparison.Ordinal);
+        await service.RefreshAsync(fixture.Token, force: true);
+    }
+
     private sealed class Fixture : IDisposable
     {
         public TestClock Clock { get; } = new();
         public string RosterJson { get; set; } = Roster;
         public string ProfessionJson { get; set; } = Professions;
+        public string MediaJson { get; set; } = CharacterMedia();
+        public Func<CancellationToken, Task>? BeforeMediaResponse { get; set; }
         public HttpStatusCode ResourceStatus { get; set; } = HttpStatusCode.OK;
         public HttpStatusCode ProfessionStatus { get; set; } = HttpStatusCode.OK;
+        public HttpStatusCode MediaStatus { get; set; } = HttpStatusCode.OK;
         public HttpStatusCode OAuthStatus { get; set; } = HttpStatusCode.OK;
         public HttpStatusCode ClassStatus { get; set; } = HttpStatusCode.OK;
         public int CacheSeconds { get; set; }
@@ -478,6 +605,7 @@ public class BlizzardGuildRosterSourceTests
         public bool UnauthorizedOnce { get; set; }
         public int OAuthCalls { get; private set; }
         public List<Request> Requests { get; } = [];
+        public IEnumerable<Request> MediaRequests => Requests.Where(request => request.Path.EndsWith("/character-media", StringComparison.Ordinal));
         public BlizzardGuildRosterSource Source { get; }
         public RosterDiagnosticLogger<BlizzardApiClient> Logger { get; } = new();
         private readonly BlizzardApiClient _api;
@@ -491,7 +619,7 @@ public class BlizzardGuildRosterSourceTests
             Source = new BlizzardGuildRosterSource(_api, options, Clock);
         }
 
-        private HttpResponseMessage Send(HttpRequestMessage request)
+        private async Task<HttpResponseMessage> Send(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             Requests.Add(
                 new(
@@ -522,6 +650,12 @@ public class BlizzardGuildRosterSourceTests
                 return Response(HttpStatusCode.NotModified, "");
             if (request.RequestUri.AbsolutePath.EndsWith("/professions", StringComparison.Ordinal))
                 return Response(ProfessionStatus, ProfessionJson);
+            if (request.RequestUri.AbsolutePath.EndsWith("/character-media", StringComparison.Ordinal))
+            {
+                if (BeforeMediaResponse is not null)
+                    await BeforeMediaResponse(cancellationToken);
+                return Response(MediaStatus, MediaJson);
+            }
             return request.RequestUri.AbsolutePath.EndsWith("/roster", StringComparison.Ordinal)
                 ? Response(HttpStatusCode.OK, RosterJson, RosterCacheSeconds)
                 : Response(ClassStatus, """{"classes":[{"id":1,"name":"Warrior"}]}""");
@@ -565,9 +699,9 @@ public class BlizzardGuildRosterSourceTests
         public override DateTimeOffset GetUtcNow() => Now;
     }
 
-    private sealed class Handler(Func<HttpRequestMessage, HttpResponseMessage> send) : HttpMessageHandler
+    private sealed class Handler(Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> send) : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
-            Task.FromResult(send(request));
+            send(request, cancellationToken);
     }
 }

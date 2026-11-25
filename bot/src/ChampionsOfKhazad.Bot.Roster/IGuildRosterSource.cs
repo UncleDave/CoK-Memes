@@ -8,4 +8,5 @@ public interface IGuildRosterSource
     bool HasSeparateProfessionRequests { get; }
     Task<RosterObservation> GetRosterAsync(CancellationToken cancellationToken);
     Task<ProfessionObservation?> GetProfessionsAsync(RosterCharacter character, CancellationToken cancellationToken);
+    Task<Uri?> GetCharacterPortraitAsync(RosterCharacter character, CancellationToken cancellationToken) => Task.FromResult<Uri?>(null);
 }

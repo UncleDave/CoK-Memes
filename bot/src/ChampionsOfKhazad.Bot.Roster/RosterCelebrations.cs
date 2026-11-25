@@ -31,7 +31,12 @@ internal static class RosterCelebrations
             foreach (var group in capped.GroupBy(member => member.ClassName, StringComparer.OrdinalIgnoreCase))
                 First(ClassKey(group.Key, cap), $"{group.Key} at level {cap}", group.ToArray(), "level", cap);
 
-            var levelCrossed = notices.Any(notice => notice.TrackKey == "level" && notice.Threshold == cap);
+            var levelNotices = notices.Where(notice => notice.TrackKey == "level" && notice.Threshold == cap).Take(2).ToArray();
+            // Decide before delivery can split the observation or remove a departed member's notice.
+            if (cap == 60 && !current.IsMock && levelNotices is [var solo])
+                result[solo.Id] = result[solo.Id] with { IncludePortrait = true };
+
+            var levelCrossed = levelNotices.Length > 0;
             var crossedCounts = LevelCounts.Where(count => capped.Length >= count && claimed.Add(CountKey(count, cap))).ToArray();
             if (crossedCounts.Length > 0 && levelCrossed)
                 Guild(CountKey(crossedCounts[^1], cap), $"{crossedCounts[^1]} guild characters at level {cap}");

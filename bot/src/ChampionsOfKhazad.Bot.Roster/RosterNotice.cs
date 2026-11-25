@@ -12,6 +12,7 @@ public record RosterNotice
     public int Threshold { get; init; }
     public RosterCelebrationKind Celebration { get; init; }
     public string[] Honours { get; init; } = [];
+    public bool IncludePortrait { get; init; }
     public bool IsMock { get; init; }
     public DateTime CreatedAtUtc { get; init; }
     public DateTime? SentAtUtc { get; init; }

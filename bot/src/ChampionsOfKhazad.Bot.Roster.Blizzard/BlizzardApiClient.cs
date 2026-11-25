@@ -35,6 +35,7 @@ public sealed class BlizzardApiClient(HttpClient http, BlizzardRosterOptions opt
         var resourceKind =
             path.EndsWith("/professions", StringComparison.Ordinal) ? "professions"
             : path.EndsWith("/roster", StringComparison.Ordinal) ? "roster"
+            : path.EndsWith("/character-media", StringComparison.Ordinal) ? "character_media"
             : "static_data";
         await _gate.WaitAsync(cancellationToken);
         try

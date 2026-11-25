@@ -20,8 +20,13 @@ public class DiscordRosterNotificationSender(SharedDiscordRestClient rest) : IRo
         ).Id;
     }
 
-    internal static Embed? CreateEmbed(RosterNoticeBatch batch) =>
-        batch.Title is null
-            ? null
-            : new EmbedBuilder().WithTitle(batch.Title).WithDescription(batch.Text).WithColor(new Color(batch.Colour ?? 0x2ECC71)).Build();
+    internal static Embed? CreateEmbed(RosterNoticeBatch batch)
+    {
+        if (batch.Title is null)
+            return null;
+        var embed = new EmbedBuilder().WithTitle(batch.Title).WithDescription(batch.Text).WithColor(new Color(batch.Colour ?? 0x2ECC71));
+        if (batch.PortraitUrl is { } portrait)
+            embed.WithThumbnailUrl(portrait.AbsoluteUri);
+        return embed.Build();
+    }
 }

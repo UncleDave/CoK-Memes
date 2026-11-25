@@ -481,12 +481,16 @@ public class RosterCelebrationTests
             Threshold = 60,
             Celebration = RosterCelebrationKind.First,
             Honours = ["First recorded level 60 in the guild"],
+            IncludePortrait = true,
         };
         var roundtrip = BsonSerializer.Deserialize<RosterNotice>(notice.ToBson());
         Assert.Equal(notice.Celebration, roundtrip.Celebration);
         Assert.Equal(notice.Honours, roundtrip.Honours);
+        Assert.True(roundtrip.IncludePortrait);
         Assert.Null(roundtrip.SentAtUtc);
         var oldNotice = notice.ToBsonDocument();
+        oldNotice.Remove(Field<RosterNotice>(nameof(RosterNotice.IncludePortrait)));
+        Assert.False(BsonSerializer.Deserialize<RosterNotice>(oldNotice).IncludePortrait);
         oldNotice.Remove(Field<RosterNotice>(nameof(RosterNotice.Celebration)));
         oldNotice.Remove(Field<RosterNotice>(nameof(RosterNotice.Honours)));
         var restoredOld = BsonSerializer.Deserialize<RosterNotice>(oldNotice);

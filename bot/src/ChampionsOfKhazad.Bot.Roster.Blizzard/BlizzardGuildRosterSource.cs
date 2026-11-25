@@ -6,6 +6,8 @@ namespace ChampionsOfKhazad.Bot.Roster.Blizzard;
 
 public sealed class BlizzardGuildRosterSource(BlizzardApiClient api, BlizzardRosterOptions options, TimeProvider clock) : IGuildRosterSource
 {
+    private const string ProfessionSuffix = "/professions";
+
     // Route changes are explicit source changes; do not carry mock/other-guild progress into live data.
     public string Id { get; } =
         $"blizzard-forever-v1:{options.Region}:{options.GuildSlug}:{options.RosterPathTemplate}:{options.ProfessionPathTemplate}";
@@ -105,12 +107,7 @@ public sealed class BlizzardGuildRosterSource(BlizzardApiClient api, BlizzardRos
 
     public async Task<ProfessionObservation?> GetProfessionsAsync(RosterCharacter character, CancellationToken cancellationToken)
     {
-        var path =
-            character.Id is not null && _profilePaths.TryGetValue(character.Id, out var profile)
-                ? profile + "/professions"
-                : options
-                    .ProfessionPathTemplate.Replace("{first}", Uri.EscapeDataString(character.FirstName.ToLowerInvariant()), StringComparison.Ordinal)
-                    .Replace("{last}", Uri.EscapeDataString(character.LastName.ToLowerInvariant()), StringComparison.Ordinal);
+        var path = CharacterProfilePath(character) + ProfessionSuffix;
         BlizzardDocument document;
         try
         {
@@ -188,6 +185,60 @@ public sealed class BlizzardGuildRosterSource(BlizzardApiClient api, BlizzardRos
         }
     }
 
+    public async Task<Uri?> GetCharacterPortraitAsync(RosterCharacter character, CancellationToken cancellationToken)
+    {
+        if (character.Id is null)
+            return null;
+        BlizzardDocument document;
+        try
+        {
+            document = await api.GetAsync(CharacterProfilePath(character) + "/character-media", options.ProfileNamespace, cancellationToken);
+        }
+        catch (BlizzardApiException exception) when (exception.StatusCode == HttpStatusCode.NotFound && exception.Resource == "resource")
+        {
+            return null;
+        }
+        var root = document.Data;
+        if (
+            root.ValueKind != JsonValueKind.Object
+            || !root.TryGetProperty("character", out var owner)
+            || owner.ValueKind != JsonValueKind.Object
+            || !owner.TryGetProperty("id", out var id)
+            || IdValue(id) != character.Id
+            || !root.TryGetProperty("assets", out var assets)
+            || assets.ValueKind != JsonValueKind.Array
+        )
+            return null;
+        foreach (var asset in assets.EnumerateArray())
+            if (
+                asset.ValueKind == JsonValueKind.Object
+                && asset.TryGetProperty("key", out var key)
+                && key.ValueKind == JsonValueKind.String
+                && key.ValueEquals("avatar")
+                && asset.TryGetProperty("value", out var value)
+                && value.ValueKind == JsonValueKind.String
+                && value.GetString() is { Length: <= 2048 } url
+                && Uri.TryCreate(url, UriKind.Absolute, out var uri)
+                && uri.Scheme == Uri.UriSchemeHttps
+                && uri.Host == "render.worldofwarcraft.com"
+                && uri.IsDefaultPort
+                && uri.UserInfo.Length == 0
+                && uri.Query.Length == 0
+                && uri.Fragment.Length == 0
+                && uri.AbsolutePath.StartsWith($"/forever-{options.Region}/character/", StringComparison.Ordinal)
+            )
+                return uri;
+        return null;
+    }
+
+    private string CharacterProfilePath(RosterCharacter character) =>
+        character.Id is not null && _profilePaths.TryGetValue(character.Id, out var profile)
+            ? profile
+            : options
+                .ProfessionPathTemplate[..^ProfessionSuffix.Length]
+                .Replace("{first}", Uri.EscapeDataString(character.FirstName.ToLowerInvariant()), StringComparison.Ordinal)
+                .Replace("{last}", Uri.EscapeDataString(character.LastName.ToLowerInvariant()), StringComparison.Ordinal);
+
     private async Task<Dictionary<string, string>> ClassesAsync(CancellationToken cancellationToken)
     {
         var document = await api.GetAsync("/data/wow/playable-class/index", options.StaticNamespace, cancellationToken);
@@ -207,7 +258,7 @@ public sealed class BlizzardGuildRosterSource(BlizzardApiClient api, BlizzardRos
             || !string.IsNullOrEmpty(uri.UserInfo)
             || !string.IsNullOrEmpty(uri.Fragment)
             || !uri.AbsolutePath.StartsWith("/profile/wow/character/", StringComparison.Ordinal)
-            || uri.AbsolutePath.EndsWith("/professions", StringComparison.Ordinal)
+            || uri.AbsolutePath.EndsWith(ProfessionSuffix, StringComparison.Ordinal)
         )
             throw new InvalidDataException("Blizzard character link points outside the expected regional character resources.");
         // Ignore all returned query parameters; the client applies our own namespace and locale.

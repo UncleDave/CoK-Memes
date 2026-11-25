@@ -58,7 +58,10 @@ public class DiscordRosterTests
     public async Task DestinationMustBeInConfiguredGuildAndAllMentionsAreDisabled(ulong channelGuild, bool celebration)
     {
         var sent = false;
-        var batch = new RosterNoticeBatch("Mock notice", [], celebration ? "Guild honours" : null, celebration ? 0xF1C40Fu : null);
+        var batch = new RosterNoticeBatch("Mock notice", [], celebration ? "Guild honours" : null, celebration ? 0xF1C40Fu : null)
+        {
+            PortraitUrl = celebration ? new("https://render.worldofwarcraft.com/forever-eu/character/7/1001-avatar.jpg") : null,
+        };
         var channel = Stub<ITextChannel>(
             (method, args) =>
             {
@@ -75,6 +78,7 @@ public class DiscordRosterTests
                     var embed = Assert.IsType<Embed>(args[embedIndex], exactMatch: false);
                     Assert.Equal(batch.Title, embed.Title);
                     Assert.Equal(batch.Text, embed.Description);
+                    Assert.Equal(batch.PortraitUrl!.AbsoluteUri, embed.Thumbnail?.Url);
                 }
                 else
                     Assert.Null(args[embedIndex]);

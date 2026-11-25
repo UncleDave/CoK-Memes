@@ -166,16 +166,22 @@ public sealed class GuildRosterService(
             var state = await store.GetAsync(ScopeId, cancellationToken);
             if (state?.ObservedAtUtc is null)
                 return;
-            var members = state.Characters.Select(member => member.Key).ToHashSet(StringComparer.Ordinal);
-            await notices.RemoveDepartedPendingAsync(ScopeId, members.ToArray(), cancellationToken);
+            var members = state.Characters.ToDictionary(member => member.Key, StringComparer.Ordinal);
+            await notices.RemoveDepartedPendingAsync(ScopeId, members.Keys.ToArray(), cancellationToken);
             var pending = await notices.GetPendingAsync(ScopeId, cancellationToken);
             foreach (
                 var batch in RosterText.NoticeBatches(
-                    pending.Where(item => item.Celebration == RosterCelebrationKind.Guild || members.Contains(item.CharacterKey))
+                    pending.Where(item => item.Celebration == RosterCelebrationKind.Guild || members.ContainsKey(item.CharacterKey))
                 )
             )
             {
-                var messageId = await sender.SendAsync(options.GuildId, options.MilestoneChannelId!.Value, batch, cancellationToken);
+                var message = batch;
+                if (
+                    batch.Notices.Where(notice => notice.IncludePortrait).Take(2).ToArray() is [var portraitNotice]
+                    && members.TryGetValue(portraitNotice.CharacterKey, out var member)
+                )
+                    message = batch with { PortraitUrl = await TryGetPortraitAsync(member, cancellationToken) };
+                var messageId = await sender.SendAsync(options.GuildId, options.MilestoneChannelId!.Value, message, cancellationToken);
                 foreach (var notice in batch.Notices)
                     await notices.MarkSentAsync(notice.Id, clock.GetUtcNow().UtcDateTime, messageId, cancellationToken);
             }
@@ -183,6 +189,22 @@ public sealed class GuildRosterService(
         finally
         {
             _gate.Release();
+        }
+    }
+
+    private async Task<Uri?> TryGetPortraitAsync(RosterCharacter member, CancellationToken cancellationToken)
+    {
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(2), clock);
+        using var lookup = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, deadline.Token);
+        try
+        {
+            return await source.GetCharacterPortraitAsync(member, lookup.Token);
+        }
+        catch (Exception)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            logger?.LogDebug("Skipping unavailable guild milestone portrait");
+            return null;
         }
     }
 

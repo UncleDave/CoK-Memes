@@ -274,6 +274,10 @@ persistence, rollout baselines, and delivery.
   No LLM call is needed to detect milestones or write each announcement.
 - Level 60 and 300 in a profession receive a distinctive celebration embed and
   one short, randomly chosen Grub joke, rather than the ordinary one-line notice.
+- If exactly one character is newly observed reaching level 60, use their Blizzard
+  portrait as the thumbnail when available. Joint level-60 celebrations and
+  profession-only celebrations stay portrait-free. Send without a thumbnail if
+  the portrait isn't available; don't wait for Blizzard to publish it.
 - Give extra recognition to the first recorded 60 in the guild, first recorded
   60 of each class, and first recorded 300 in each profession/skill track. Multiple
   arrivals in one observation get joint recognition, not a fabricated ordering.

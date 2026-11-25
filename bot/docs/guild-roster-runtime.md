@@ -217,6 +217,10 @@ The accepted [milestone design](guild-roster.md#milestone-notifications) adds:
 
 - A green celebration embed for each newly crossed level 60 or profession rank 300,
   with a short Grub tagline. Ordinary milestones retain plain text.
+- A solo level-60 crossing can add a Blizzard portrait thumbnail, including when it
+  shares an embed with guild honours. Eligibility is saved on the pending notice
+  when detecting the crossing; splitting a joint celebration or removing a departed
+  member's notice cannot turn it into a solo portrait.
 - Gold recognition for the first recorded level 60 in the guild, the first recorded
   level 60 of each class, and the first recorded 300 in each profession/skill track.
   Multiple qualifying arrivals in one refresh receive joint recognition, never an
@@ -277,6 +281,16 @@ ordinary duplicates; this remains best effort, not exactly-once. A crash between
 state and notice writes can miss a milestone, and a send accepted before a failed
 sent-status write can duplicate on retry. No distributed leases, multi-document
 transactions, history archive, or catch-up throttling have been added.
+
+During delivery only, the bot gives an eligible portrait lookup up to two seconds.
+It requests the current roster member's `/character-media` document through the
+existing app-token client and cache. The response must identify the same stable
+character ID and contain an `avatar` URL on Blizzard's HTTPS render host for the
+configured Forever region. Discord receives the URL as a thumbnail; the bot does
+not download the image or persist the URL with the notice. A missing, invalid,
+or failed media lookup sends the same celebration without a thumbnail and does
+not schedule another post. Older pending records without eligibility deliver
+unchanged. The lookup is not part of the roster or profession scan.
 
 Departure cleanup removes only unsent personal notices. Shared guild accomplishments
 are independent of an individual contributor and remain deliverable after departures.

@@ -10,6 +10,7 @@
     <PackageReference Include="Humanizer.Core" Version="3.0.10" />
     <PackageReference Include="MediatR" Version="15.0.0" />
     <PackageReference Include="Microsoft.Extensions.AI" Version="11.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="11.0.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.15" />
     <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" Version="10.0.15" />
     <PackageReference Include="Serilog.Extensions.Hosting" Version="10.0.0" />

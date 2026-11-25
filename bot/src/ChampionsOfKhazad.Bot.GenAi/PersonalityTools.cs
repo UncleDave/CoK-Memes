@@ -17,7 +17,8 @@ internal class PersonalityTools(
     ILogger<PersonalityTools> logger,
     IGetLore loreGetter,
     CustomerDisciplineService customers,
-    GuildRosterQueries? roster = null
+    GuildRosterQueries? roster = null,
+    IAuctionPriceLookup? auctionPrices = null
 )
 {
     public async Task<(string? Text, bool NotebookSearched)> GetAuthorContextAsync(
@@ -127,6 +128,9 @@ internal class PersonalityTools(
 
         if (messageContext.GuildId is > 0 && messageContext.ChannelId is > 0 && roster?.IsAvailableFor(messageContext.GuildId.Value) == true)
             tools.AddRange(new RosterTools(roster, messageContext, logger).Create());
+
+        if (messageContext.GuildId is > 0 && messageContext.ChannelId is > 0 && auctionPrices?.IsAvailableFor(messageContext.GuildId.Value) == true)
+            tools.Add(new AuctionPriceTool(auctionPrices, messageContext, logger).Create());
 
         tools.Add(new HostedWebSearchTool());
         tools.Add(

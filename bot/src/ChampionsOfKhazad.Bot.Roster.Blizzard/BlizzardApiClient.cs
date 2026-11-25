@@ -1,6 +1,5 @@
 using System.Net;
 using System.Net.Http.Headers;
-using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 
@@ -14,8 +13,7 @@ public sealed class BlizzardApiClient(HttpClient http, BlizzardRosterOptions opt
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly Dictionary<string, CachedDocument> _cache = new(StringComparer.Ordinal);
     private int _cacheBytes;
-    private string? _token;
-    private DateTimeOffset _tokenExpires;
+    private BlizzardAppToken? _token;
     private DateTimeOffset _blockedUntil;
 
     public async Task<BlizzardDocument> GetAsync(string path, string apiNamespace, CancellationToken cancellationToken)
@@ -57,7 +55,7 @@ public sealed class BlizzardApiClient(HttpClient http, BlizzardRosterOptions opt
             {
                 await EnsureTokenAsync(cancellationToken);
                 using var request = new HttpRequestMessage(HttpMethod.Get, uri);
-                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _token);
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _token!.Value);
                 if (cached?.ETag is { } etag)
                     request.Headers.IfNoneMatch.Add(etag);
                 if (cached?.LastModified is { } modified)
@@ -124,32 +122,13 @@ public sealed class BlizzardApiClient(HttpClient http, BlizzardRosterOptions opt
 
     private async Task EnsureTokenAsync(CancellationToken cancellationToken)
     {
-        if (_token is not null && clock.GetUtcNow() < _tokenExpires)
+        if (_token is { } cached && clock.GetUtcNow() < cached.RenewAtUtc)
             return;
-        using var request = new HttpRequestMessage(HttpMethod.Post, "https://oauth.battle.net/token")
-        {
-            Content = new FormUrlEncodedContent(new Dictionary<string, string> { ["grant_type"] = "client_credentials" }),
-        };
-        request.Headers.Authorization = new AuthenticationHeaderValue(
-            "Basic",
-            Convert.ToBase64String(Encoding.UTF8.GetBytes($"{options.ClientId}:{options.ClientSecret}"))
-        );
+        using var request = BlizzardAppToken.CreateRequest(options);
         using var response = await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
         CheckStatus(response, "OAuth");
         using var document = JsonDocument.Parse(await ReadBodyAsync(response.Content, cancellationToken));
-        var root = document.RootElement;
-        if (
-            root.ValueKind != JsonValueKind.Object
-            || !root.TryGetProperty("access_token", out var accessToken)
-            || accessToken.ValueKind != JsonValueKind.String
-            || string.IsNullOrWhiteSpace(accessToken.GetString())
-            || !root.TryGetProperty("expires_in", out var lifetime)
-            || !lifetime.TryGetInt32(out var seconds)
-            || seconds <= 0
-        )
-            throw new BlizzardApiException("Blizzard OAuth response did not contain a usable token and expiry.");
-        _token = accessToken.GetString();
-        _tokenExpires = clock.GetUtcNow().AddSeconds(Math.Max(1, seconds - Math.Min(60, seconds / 10)));
+        _token = BlizzardAppToken.Parse(document.RootElement, clock.GetUtcNow());
     }
 
     private void CheckStatus(HttpResponseMessage response, string resource, string? resourceKind = null)

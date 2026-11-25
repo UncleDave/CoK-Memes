@@ -27,6 +27,7 @@ public class GuildRosterConfigurationTests
         Assert.Equal("eu", blizzard.Region);
         Assert.Equal("Crossroads Mega Chippy", blizzard.GuildName);
         Assert.Equal("crossroads-mega-chippy", blizzard.GuildSlug);
+        Assert.True(blizzard.AuctionPricesEnabled);
         Assert.Null(blizzard.ClientId);
         Assert.Null(blizzard.ClientSecret);
         Assert.Null(configuration["GuildRoster:MockFile"]);

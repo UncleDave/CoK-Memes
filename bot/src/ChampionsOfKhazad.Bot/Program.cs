@@ -1,4 +1,5 @@
 ﻿using System.Globalization;
+using System.Net;
 using ChampionsOfKhazad.Bot;
 using ChampionsOfKhazad.Bot.Core;
 using ChampionsOfKhazad.Bot.EventLoop;
@@ -72,6 +73,27 @@ if (rosterOptions.Enabled)
         .AddSingleton<GuildRosterQueries>()
         .AddSingleton<IRosterNotificationSender, DiscordRosterNotificationSender>()
         .AddHostedService<GuildRosterWorker>();
+
+    if (blizzardOptions.AuctionPricesEnabled && blizzardOptions.Region == "eu")
+    {
+        host.Services.AddHttpClient("BlizzardAuctions", client => client.Timeout = Timeout.InfiniteTimeSpan)
+            .ConfigurePrimaryHttpMessageHandler(() =>
+                new HttpClientHandler
+                {
+                    AllowAutoRedirect = false,
+                    UseCookies = false,
+                    AutomaticDecompression = DecompressionMethods.All,
+                }
+            )
+            .RemoveAllLoggers();
+        host.Services.AddSingleton<IAuctionPriceLookup>(services => new BlizzardAuctionPriceLookup(
+            services.GetRequiredService<IHttpClientFactory>().CreateClient("BlizzardAuctions"),
+            blizzardOptions,
+            rosterOptions.GuildId,
+            services.GetRequiredService<TimeProvider>(),
+            services.GetRequiredService<Microsoft.Extensions.Logging.ILogger<BlizzardAuctionPriceLookup>>()
+        ));
+    }
 }
 
 host.Services.AddSingleton<DiscordSocketClient>(services =>

@@ -80,6 +80,15 @@ internal abstract partial class PersonalityBase(
                 - Keep routine roster freshness copy to a last-checked date, using profession check timestamps for professions/recipes and the roster check timestamp for levels. For several recipe crafters use the oldest known check among those shown. Do not substitute source timestamps or a membership check for a missing profession check. Coverage breakdowns and source-age diagnostics are for questions about those details, not every reply. Keep actual refresh failures affecting the returned data visible.
                 - If roster data is unavailable, say so rather than inventing current statistics.
                 """;
+        if (tools.Any(tool => tool.Name == AuctionPriceTool.Name))
+            systemPrompt += """
+
+
+                ## WoW Auction Prices:
+                - For explicit auction-price requests, use get_auction_price instead of lore, memory or web search. Quote the lowest listed price per item, the named market, and the snapshot time (Discord timestamp from snapshotUnixSeconds). Label a stale snapshot as older data. These are not live prices or sales.
+                - Use the returned estimated total for an explicit quantity; it scales the lowest price and is not a guarantee of stock. If someone asks for a stack without giving a number, give the unit price and ask how many. Do not assume an inventory stack size.
+                - Ask which item if choices are returned. Distinguish a catalogue miss or unavailable lookup from no buyouts in a valid snapshot. Do not invent a price or a different market.
+                """;
 
         var messages = new ChatHistory([new ChatMessage(ChatRole.System, systemPrompt), .. chatHistory]);
         var options = new ChatOptions

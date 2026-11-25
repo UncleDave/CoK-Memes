@@ -10,6 +10,7 @@ public class BlizzardRosterOptions
     public string GuildSlug { get; set; } = "crossroads-mega-chippy";
     public string RosterPathTemplate { get; set; } = "/data/wow/guild/{guild}/roster";
     public string ProfessionPathTemplate { get; set; } = "/profile/wow/character/{first}-{last}/professions";
+    public bool AuctionPricesEnabled { get; set; }
     public string ApiHost => $"{Region}.api.blizzard.com";
     public string ProfileNamespace => $"profile-forever-{Region}";
     public string StaticNamespace => $"static-forever-{Region}";

@@ -126,6 +126,7 @@ There is no runtime mock mode or fixture fallback.
 | `Blizzard:Region` | `eu` | Regional API host and Forever namespaces |
 | `Blizzard:GuildName` | `Crossroads Mega Chippy` | Expected in-game guild name |
 | `Blizzard:GuildSlug` | `crossroads-mega-chippy` | Guild route identifier |
+| `Blizzard:AuctionPricesEnabled` | `true` in appsettings | Enable [Grub's auction-price lookup](docs/auction-prices.md) for EU when the guild roster is enabled |
 | `Blizzard:RosterPathTemplate` | `/data/wow/guild/{guild}/roster` | Expected realm-free membership route |
 | `Blizzard:ProfessionPathTemplate` | `/profile/wow/character/{first}-{last}/professions` | Fallback character-professions route when no profile link is returned |
 

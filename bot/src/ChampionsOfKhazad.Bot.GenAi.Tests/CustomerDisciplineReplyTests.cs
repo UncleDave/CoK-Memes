@@ -805,6 +805,77 @@ public class CustomerDisciplineReplyTests
         Assert.Equal(0, fixture.RosterStore.Reads);
     }
 
+    [Fact]
+    public async Task GrubGetsAnAuctionQuoteForTheCurrentGuildWithTheRequestedQuantityAndSnapshotTime()
+    {
+        var auction = new AuctionLookup();
+        using var fixture = new Fixture(auctionPrices: auction);
+        var tool = Assert.IsAssignableFrom<AIFunction>(
+            fixture.Tools.Create(fixture.Context, true).Single(candidate => candidate.Name == "get_auction_price")
+        );
+        Assert.False(tool.JsonSchema.GetProperty("properties").TryGetProperty("guildId", out _));
+        fixture.Chat.Actions = ["get_auction_price"];
+
+        await fixture.InvokeAsync("What will 20 Thorium Ore cost?");
+
+        Assert.Equal((2UL, "Thorium Ore", (int?)20), Assert.Single(auction.Calls));
+        using var response = ReadResult(Assert.Single(fixture.Chat.Results));
+        Assert.Equal("ok", response.RootElement.GetProperty("status").GetString());
+        Assert.Equal("20s 42c", response.RootElement.GetProperty("lowestUnitPrice").GetString());
+        Assert.Equal("4g 8s 40c", response.RootElement.GetProperty("estimatedTotal").GetString());
+        Assert.Equal(AuctionLookup.SnapshotTime.ToUnixTimeSeconds(), response.RootElement.GetProperty("snapshotUnixSeconds").GetInt64());
+        Assert.Equal(0, fixture.Lore.Searches);
+    }
+
+    [Fact]
+    public async Task AuctionToolIsNotExposedToFollowersDmsOtherGuildsOrBarredCustomers()
+    {
+        var auction = new AuctionLookup();
+        using var fixture = new Fixture(auctionPrices: auction);
+        Assert.DoesNotContain(fixture.Tools.Create(fixture.Context, false), tool => tool.Name == "get_auction_price");
+        fixture.Context.GuildId = null;
+        Assert.DoesNotContain(fixture.Tools.Create(fixture.Context, true), tool => tool.Name == "get_auction_price");
+        fixture.Context.GuildId = 999;
+        Assert.DoesNotContain(fixture.Tools.Create(fixture.Context, true), tool => tool.Name == "get_auction_price");
+        fixture.Context.GuildId = 2;
+        await fixture.AddStrikesAsync(3);
+        await fixture.InvokeAsync("How much is Thorium Ore?");
+        Assert.DoesNotContain("get_auction_price", fixture.Chat.InitialTools);
+        Assert.Empty(auction.Calls);
+    }
+
+    [Fact]
+    public async Task AThirdStrikeStopsAnAuctionLookupInTheSameConversation()
+    {
+        var auction = new AuctionLookup();
+        using var fixture = new Fixture(auctionPrices: auction);
+        await fixture.AddStrikesAsync(2);
+        fixture.Chat.Actions = ["issue_customer_strike", "get_auction_price"];
+
+        Assert.Contains("You're barred", await fixture.InvokeAsync());
+        Assert.Empty(auction.Calls);
+    }
+
+    [Fact]
+    public async Task AuctionToolKeepsAnUnspecifiedQuantityUnknownAndCapsRepeatedCalls()
+    {
+        var auction = new AuctionLookup();
+        using var fixture = new Fixture(auctionPrices: auction);
+        var tool = Assert.IsAssignableFrom<AIFunction>(
+            fixture.Tools.Create(fixture.Context, true).Single(candidate => candidate.Name == "get_auction_price")
+        );
+        for (var attempt = 1; attempt <= 4; attempt++)
+        {
+            var result = await tool.InvokeAsync(new AIFunctionArguments { ["item"] = "Thorium Ore" }, TestContext.Current.CancellationToken);
+            using var response = ReadResult(Assert.IsType<JsonElement>(result).GetString()!);
+            Assert.Equal(attempt <= 3 ? "ok" : "limit_reached", response.RootElement.GetProperty("status").GetString());
+            Assert.False(response.RootElement.TryGetProperty("quantity", out _));
+            Assert.False(response.RootElement.TryGetProperty("estimatedTotal", out _));
+        }
+        Assert.Equal(3, auction.Calls.Count);
+        Assert.All(auction.Calls, call => Assert.Null(call.Quantity));
+    }
+
     private static JsonDocument ReadResult(string result) => JsonDocument.Parse(result.Split('\n')[0]);
 
     private sealed class Fixture : IDisposable
@@ -822,7 +893,7 @@ public class CustomerDisciplineReplyTests
         private readonly IChatClient _client;
         private readonly IPersonality _personality;
 
-        public Fixture(bool rosterEnabled = false)
+        public Fixture(bool rosterEnabled = false, IAuctionPriceLookup? auctionPrices = null)
         {
             Service = new CustomerDisciplineService(Store, TimeProvider.System);
             _client = new ChatClientBuilder(Chat).UseFunctionInvocation().Build();
@@ -841,7 +912,8 @@ public class CustomerDisciplineReplyTests
                 NullLogger<PersonalityTools>.Instance,
                 Lore,
                 Service,
-                queries
+                queries,
+                auctionPrices
             );
             _personality = new LorekeeperPersonality(
                 new EmojiHandler(),
@@ -876,6 +948,30 @@ public class CustomerDisciplineReplyTests
         {
             _client.Dispose();
             _rosterService?.Dispose();
+        }
+    }
+
+    private sealed class AuctionLookup : IAuctionPriceLookup
+    {
+        public static readonly DateTimeOffset SnapshotTime = new(2026, 11, 25, 1, 23, 0, TimeSpan.Zero);
+        public List<(ulong Guild, string Item, int? Quantity)> Calls { get; } = [];
+
+        public bool IsAvailableFor(ulong guildId) => guildId == 2;
+
+        public Task<AuctionPriceQuote> QuoteAsync(ulong guildId, string item, int? quantity, CancellationToken cancellationToken)
+        {
+            Calls.Add((guildId, item, quantity));
+            return Task.FromResult(
+                new AuctionPriceQuote("ok")
+                {
+                    Market = "EU Normal Horde",
+                    Item = new(10620, "Thorium Ore"),
+                    LowestUnitPrice = "20s 42c",
+                    Quantity = quantity,
+                    EstimatedTotal = quantity == 20 ? "4g 8s 40c" : null,
+                    SnapshotAtUtc = SnapshotTime,
+                }
+            );
         }
     }
 
@@ -1002,6 +1098,7 @@ public class CustomerDisciplineReplyTests
                     "issue_customer_strike" => new() { ["reason"] = StrikeReason },
                     "search_lore" => new() { ["query"] = "guild" },
                     "find_guild_recipe_crafters" => new() { ["recipe"] = "Hot Lion Chops" },
+                    "get_auction_price" => new() { ["item"] = "Thorium Ore", ["quantity"] = 20 },
                     _ => [],
                 };
                 return new ChatResponse(new ChatMessage(ChatRole.Assistant, [new FunctionCallContent("call-" + results.Length, action, arguments)]))

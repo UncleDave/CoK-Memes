@@ -148,10 +148,12 @@ public class GuildRosterQueries(GuildRosterOptions options, GuildRosterService s
             CheckedAtUtc = state.CheckedAtUtc,
             LastRefreshFailed = state.LastRefreshFailed,
             Page = page,
+            MilestoneValue = profession is null ? options.LevelCap : RosterMilestones.ProfessionCelebrationRank,
             Profession = profession,
         };
         var members = state.Characters.Where(member => name is null || member.FullName.Contains(name, StringComparison.OrdinalIgnoreCase)).ToArray();
         var entries = new List<(RosterCharacter Member, ProfessionSkill? Profession, int Value)>();
+        var trackKey = RosterProgress.LevelTrackKey;
         if (profession is null)
             entries.AddRange(members.Select(member => (member, (ProfessionSkill?)null, member.Level)));
         else
@@ -193,32 +195,89 @@ public class GuildRosterQueries(GuildRosterOptions options, GuildRosterService s
                     ProfessionChoices = page > pages ? [] : choices.Skip((page - 1) * PageSize).Take(PageSize).ToArray(),
                 };
             }
+            if (tracks.Length == 1)
+                trackKey = tracks[0];
             entries.AddRange(
                 matches
                     .Where(item => item.Skill.Skill is { } rank && rank >= (minimumSkill ?? 0))
                     .Select(item => (item.Member, (ProfessionSkill?)item.Skill, item.Skill.Skill!.Value))
             );
         }
+        if (entries.Count == 0)
+            return result with { Status = state.Characters.Length == 0 ? "empty" : "no_match" };
+
+        var recordedProgress = state
+            .Progress.Where(item => item.TrackKey == trackKey && item.RecordedAtUtc.HasValue)
+            .ToDictionary(item => item.CharacterKey, StringComparer.Ordinal);
+        DateTime? RecordedAt(RosterCharacter member, int value) =>
+            recordedProgress.GetValueOrDefault(member.Key) is { } progress && progress.HighWater == value ? progress.RecordedAtUtc : null;
+
+        DateTime? RecordedAtMilestone(RosterCharacter member, int milestone)
+        {
+            var matchesMilestone = profession is null
+                ? member.Level == milestone
+                : member.Professions?.Skills.Any(skill => skill.TrackKey == trackKey && skill.Skill == milestone) == true;
+            return matchesMilestone ? RecordedAt(member, milestone) : null;
+        }
+
         var ordered = entries
+            .Select(item => (item.Member, item.Profession, item.Value, RecordedAtUtc: RecordedAt(item.Member, item.Value)))
             .OrderByDescending(item => item.Value)
+            .ThenBy(item => item.RecordedAtUtc is null)
+            .ThenBy(item => item.RecordedAtUtc)
             .ThenBy(item => item.Member.FullName, StringComparer.OrdinalIgnoreCase)
             .ThenBy(item => item.Member.Key, StringComparer.Ordinal)
             .ToArray();
         var totalPages = (ordered.Length + PageSize - 1) / PageSize;
         result = result with { TotalPages = totalPages, TotalCount = ordered.Length };
-        if (ordered.Length == 0)
-            return result with { Status = state.Characters.Length == 0 ? "empty" : "no_match" };
         if (page > totalPages)
             return result with { Status = "page_out_of_range" };
         var rows = new List<RosterEntry>();
         var rank = 0;
         for (var index = 0; index < ordered.Length; index++)
         {
-            if (index == 0 || ordered[index].Value != ordered[index - 1].Value)
+            var item = ordered[index];
+            if (index == 0 || item.Value != ordered[index - 1].Value || item.RecordedAtUtc != ordered[index - 1].RecordedAtUtc)
                 rank = index + 1;
             if (index / PageSize + 1 == page)
-                rows.Add(new(rank, ordered[index].Member, ordered[index].Profession));
+                rows.Add(new(rank, item.Member, item.Profession) { RecordedAtUtc = item.RecordedAtUtc });
         }
-        return result with { Rows = rows.ToArray() };
+        return result with
+        {
+            Rows =
+                result.MilestoneValue is { } milestone && rows.Any(row => row.Value == milestone && row.RecordedAtUtc.HasValue)
+                    ? WithMilestoneFirsts(rows, state.Characters, milestone, member => RecordedAtMilestone(member, milestone), profession is null)
+                    : rows.ToArray(),
+        };
+    }
+
+    private static RosterEntry[] WithMilestoneFirsts(
+        List<RosterEntry> rows,
+        RosterCharacter[] members,
+        int milestone,
+        Func<RosterCharacter, DateTime?> recordedAtMilestone,
+        bool includeClassFirsts
+    )
+    {
+        var records = members
+            .Select(member => (member.ClassName, RecordedAtUtc: recordedAtMilestone(member)))
+            .Where(item => item.RecordedAtUtc.HasValue)
+            .ToArray();
+        var firstAt = records.Min(item => item.RecordedAtUtc);
+        var firstByClass = includeClassFirsts
+            ? records
+                .GroupBy(item => item.ClassName, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(group => group.Key, group => group.Min(item => item.RecordedAtUtc), StringComparer.OrdinalIgnoreCase)
+            : null;
+        return rows.Select(row =>
+                row.Value == milestone && row.RecordedAtUtc is { } recordedAt
+                    ? row with
+                    {
+                        FirstAtMilestone = recordedAt == firstAt,
+                        FirstClassAtCap = recordedAt == firstByClass?.GetValueOrDefault(row.Character.ClassName),
+                    }
+                    : row
+            )
+            .ToArray();
     }
 }

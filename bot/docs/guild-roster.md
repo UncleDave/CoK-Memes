@@ -54,9 +54,12 @@ channel. Include the character's full name (Firstname Lastname), class, and leve
 Alts count as separate characters; this is not a ranking of Discord members or mains.
 Defer the interaction before querying, following the existing command pattern.
 
-Equal levels share a rank (1, 1, 3); full names give deterministic ordering
-within ties, not evidence of who reached a level first. Bound each page to 10
-rows and allow an optional page number; ranks apply across the entire snapshot.
+Break level ties by the time the bot recorded that level, earliest first and
+unknown times last. Equal or unknown times share a rank at the same level; full
+names give deterministic ordering within those ties. Bound each page to 10 rows
+and allow an optional page number; ranks apply across the entire snapshot. Show
+recorded cap times and first-recorded badges for the guild and each class. See
+the [runtime guide](guild-roster-runtime.md#discord-and-grub).
 Show one `Last checked` date/time, using the roster check timestamp. No data,
 unavailable storage, and an out-of-range page have distinct responses; none should
 look like an empty guild.
@@ -69,18 +72,19 @@ Support primary and secondary professions in the model, but only promise fields
 verified in Forever. Do not require two primary professions or assume every
 secondary profession is available through guild-wide collection.
 
-Proposed `/leaderboard profession:alchemy` ranks characters by their known Alchemy
-skill; omitting `profession` keeps the character-level leaderboard. Use the same
-pagination and shared-rank rules. Compare only the same profession/skill-line tier,
-not unrelated professions or tiers. Missing skill values are excluded from ranked
-rows, not treated as zero. Coverage counts remain available in structured queries
+`/leaderboard profession:alchemy` ranks characters by their known Alchemy skill;
+omitting `profession` keeps the character-level leaderboard. Use the same
+pagination and recorded-time tie-breaking. Show recorded times at skill 300 and a
+trophy for the earliest recorded 300 on the chosen profession/skill-line tier.
+Missing skill values are excluded from ranked rows, not treated as zero. Coverage
+counts remain available in structured queries
 for on-demand explanation, but routine messages do not append coverage breakdowns
 or generic incomplete-data warnings. A complete empty profession list is known
 absence, not unavailable data. No known practitioners is not proof that the guild
 has none.
 
-Profession leaderboards show only one `Last checked` date/time, using the oldest
-known profession check among displayed rows, not the source-data age or a newer
+The profession leaderboard's `Last checked` footer uses the oldest known
+profession check among displayed rows, not the source-data age or a newer
 membership check. Omit the date when no displayed profession check is known. Checks
 include cached responses and failed attempts, not necessarily new gameplay data.
 Keep actual refresh failures affecting displayed data visible, but leave source
@@ -337,8 +341,8 @@ unless spam is actually observed. Keep the highest-crossed-threshold behaviour
 above, rather than replaying intermediate thresholds. Secondary professions are
 approved; the environment-specific destination channels above are configured. This requires small
 progression/delivery state, not a full historical snapshot archive or race system.
-Celebration keys are persisted with that state; the accepted expansion does not
-add historical timing.
+Celebration keys are persisted with that state. Recorded leaderboard times are
+poll times, not evidence of actual achievement times.
 
 ## Collection scope
 

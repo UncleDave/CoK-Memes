@@ -20,6 +20,9 @@ internal class MongoRosterNoticeStore(IMongoCollection<RosterNotice> collection)
             .ThenBy(notice => notice.Id)
             .ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<RosterNotice>> GetProgressNoticesAsync(string scopeId, CancellationToken cancellationToken) =>
+        await collection.Find(notice => notice.ScopeId == scopeId && notice.Threshold > 0).ToListAsync(cancellationToken);
+
     public Task MarkSentAsync(string id, DateTime sentAtUtc, ulong messageId, CancellationToken cancellationToken) =>
         collection.UpdateOneAsync(
             notice => notice.Id == id && notice.SentAtUtc == null,

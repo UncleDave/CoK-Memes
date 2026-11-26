@@ -14,5 +14,6 @@ public record RosterState
     public bool LastRefreshFailed { get; init; }
     public RosterCharacter[] Characters { get; init; } = [];
     public RosterProgress[] Progress { get; init; } = [];
+    public bool ProgressTimesBackfilled { get; init; }
     public RosterCelebrationState? Celebrations { get; init; }
 }

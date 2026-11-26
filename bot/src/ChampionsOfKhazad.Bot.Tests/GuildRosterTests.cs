@@ -112,6 +112,8 @@ public class GuildRosterTests
         fixture.SetMembers(Character(level: 40));
         await fixture.Refresh();
         Assert.Empty(fixture.Notices.Items);
+        var rejoined = await fixture.Queries.QueryAsync(50, cancellationToken: fixture.Token);
+        Assert.Null(Assert.Single(rejoined.Rows).RecordedAtUtc);
         fixture.Advance();
         fixture.SetMembers(Character("2", 1));
         await fixture.Refresh();
@@ -393,20 +395,34 @@ public class GuildRosterTests
     [Fact]
     public void RosterAndNoticeBsonRoundtripPreservesIdsUnknownFieldsUtcDatesAndPendingStatus()
     {
-        var now = DateTime.UtcNow;
+        var now = new DateTime(2026, 11, 6, 12, 40, 0, DateTimeKind.Utc);
         var state = new RosterState
         {
             Id = "50:mock",
             ObservedAtUtc = now,
             Characters = [Character(professions: Professions(null))],
-            Progress = [new("id:1", "level", 20)],
+            Progress = [new("id:1", "level", 20) { RecordedAtUtc = now }],
+            ProgressTimesBackfilled = true,
         };
         var restored = BsonSerializer.Deserialize<RosterState>(state.ToBson());
         Assert.Equal(DateTimeKind.Utc, restored.ObservedAtUtc!.Value.Kind);
         Assert.Null(restored.Characters[0].Professions!.Skills[0].Skill);
         Assert.Equal("id:1", restored.Characters[0].Key);
         Assert.Equal(20, restored.Progress[0].HighWater);
+        Assert.Equal(now, restored.Progress[0].RecordedAtUtc);
+        Assert.Equal(DateTimeKind.Utc, restored.Progress[0].RecordedAtUtc!.Value.Kind);
+        Assert.True(restored.ProgressTimesBackfilled);
         Assert.Null(restored.Characters[0].ProfessionsCheckedAtUtc);
+
+        var legacy = state.ToBsonDocument();
+        legacy.Remove(Field<RosterState>(nameof(RosterState.ProgressTimesBackfilled)));
+        var legacyProgress = legacy[Field<RosterState>(nameof(RosterState.Progress))].AsBsonArray[0].AsBsonDocument;
+        legacyProgress.Remove(Field<RosterProgress>(nameof(RosterProgress.RecordedAtUtc)));
+        var restoredLegacy = BsonSerializer.Deserialize<RosterState>(legacy);
+        Assert.False(restoredLegacy.ProgressTimesBackfilled);
+        Assert.Null(restoredLegacy.Progress[0].RecordedAtUtc);
+
+        static string Field<T>(string name) => BsonClassMap.LookupClassMap(typeof(T)).GetMemberMap(name).ElementName;
     }
 
     private sealed class Sender(MemoryRosterNotices store) : IRosterNotificationSender

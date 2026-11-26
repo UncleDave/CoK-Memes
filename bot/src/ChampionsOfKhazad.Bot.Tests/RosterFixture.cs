@@ -118,6 +118,7 @@ internal sealed class RosterFixture : IDisposable
     {
         public Dictionary<string, RosterNotice> Items { get; } = [];
         public List<string> Steps { get; } = [];
+        public Exception? ProgressNoticeReadFailure { get; set; }
 
         public Task AddPendingAsync(RosterNotice notice, CancellationToken cancellationToken)
         {
@@ -130,6 +131,14 @@ internal sealed class RosterFixture : IDisposable
             Task.FromResult<IReadOnlyList<RosterNotice>>(
                 Items.Values.Where(item => item.ScopeId == scopeId && item.SentAtUtc is null).OrderBy(item => item.Id).ToArray()
             );
+
+        public Task<IReadOnlyList<RosterNotice>> GetProgressNoticesAsync(string scopeId, CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (ProgressNoticeReadFailure is { } failure)
+                throw failure;
+            return Task.FromResult<IReadOnlyList<RosterNotice>>(Items.Values.Where(item => item.ScopeId == scopeId && item.Threshold > 0).ToArray());
+        }
 
         public Task MarkSentAsync(string id, DateTime sentAtUtc, ulong messageId, CancellationToken cancellationToken)
         {

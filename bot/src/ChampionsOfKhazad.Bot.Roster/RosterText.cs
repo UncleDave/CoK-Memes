@@ -80,25 +80,17 @@ public static partial class RosterText
         else
         {
             lines.Add($"**{Safe(page.GuildName)} — {(page.Profession is null ? "Level leaderboard" : Safe(page.Profession) + " leaderboard")}**");
-            lines.AddRange(
-                page.Rows.Select(row =>
-                    $"{row.Rank}. **{Safe(row.Character.FullName)}** — {Safe(row.Character.ClassName)}, "
-                    + (
-                        row.Profession is null
-                            ? $"level {row.Character.Level}"
-                            : $"{Safe(row.Profession.Name)} {row.Profession.Skill}" + (row.Profession.MaxSkill is { } max ? $"/{max}" : "")
-                    )
-                )
-            );
+            lines.AddRange(page.Rows.Select(row => LeaderboardLine(row, page.MilestoneValue)));
+            if (page.MilestoneValue is { } milestone && page.Rows.Any(row => row.FirstAtMilestone || row.FirstClassAtCap))
+                lines.Add(page.Profession is null ? $"First recorded at {milestone}: 🏆 guild · 🥇 class" : $"🏆 First recorded at {milestone}");
             lines.Add($"Page {page.Page}/{page.TotalPages}");
         }
-        var professionRows = page.Rows.Where(row => row.Profession is not null).ToArray();
-        var checkedAt = page.Profession is null ? page.CheckedAtUtc : professionRows.Select(row => row.Character.ProfessionsCheckedAtUtc).Min();
+        var checkedAt = page.Profession is null
+            ? page.CheckedAtUtc
+            : page.Rows.Where(row => row.Profession is not null).Min(row => row.Character.ProfessionsCheckedAtUtc);
         if (checkedAt is { } timestamp)
-            lines.Add(
-                $"Last checked <t:{new DateTimeOffset(timestamp, TimeSpan.Zero).ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture)}:f>"
-            );
-        var failedProfessionChecks = professionRows.Count(row => row.Character.ProfessionRefreshFailed);
+            lines.Add($"Last checked {DiscordDate(timestamp)}");
+        var failedProfessionChecks = page.Rows.Count(row => row.Profession is not null && row.Character.ProfessionRefreshFailed);
         if (failedProfessionChecks > 0)
             lines.Add(
                 $"The latest profession check failed for {failedProfessionChecks} displayed {(failedProfessionChecks == 1 ? "character" : "characters")}; showing retained data."
@@ -107,6 +99,22 @@ public static partial class RosterText
             lines.Add("The latest refresh failed; showing the last collected data.");
         return Pack(lines).ToArray();
     }
+
+    private static string LeaderboardLine(RosterEntry row, int? milestone)
+    {
+        var trophy = row.FirstAtMilestone ? " 🏆" : "";
+        var className = Safe(row.Character.ClassName) + (row.FirstClassAtCap ? " 🥇" : "");
+        var value = row.Profession is { } skill
+            ? $"{Safe(skill.Name)} {skill.Skill}" + (skill.MaxSkill is { } max ? $"/{max}" : "")
+            : $"level {row.Character.Level}";
+        var line = $"{row.Rank}. **{Safe(row.Character.FullName)}**{trophy} — {className}, {value}";
+        if (milestone.HasValue && row.Value == milestone)
+            line += row.RecordedAtUtc is { } recordedAt ? $" · recorded {DiscordDate(recordedAt)}" : " · time unknown";
+        return line;
+    }
+
+    private static string DiscordDate(DateTime timestamp) =>
+        $"<t:{new DateTimeOffset(timestamp, TimeSpan.Zero).ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture)}:f>";
 
     public static IEnumerable<RosterNoticeBatch> NoticeBatches(IEnumerable<RosterNotice> notices, Random? random = null)
     {

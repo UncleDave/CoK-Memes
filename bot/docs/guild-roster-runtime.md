@@ -114,16 +114,40 @@ A failed lookup is not a departure. Numeric IDs preserve progression through ren
 different IDs reusing a name remain distinct. Rejoins seed silently. Name-only
 identity support in the shared model is not used to hide missing live character IDs.
 
+The refresh stores the detecting poll's start time alongside a new high-water
+mark for an already-known level or profession track (profession ID and tier),
+even when milestone delivery is disabled. Baselines and skipped values have no
+inferred time. Unchanged or regressed observations do not replace a recorded
+time, and it applies only when the current level or skill matches that mark.
+After upgrade, existing marks can pick up times from same-scope milestone
+notices (pending or sent) with the same character, track, and value, using
+notice creation, not delivery. Other legacy times remain unknown. A failed
+notice lookup is retried without blocking refreshes or milestone detection.
+Blizzard's snapshots do not establish actual level-up or skill-up times.
+
 ## Discord and Grub
 
 `/leaderboard [profession] [page]` is guild-registered while enabled. It defers before
-queued work and returns ten characters per page with shared ranks, full names,
-class, level/rank, and one `Last checked` date/time. Profession filters accept names,
-IDs, or an unambiguous ID:tier. Unknown ranks are not zero-filled. Structured
-coverage reports unique affected
-characters out of the whole guild (or name-filtered set), with separate counts for
-unavailable observations, partial observations, failed refreshes, and unknown ranks
-in the requested profession. Counts can overlap, and known complete empty lists
+queued work and returns ten characters per page with full names, class, level/rank,
+and one `Last checked` date/time. Equal levels or skill values sort by earliest
+recorded time, with unknown times last. Characters at the same value recorded in
+the same poll or with unknown times share a rank; full names and stable keys
+order those ties.
+
+Level rows at the configured cap (normally 60) and profession rows at skill 300
+show the recorded date/time or `time unknown`. 🏆 marks the earliest recorded cap
+on the current roster for levels, or the earliest recorded 300 in the selected
+profession tier. 🥇 sits beside the class name for the earliest recorded level
+cap in that class. Badges use the whole current roster, not just the displayed
+page. Characters with the same earliest time share the badge. Unknown times do
+not earn badges. These are leaderboard distinctions, not the one-time milestone
+announcements.
+
+Profession filters accept names, IDs, or an unambiguous ID:tier. Unknown skill
+ranks are not zero-filled. Structured coverage reports unique affected characters
+out of the whole guild (or name-filtered set), with separate counts for unavailable
+observations, partial observations, failed refreshes, and unknown ranks in the
+requested profession. Counts can overlap, and known complete empty lists
 are not counted as missing. This coverage is independent of pagination and minimum
 skill filters; it is not a claim that the displayed practitioners lack data. These
 counts remain available to Grub for diagnostic questions, not routine message copy.
@@ -136,7 +160,7 @@ not just fresh network downloads. Profession check times are recorded when each
 attempt completes; missing historical checks are not replaced with membership
 checks. Empty profession results show no fabricated check date. Routine messages
 omit coverage breakdowns, source timestamps, and oldest/newest ranges. Failed
-checks affecting displayed profession rows still get a short retained-data warning;
+checks affecting displayed profession ranks get a short retained-data warning;
 the existing roster-refresh failure warning also remains. Grub receives coverage
 counts and per-character check/source timestamps for on-demand questions, but its
 routine copy follows the same last-checked-only policy. Source timestamps retain

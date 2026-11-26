@@ -107,6 +107,8 @@ public sealed class GuildRosterService(
                     }
                     members.Add(member);
                 }
+                if (!previous.ProgressTimesBackfilled)
+                    previous = await TryBackfillProgressTimesAsync(previous, cancellationToken);
                 current = previous with
                 {
                     SourceId = source.Id,
@@ -206,6 +208,43 @@ public sealed class GuildRosterService(
             logger?.LogDebug("Skipping unavailable guild milestone portrait");
             return null;
         }
+    }
+
+    private async Task<RosterState> TryBackfillProgressTimesAsync(RosterState state, CancellationToken cancellationToken)
+    {
+        if (state.Progress.All(item => item.RecordedAtUtc.HasValue))
+            return state with { ProgressTimesBackfilled = true };
+
+        IReadOnlyList<RosterNotice> legacyNotices;
+        try
+        {
+            legacyNotices = await notices.GetProgressNoticesAsync(state.Id, cancellationToken);
+        }
+        catch (Exception exception)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            logger?.LogWarning(
+                "Legacy milestone notice lookup failed; continuing without backfill. Failure category: {FailureCategory}",
+                exception.GetType().Name
+            );
+            return state;
+        }
+
+        var noticeTimes = legacyNotices
+            .Where(notice => notice.CreatedAtUtc != default)
+            .GroupBy(notice => (notice.CharacterKey, notice.TrackKey, notice.Threshold))
+            .ToDictionary(group => group.Key, group => group.Min(notice => notice.CreatedAtUtc));
+        var progress = state
+            .Progress.Select(item =>
+                item.RecordedAtUtc is null && noticeTimes.TryGetValue((item.CharacterKey, item.TrackKey, item.HighWater), out var recordedAt)
+                    ? item with
+                    {
+                        RecordedAtUtc = recordedAt,
+                    }
+                    : item
+            )
+            .ToArray();
+        return state with { Progress = progress, ProgressTimesBackfilled = true };
     }
 
     private static ProfessionObservation Merge(ProfessionObservation? old, ProfessionObservation incoming)

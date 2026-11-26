@@ -13,6 +13,7 @@ public record RosterPage
     public int Page { get; init; }
     public int TotalPages { get; init; }
     public int TotalCount { get; init; }
+    public int? MilestoneValue { get; init; }
     public string? Profession { get; init; }
     public string[] ProfessionChoices { get; init; } = [];
     public RosterEntry[] Rows { get; init; } = [];

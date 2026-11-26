@@ -5,6 +5,8 @@ namespace ChampionsOfKhazad.Bot.Roster;
 
 public static class RosterMilestones
 {
+    internal const int ProfessionCelebrationRank = 300;
+
     public static (RosterProgress[] Progress, RosterCelebrationState Celebrations, RosterNotice[] Notices) Compare(
         RosterState previous,
         RosterState current,
@@ -19,21 +21,24 @@ public static class RosterMilestones
         foreach (var member in current.Characters)
         {
             Check(
-                "level",
+                RosterProgress.LevelTrackKey,
                 member.Level,
                 null,
                 Enumerable.Range(1, member.Level / 10).Select(value => value * 10).Concat(options.LevelCap is { } cap ? [cap] : []).Distinct()
             );
             foreach (var skill in member.Professions?.Skills ?? [])
                 if (skill.Skill is { } rank)
-                    Check(skill.TrackKey, rank, skill.Name, options.ProfessionMilestones.Append(300));
+                    Check(skill.TrackKey, rank, skill.Name, options.ProfessionMilestones.Append(ProfessionCelebrationRank));
 
             void Check(string track, int value, string? profession, IEnumerable<int> thresholds)
             {
                 var key = (member.Key, track);
                 var known = progress.GetValueOrDefault(key);
+                if (known is not null && value <= known.HighWater)
+                    return;
+                var advancedWhilePresent = known is not null && existingMembers.Contains(member.Key);
                 var threshold = thresholds.Where(item => item > (known?.HighWater ?? value) && item <= value).DefaultIfEmpty().Max();
-                if (announcementsEnabled && existingMembers.Contains(member.Key) && known is not null && threshold > 0)
+                if (announcementsEnabled && advancedWhilePresent && threshold > 0)
                 {
                     var id = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes($"{current.Id}\n{member.Key}\n{track}\n{threshold}")));
                     notices.Add(
@@ -48,7 +53,8 @@ public static class RosterMilestones
                             ClassName = member.ClassName,
                             Threshold = threshold,
                             Celebration =
-                                (profession is null && threshold == options.LevelCap) || (profession is not null && threshold == 300)
+                                (profession is null && threshold == options.LevelCap)
+                                || (profession is not null && threshold == ProfessionCelebrationRank)
                                     ? RosterCelebrationKind.Personal
                                     : RosterCelebrationKind.None,
                             IsMock = current.IsMock,
@@ -56,7 +62,7 @@ public static class RosterMilestones
                         }
                     );
                 }
-                progress[key] = new RosterProgress(member.Key, track, Math.Max(value, known?.HighWater ?? value));
+                progress[key] = new RosterProgress(member.Key, track, value) { RecordedAtUtc = advancedWhilePresent ? now : null };
             }
         }
         var celebrations = RosterCelebrations.Compare(previous, current, options, now, announcementsEnabled, notices.ToArray());

@@ -135,13 +135,11 @@ the same poll or with unknown times share a rank; full names and stable keys
 order those ties.
 
 Level rows at the configured cap (normally 60) and profession rows at skill 300
-show the recorded date/time or `time unknown`. 🏆 marks the earliest recorded cap
-on the current roster for levels, or the earliest recorded 300 in the selected
-profession tier. 🥇 sits beside the class name for the earliest recorded level
-cap in that class. Badges use the whole current roster, not just the displayed
-page. Characters with the same earliest time share the badge. Unknown times do
-not earn badges. These are leaderboard distinctions, not the one-time milestone
-announcements.
+show the recorded date/time or `time unknown`. 🥇 sits beside the class name for
+that class's earliest recorded level cap. Medals use the whole current roster,
+not just the displayed page. Characters with the same earliest time share the
+medal. Unknown times do not earn medals. These are distinct from the one-time
+milestone announcements.
 
 Profession filters accept names, IDs, or an unambiguous ID:tier. Unknown skill
 ranks are not zero-filled. Structured coverage reports unique affected characters

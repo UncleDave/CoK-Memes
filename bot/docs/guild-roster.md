@@ -58,7 +58,7 @@ Break level ties by the time the bot recorded that level, earliest first and
 unknown times last. Equal or unknown times share a rank at the same level; full
 names give deterministic ordering within those ties. Bound each page to 10 rows
 and allow an optional page number; ranks apply across the entire snapshot. Show
-recorded cap times and first-recorded badges for the guild and each class. See
+recorded cap times and a first-recorded medal for each class. See
 the [runtime guide](guild-roster-runtime.md#discord-and-grub).
 Show one `Last checked` date/time, using the roster check timestamp. No data,
 unavailable storage, and an out-of-range page have distinct responses; none should
@@ -74,8 +74,8 @@ secondary profession is available through guild-wide collection.
 
 `/leaderboard profession:alchemy` ranks characters by their known Alchemy skill;
 omitting `profession` keeps the character-level leaderboard. Use the same
-pagination and recorded-time tie-breaking. Show recorded times at skill 300 and a
-trophy for the earliest recorded 300 on the chosen profession/skill-line tier.
+pagination and recorded-time tie-breaking. Show recorded times at skill 300 on
+the chosen profession/skill-line tier.
 Missing skill values are excluded from ranked rows, not treated as zero. Coverage
 counts remain available in structured queries
 for on-demand explanation, but routine messages do not append coverage breakdowns

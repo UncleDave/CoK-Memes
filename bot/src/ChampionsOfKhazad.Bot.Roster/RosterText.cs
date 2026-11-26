@@ -81,8 +81,8 @@ public static partial class RosterText
         {
             lines.Add($"**{Safe(page.GuildName)} — {(page.Profession is null ? "Level leaderboard" : Safe(page.Profession) + " leaderboard")}**");
             lines.AddRange(page.Rows.Select(row => LeaderboardLine(row, page.MilestoneValue)));
-            if (page.MilestoneValue is { } milestone && page.Rows.Any(row => row.FirstAtMilestone || row.FirstClassAtCap))
-                lines.Add(page.Profession is null ? $"First recorded at {milestone}: 🏆 guild · 🥇 class" : $"🏆 First recorded at {milestone}");
+            if (page.MilestoneValue is { } milestone && page.Rows.Any(row => row.FirstClassAtCap))
+                lines.Add($"🥇 First recorded at {milestone} in each class");
             lines.Add($"Page {page.Page}/{page.TotalPages}");
         }
         var checkedAt = page.Profession is null
@@ -102,12 +102,11 @@ public static partial class RosterText
 
     private static string LeaderboardLine(RosterEntry row, int? milestone)
     {
-        var trophy = row.FirstAtMilestone ? " 🏆" : "";
         var className = Safe(row.Character.ClassName) + (row.FirstClassAtCap ? " 🥇" : "");
         var value = row.Profession is { } skill
             ? $"{Safe(skill.Name)} {skill.Skill}" + (skill.MaxSkill is { } max ? $"/{max}" : "")
             : $"level {row.Character.Level}";
-        var line = $"{row.Rank}. **{Safe(row.Character.FullName)}**{trophy} — {className}, {value}";
+        var line = $"{row.Rank}. **{Safe(row.Character.FullName)}** — {className}, {value}";
         if (milestone.HasValue && row.Value == milestone)
             line += row.RecordedAtUtc is { } recordedAt ? $" · recorded {DiscordDate(recordedAt)}" : " · time unknown";
         return line;

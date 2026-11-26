@@ -91,7 +91,7 @@ public class RosterLeaderboardTests
     }
 
     [Fact]
-    public async Task Profession300ShowsRecordedTimesAndJointFirstsForTheRequestedTier()
+    public async Task Profession300ShowsRecordedTimesForTheRequestedTierWithoutATrophy()
     {
         using var fixture = new RosterFixture();
         fixture.Options.LevelCap = null;
@@ -101,11 +101,7 @@ public class RosterLeaderboardTests
         var joint = Character("2", first: "Bravo", professions: training);
         var later = Character("3", first: "Aster", professions: training);
         var unknown = Character("4", first: "Alpha", professions: mastered);
-        var otherTier = Character("5", first: "Other", professions: Professions(299, tier: "other"));
-        fixture.SetMembers(unknown, later, first, joint, otherTier);
-        await fixture.Refresh();
-        fixture.Advance();
-        otherTier = otherTier with { Professions = Professions(300, tier: "other") };
+        var otherTier = Character("5", first: "Other", professions: Professions(300, tier: "other"));
         fixture.SetMembers(unknown, later, first, joint, otherTier);
         await fixture.Refresh();
         fixture.Advance();
@@ -124,23 +120,19 @@ public class RosterLeaderboardTests
             $"""
             **Mock roster**
             **Mock Guild — 171:classic leaderboard**
-            1. **Bravo Ironhide** 🏆 — Warrior, Alchemy 300/300 · recorded {DiscordDate(firstAt)}
-            1. **Zulu Ironhide** 🏆 — Warrior, Alchemy 300/300 · recorded {DiscordDate(firstAt)}
+            1. **Bravo Ironhide** — Warrior, Alchemy 300/300 · recorded {DiscordDate(firstAt)}
+            1. **Zulu Ironhide** — Warrior, Alchemy 300/300 · recorded {DiscordDate(firstAt)}
             3. **Aster Ironhide** — Warrior, Alchemy 300/300 · recorded {DiscordDate(laterAt)}
             4. **Alpha Ironhide** — Warrior, Alchemy 300/300 · time unknown
-            🏆 First recorded at 300
             Page 1/1
             Last checked {DiscordDate(laterAt)}
             """.ReplaceLineEndings("\n"),
             string.Join('\n', RosterText.Leaderboard(page))
         );
-
-        var filtered = await fixture.Queries.QueryAsync(50, profession: "171:classic", name: "Aster", cancellationToken: fixture.Token);
-        Assert.DoesNotContain("🏆", string.Join('\n', RosterText.Leaderboard(filtered)));
     }
 
     [Fact]
-    public async Task Level60ShowsRecordedTimesAndJointFirstsByGuildAndClassOnly()
+    public async Task Level60ShowsRecordedTimesAndJointClassFirstsWithoutAGuildTrophy()
     {
         using var fixture = new RosterFixture();
         var borin = Character("1", 59, professions: Professions());
@@ -166,12 +158,12 @@ public class RosterLeaderboardTests
             $"""
             **Mock roster**
             **Mock Guild — Level leaderboard**
-            1. **Borin Ironhide** 🏆 — Warrior 🥇, level 60 · recorded {DiscordDate(firstAt)}
-            1. **Zulu Ironhide** 🏆 — Warrior 🥇, level 60 · recorded {DiscordDate(firstAt)}
+            1. **Borin Ironhide** — Warrior 🥇, level 60 · recorded {DiscordDate(firstAt)}
+            1. **Zulu Ironhide** — Warrior 🥇, level 60 · recorded {DiscordDate(firstAt)}
             3. **Aster Ironhide** — Mage 🥇, level 60 · recorded {DiscordDate(laterAt)}
             3. **Oath Ironhide** — Warrior, level 60 · recorded {DiscordDate(laterAt)}
             5. **Alpha Ironhide** — Hunter, level 60 · time unknown
-            First recorded at 60: 🏆 guild · 🥇 class
+            🥇 First recorded at 60 in each class
             Page 1/1
             Last checked {DiscordDate(laterAt)}
             """.ReplaceLineEndings("\n"),
@@ -284,7 +276,7 @@ public class RosterLeaderboardTests
         Assert.Equal(["1", "2", "3", "4"], page.Rows.Select(row => row.Character.Id));
         Assert.Null(page.Rows[^1].RecordedAtUtc);
         var text = string.Join('\n', RosterText.Leaderboard(page));
-        Assert.Contains($"**Renamed Ironhide** 🏆 — Warrior 🥇, level 60 · recorded {DiscordDate(firstAt)}", text);
+        Assert.Contains($"**Renamed Ironhide** — Warrior 🥇, level 60 · recorded {DiscordDate(firstAt)}", text);
         Assert.Contains($"**Borin Ironhide** — Warrior, level 60 · recorded {DiscordDate(secondAt)}", text);
         Assert.Contains("**Alpha Ironhide** — Warrior, level 60 · time unknown", text);
         Assert.DoesNotContain(DiscordDate(now), text);

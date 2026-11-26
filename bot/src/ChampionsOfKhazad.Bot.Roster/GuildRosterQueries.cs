@@ -212,14 +212,6 @@ public class GuildRosterQueries(GuildRosterOptions options, GuildRosterService s
         DateTime? RecordedAt(RosterCharacter member, int value) =>
             recordedProgress.GetValueOrDefault(member.Key) is { } progress && progress.HighWater == value ? progress.RecordedAtUtc : null;
 
-        DateTime? RecordedAtMilestone(RosterCharacter member, int milestone)
-        {
-            var matchesMilestone = profession is null
-                ? member.Level == milestone
-                : member.Professions?.Skills.Any(skill => skill.TrackKey == trackKey && skill.Skill == milestone) == true;
-            return matchesMilestone ? RecordedAt(member, milestone) : null;
-        }
-
         var ordered = entries
             .Select(item => (item.Member, item.Profession, item.Value, RecordedAtUtc: RecordedAt(item.Member, item.Value)))
             .OrderByDescending(item => item.Value)
@@ -245,36 +237,32 @@ public class GuildRosterQueries(GuildRosterOptions options, GuildRosterService s
         return result with
         {
             Rows =
-                result.MilestoneValue is { } milestone && rows.Any(row => row.Value == milestone && row.RecordedAtUtc.HasValue)
-                    ? WithMilestoneFirsts(rows, state.Characters, milestone, member => RecordedAtMilestone(member, milestone), profession is null)
+                profession is null && result.MilestoneValue is { } cap && rows.Any(row => row.Character.Level == cap && row.RecordedAtUtc.HasValue)
+                    ? WithClassFirsts(rows, state.Characters, cap, member => RecordedAt(member, cap))
                     : rows.ToArray(),
         };
     }
 
-    private static RosterEntry[] WithMilestoneFirsts(
+    private static RosterEntry[] WithClassFirsts(
         List<RosterEntry> rows,
         RosterCharacter[] members,
-        int milestone,
-        Func<RosterCharacter, DateTime?> recordedAtMilestone,
-        bool includeClassFirsts
+        int cap,
+        Func<RosterCharacter, DateTime?> recordedAtCap
     )
     {
-        var records = members
-            .Select(member => (member.ClassName, RecordedAtUtc: recordedAtMilestone(member)))
+        var firstByClass = members
+            .Where(member => member.Level == cap)
+            .Select(member => (member.ClassName, RecordedAtUtc: recordedAtCap(member)))
             .Where(item => item.RecordedAtUtc.HasValue)
-            .ToArray();
-        var firstAt = records.Min(item => item.RecordedAtUtc);
-        var firstByClass = includeClassFirsts
-            ? records
-                .GroupBy(item => item.ClassName, StringComparer.OrdinalIgnoreCase)
-                .ToDictionary(group => group.Key, group => group.Min(item => item.RecordedAtUtc), StringComparer.OrdinalIgnoreCase)
-            : null;
+            .GroupBy(item => item.ClassName, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.Min(item => item.RecordedAtUtc), StringComparer.OrdinalIgnoreCase);
         return rows.Select(row =>
-                row.Value == milestone && row.RecordedAtUtc is { } recordedAt
+                row.Character.Level == cap
+                && row.RecordedAtUtc is { } recordedAt
+                && recordedAt == firstByClass.GetValueOrDefault(row.Character.ClassName)
                     ? row with
                     {
-                        FirstAtMilestone = recordedAt == firstAt,
-                        FirstClassAtCap = recordedAt == firstByClass?.GetValueOrDefault(row.Character.ClassName),
+                        FirstClassAtCap = true,
                     }
                     : row
             )
